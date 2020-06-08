@@ -180,7 +180,7 @@
                     "settings": {
                         "minDockerVersion": "v1.25",
                         "registryCredentials": {
-                            "rtpt": {
+                            "rtptofficial": {
                                 "address": "$ACR_NAME_RTPT",
                                 "password": "$ACR_PASSWORD_RTPT",
                                 "username": "$ACR_USERNAME_RTPT"
