@@ -11,7 +11,7 @@
                                     "IpcMode": "host",
                                     "Binds": [
                                         "/tmp/.X11-unix:/tmp/.X11-unix",
-                                        "/tmp/video:/home/boris/Videos"
+                                        "/home/boris/Videos:/tmp/video"
                                     ],
                                     "Runtime": "nvidia",
                                     "ShmSize": 536870912,
@@ -148,6 +148,7 @@
                                         "/usr/bin/docker:/usr/bin/docker"
                                     ],
                                     "LogConfig": {
+                                        "Type": "json-file",
                                         "Config": {
                                             "max-size": "500m"
                                         }
