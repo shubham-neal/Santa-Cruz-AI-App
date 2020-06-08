@@ -6,7 +6,7 @@
                   "tracker": {
                       "settings": {
                           "image": "$ACR_NAME_RTPT/$TRACKER_CONTAINER_IMAGE_NAME:$TRACKER_CONTAINER_IMAGE_TAG",
-                          "createOptions": "{\"HostConfig\":{\"IpcMode\":\"host\",\"Binds\":[\"/tmp/.X11-unix:/tmp/.X11-unix\"],\"Runtime\":\"nvidia\",\"ShmSize\":536870912,\"LogConfig\":{\"Type\":\"json-file\",\"Config\":{\"max-size\": \"100m\",\"max-file\":\"2000\"}}}}"
+                          "createOptions": {"HostConfig":{"IpcMode":"host","Binds":["/tmp/.X11-unix:/tmp/.X11-unix", "/tmp/video:/home/boris/Videos"],"Runtime":"nvidia","ShmSize":536870912,"LogConfig":{"Type":"json-file","Config":{"max-size": "100m","max-file":"2000"}}}}
                       },
                       "type": "docker",
                       "env": {
@@ -39,7 +39,7 @@
                   "telegraf": {
                       "settings": {
                           "image": "$ACR_NAME_RTPT/$TELEGRAF_CONTAINER_IMAGE_NAME:$TELEGRAF_CONTAINER_IMAGE_TAG",
-                          "createOptions": "{\"HostConfig\":{\"Runtime\":\"nvidia\",\"NetworkMode\":\"azure-iot-edge\",\"Memory\":33554432,\"Binds\":[\"/var/run/docker.sock:/var/run/docker.sock\"]}}"
+                          "createOptions": {"HostConfig":{"Runtime":"nvidia","NetworkMode":"azure-iot-edge","Memory":33554432,"Binds":["/var/run/docker.sock:/var/run/docker.sock"]}}
                       },
                       "type": "docker",
                       "env": {
@@ -84,7 +84,7 @@
                   "localblobstorage": {
                       "settings": {
                           "image": "mcr.microsoft.com/$LBS_CONTAINER_IMAGE_NAME:$LBS_CONTAINER_IMAGE_TAG",
-                          "createOptions": "{\"HostConfig\":{\"Binds\":[\"$LBS_BLOB_FOLDER:/blobroot\"],\"PortBindings\":{\"11002/tcp\":[{\"HostPort\":\"11002\"}]}}}"
+                          "createOptions": {"HostConfig":{"Binds":["$LBS_BLOB_FOLDER:/blobroot"],"PortBindings":{"11002/tcp":[{"HostPort":"11002"}]}}}
                       },
                       "type": "docker",
                       "env": {
@@ -102,7 +102,7 @@
                   "penginelogs": {
                       "settings": {
                           "image": "$ACR_NAME_RTPT/$LOG_CONTAINER_IMAGE_NAME:$LOG_CONTAINER_IMAGE_TAG",
-                          "createOptions": "{\"HostConfig\": {\"Binds\": [\"/var/run/docker.sock:/var/run/docker.sock\",\"/usr/bin/docker:/usr/bin/docker\"],\"LogConfig\": {\"Config\": {\"max-size\": \"500m\"}}}}"
+                          "createOptions": {"HostConfig": {"Binds": ["/var/run/docker.sock:/var/run/docker.sock","/usr/bin/docker:/usr/bin/docker"],"LogConfig": {"Config": {"max-size": "500m"}}}}
                       },
                       "type": "docker",
                       "env": {
@@ -149,7 +149,7 @@
                   "edgeHub": {
                       "settings": {
                           "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
-                          "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"443/tcp\":[{\"HostPort\":\"443\"}],\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}]}}}"
+                          "createOptions": {"HostConfig":{"PortBindings":{"443/tcp":[{"HostPort":"443"}],"5671/tcp":[{"HostPort":"5671"}],"8883/tcp":[{"HostPort":"8883"}]}}}
                       },
                       "type": "docker",
                       "status": "running",
@@ -177,13 +177,13 @@
               },
               "graphs": {
                   "CrossingLines": {
-                      "skillId": "Microsoft.ComputerVision.PersonCrossingPolygon",
+                      "skillId": "Microsoft.ComputerVision.PersonCrossingPolygon.Debug",
                       "version": 1,
                       "enabled": true,
                       "parameters": {
-                          "VIDEO_URL": "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+                          "VIDEO_URL": "/tmp/video/zoffice.mp4",
                           "VIDEO_SOURCE_ID": "test_rtsp",
-                          "VIDEO_IS_LIVE": "true",
+                          "VIDEO_IS_LIVE": "false",
                           "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
                           "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[125,458],[160,758],[1362,654],[1362,176],[1064,183],[912,368],[125,458]],\"threshold\":50.0}]}"
                       }
@@ -194,8 +194,8 @@
       "localblobstorage": {
           "properties.desired": {
               "deviceAutoDeleteProperties": {
-                  "deleteOn": $LBS_DELETE_ON,
-                  "deleteAfterMinutes": $LBS_DELETE_AFTER_MINUTES
+                  "deleteOn": "$LBS_DELETE_ON",
+                  "deleteAfterMinutes": "$LBS_DELETE_AFTER_MINUTES"
               },
               "deviceToCloudUploadProperties": {
                   "uploadOn": false
