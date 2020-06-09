@@ -11,7 +11,7 @@
                                     "IpcMode": "host",
                                     "Binds": [
                                         "/tmp/.X11-unix:/tmp/.X11-unix",
-                                        "/home/boris/Videos:/tmp/video"
+                                        "/tmp/video:/tmp/video"
                                     ],
                                     "Runtime": "nvidia",
                                     "ShmSize": 536870912,
