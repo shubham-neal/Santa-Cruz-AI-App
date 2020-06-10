@@ -253,9 +253,9 @@
                         "version": 1,
                         "enabled": true,
                         "parameters": {
-                            "VIDEO_URL": "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov",
+                            "VIDEO_URL": "/tmp/video/zoffice.mp4",
                             "VIDEO_SOURCE_ID": "test_rtsp",
-                            "VIDEO_IS_LIVE": "true",
+                            "VIDEO_IS_LIVE": "false",
                             "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
                             "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[0.29,0.01],[0.29,0.75],[0.82,0.75],[0.82,0.01],[0.29,0.01]],\"threshold\":10.0}]}"
                         }
