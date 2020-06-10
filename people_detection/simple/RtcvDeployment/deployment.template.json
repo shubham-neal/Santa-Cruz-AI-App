@@ -47,6 +47,12 @@
                             },
                             "OMP_WAIT_POLICY": {
                                 "value": "PASSIVE"
+                            },
+                            "KEY_ENV": {
+                                "value": "$KEY_ENV"
+                            },
+                            "IV_ENV": {
+                                "value": "$IV_ENV"
                             }
                         },
                         "status": "running",
@@ -253,9 +259,9 @@
                         "version": 1,
                         "enabled": true,
                         "parameters": {
-                            "VIDEO_URL": "/tmp/video/zoffice.mp4",
+                            "VIDEO_URL": "$CROSSING_VIDEO_URL",
                             "VIDEO_SOURCE_ID": "test_rtsp",
-                            "VIDEO_IS_LIVE": "false",
+                            "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
                             "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
                             "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[0.29,0.01],[0.29,0.75],[0.82,0.75],[0.82,0.01],[0.29,0.01]],\"threshold\":10.0}]}"
                         }
