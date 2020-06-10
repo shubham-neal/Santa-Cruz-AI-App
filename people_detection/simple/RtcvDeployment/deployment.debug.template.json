@@ -171,7 +171,7 @@
                                 "value": "$ARCHON_LOG_LEVEL"
                             }
                         },
-                        "status": "stopped",
+                        "status": "running",
                         "restartPolicy": "always",
                         "version": "1.0"
                     }
