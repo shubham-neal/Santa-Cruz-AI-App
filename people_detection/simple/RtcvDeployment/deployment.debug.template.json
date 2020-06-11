@@ -6,7 +6,24 @@
                     "tracker": {
                         "settings": {
                             "image": "$ACR_NAME_RTPT/$TRACKER_CONTAINER_IMAGE_NAME:$TRACKER_CONTAINER_IMAGE_TAG",
-                            "createOptions": "{\"HostConfig\":{\"IpcMode\":\"host\",\"Binds\":[\"/tmp/.X11-unix:/tmp/.X11-unix\"],\"Runtime\":\"nvidia\",\"ShmSize\":536870912,\"LogConfig\":{\"Type\":\"json-file\",\"Config\":{\"max-size\": \"100m\",\"max-file\":\"2000\"}}}}"
+                            "createOptions": {
+                                "HostConfig": {
+                                    "IpcMode": "host",
+                                    "Binds": [
+                                        "/tmp/.X11-unix:/tmp/.X11-unix",
+                                        "/tmp/video:/tmp/video"
+                                    ],
+                                    "Runtime": "nvidia",
+                                    "ShmSize": 536870912,
+                                    "LogConfig": {
+                                        "Type": "json-file",
+                                        "Config": {
+                                            "max-size": "100m",
+                                            "max-file": "2000"
+                                        }
+                                    }
+                                }
+                            }
                         },
                         "type": "docker",
                         "env": {
@@ -39,7 +56,16 @@
                     "telegraf": {
                         "settings": {
                             "image": "$ACR_NAME_RTPT/$TELEGRAF_CONTAINER_IMAGE_NAME:$TELEGRAF_CONTAINER_IMAGE_TAG",
-                            "createOptions": "{\"HostConfig\":{\"Runtime\":\"nvidia\",\"NetworkMode\":\"azure-iot-edge\",\"Memory\":33554432,\"Binds\":[\"/var/run/docker.sock:/var/run/docker.sock\"]}}"
+                            "createOptions": {
+                                "HostConfig": {
+                                    "Runtime": "nvidia",
+                                    "NetworkMode": "azure-iot-edge",
+                                    "Memory": 33554432,
+                                    "Binds": [
+                                        "/var/run/docker.sock:/var/run/docker.sock"
+                                    ]
+                                }
+                            }
                         },
                         "type": "docker",
                         "env": {
@@ -84,7 +110,20 @@
                     "localblobstorage": {
                         "settings": {
                             "image": "mcr.microsoft.com/$LBS_CONTAINER_IMAGE_NAME:$LBS_CONTAINER_IMAGE_TAG",
-                            "createOptions": "{\"HostConfig\":{\"Binds\":[\"$LBS_BLOB_FOLDER:/blobroot\"],\"PortBindings\":{\"11002/tcp\":[{\"HostPort\":\"11002\"}]}}}"
+                            "createOptions": {
+                                "HostConfig": {
+                                    "Binds": [
+                                        "$LBS_BLOB_FOLDER:/blobroot"
+                                    ],
+                                    "PortBindings": {
+                                        "11002/tcp": [
+                                            {
+                                                "HostPort": "11002"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
                         },
                         "type": "docker",
                         "env": {
@@ -102,7 +141,20 @@
                     "penginelogs": {
                         "settings": {
                             "image": "$ACR_NAME_RTPT/$LOG_CONTAINER_IMAGE_NAME:$LOG_CONTAINER_IMAGE_TAG",
-                            "createOptions": "{\"HostConfig\": {\"Binds\": [\"/var/run/docker.sock:/var/run/docker.sock\",\"/usr/bin/docker:/usr/bin/docker\"],\"LogConfig\": {\"Config\": {\"max-size\": \"500m\"}}}}"
+                            "createOptions": {
+                                "HostConfig": {
+                                    "Binds": [
+                                        "/var/run/docker.sock:/var/run/docker.sock",
+                                        "/usr/bin/docker:/usr/bin/docker"
+                                    ],
+                                    "LogConfig": {
+                                        "Type": "json-file",
+                                        "Config": {
+                                            "max-size": "500m"
+                                        }
+                                    }
+                                }
+                            }
                         },
                         "type": "docker",
                         "env": {
@@ -119,7 +171,7 @@
                                 "value": "$ARCHON_LOG_LEVEL"
                             }
                         },
-                        "status": "stopped",
+                        "status": "running",
                         "restartPolicy": "always",
                         "version": "1.0"
                     }
@@ -128,7 +180,7 @@
                     "settings": {
                         "minDockerVersion": "v1.25",
                         "registryCredentials": {
-                            "rtpt": {
+                            "rtptofficial": {
                                 "address": "$ACR_NAME_RTPT",
                                 "password": "$ACR_PASSWORD_RTPT",
                                 "username": "$ACR_USERNAME_RTPT"
@@ -149,7 +201,27 @@
                     "edgeHub": {
                         "settings": {
                             "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
-                            "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"443/tcp\":[{\"HostPort\":\"443\"}],\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}]}}}"
+                            "createOptions": {
+                                "HostConfig": {
+                                    "PortBindings": {
+                                        "443/tcp": [
+                                            {
+                                                "HostPort": "443"
+                                            }
+                                        ],
+                                        "5671/tcp": [
+                                            {
+                                                "HostPort": "5671"
+                                            }
+                                        ],
+                                        "8883/tcp": [
+                                            {
+                                                "HostPort": "8883"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
                         },
                         "type": "docker",
                         "status": "running",
@@ -176,41 +248,17 @@
                     "CustomerTelemetryEnabled": true
                 },
                 "graphs": {
-                    "EndComputer": {
-                        "skillId": "peopleDwellTimeDebug",
+                    "CrossingLines": {
+                        "skillId": "Microsoft.ComputerVision.PersonCrossingPolygon.Debug",
                         "version": 1,
                         "enabled": true,
                         "parameters": {
-                            "VIDEO_URL": "$END_COMPUTER_URL",
-                            "VIDEO_SOURCE_ID": "end_computer",
-                            "VIDEO_IS_LIVE": $LIVE_CAMERAS,
+                            "VIDEO_URL": "$CROSSING_VIDEO_URL",
+                            "VIDEO_SOURCE_ID": "test_rtsp",
+                            "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
                             "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
-                            "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[125,458],[160,758],[1362,654],[1362,176],[1064,183],[912,368],[125,458]],\"threshold\":50.0}]}"
-                        }
-                    },
-                    "DoorTopDown": {
-                        "skillId": "peopleCountingDebug",
-                        "version": 1,
-                        "enabled": true,
-                        "parameters": {
-                            "VIDEO_URL": "$DOOR_TOPDOWN_URL",
-                            "VIDEO_SOURCE_ID": "door_topdown",
-                            "VIDEO_IS_LIVE": $LIVE_CAMERAS,
-                            "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
-                            "AGGREGATOR_CONFIG": "{\"lines\":[{\"name\":\"door\",\"line\":{\"start\":{\"x\":470,\"y\":800},\"end\":{\"x\":480,\"y\":370}},\"threshold\":50.0}]}"
-                        }
-                    },
-                    "VideoRecorder": {
-                        "version": 2,
-                        "enabled": false,
-                        "skillId": "videoRecorder",
-                        "parameters": {
-                            "DEVICES_PATH_PARAM": $VR_DEVICE_LIST,
-                            "CONNECTION_STRING_PARAM": "DefaultEndpointsProtocol=http;BlobEndpoint=http://localblobstorage:11002/$LBS_ACCOUNT_NAME;AccountName=$LBS_ACCOUNT_NAME;AccountKey=$LBS_ACCOUNT_KEY",
-                            "CONTAINER_NAME_PARAM": "recordedvideo",
-                            "DURATION_TIME_PARAM": $VR_DURATION_TIME_IN_SECONDS,
-                            "SAFE_TIME_PARAM": 60,
-                            "PUBLIC_KEY_PARAM": "$VR_ENCRYPTION_KEY_URL"
+                            "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
+                            "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[0.29,0.01],[0.29,0.75],[0.82,0.75],[0.82,0.01],[0.29,0.01]],\"threshold\":10.0}]}"
                         }
                     }
                 }
@@ -219,8 +267,8 @@
         "localblobstorage": {
             "properties.desired": {
                 "deviceAutoDeleteProperties": {
-                    "deleteOn": $LBS_DELETE_ON,
-                    "deleteAfterMinutes": $LBS_DELETE_AFTER_MINUTES
+                    "deleteOn": "$LBS_DELETE_ON",
+                    "deleteAfterMinutes": "$LBS_DELETE_AFTER_MINUTES"
                 },
                 "deviceToCloudUploadProperties": {
                     "uploadOn": false
