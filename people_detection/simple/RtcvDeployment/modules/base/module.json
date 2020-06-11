@@ -4,7 +4,7 @@
     "image": {
         "repository": "${ACR_NAME_RTPT}/base",
         "tag": {
-            "version": "latest",
+            "version": "latest-amd64",
             "platforms": {
                 "amd64": "./base.dockerfile"
             }

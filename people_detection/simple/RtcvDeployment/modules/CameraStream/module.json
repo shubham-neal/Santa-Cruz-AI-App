@@ -4,7 +4,7 @@
     "image": {
         "repository": "${ACR_NAME_RTPT}/camerastream",
         "tag": {
-            "version": "0.0.1",
+            "version": "${CAMERA_CONTAINER_IMAGE_TAG}",
             "platforms": {
                 "amd64": "./camera-stream.dockerfile"
             }
