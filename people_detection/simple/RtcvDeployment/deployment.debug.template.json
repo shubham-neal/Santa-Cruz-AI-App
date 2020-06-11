@@ -233,8 +233,7 @@
         "$edgeHub": {
             "properties.desired": {
                 "routes": {
-                    "route": "FROM /messages/* INTO $upstream",
-                    "routeall": "FROM /* INTO $upstream"
+                    "route": "FROM /messages/* INTO $upstream"
                 },
                 "schemaVersion": "1.0",
                 "storeAndForwardConfiguration": {
