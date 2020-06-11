@@ -47,12 +47,6 @@
                             },
                             "OMP_WAIT_POLICY": {
                                 "value": "PASSIVE"
-                            },
-                            "KEY_ENV": {
-                                "value": "$KEY_ENV"
-                            },
-                            "IV_ENV": {
-                                "value": "$IV_ENV"
                             }
                         },
                         "status": "running",
