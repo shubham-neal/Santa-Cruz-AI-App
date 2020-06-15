@@ -1,5 +1,9 @@
 import cv2
-import os, logging, time, json, datetime
+import os
+import logging
+import time
+import json
+import datetime
 import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
@@ -7,10 +11,11 @@ import requests
 from messaging.iotmessenger import IoTInferenceMessenger
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
-    level=logging.INFO)
+                    level=logging.INFO)
 
 camera_config = None
 intervals_per_cam = dict()
+
 
 def module_twin_callback(update_state, payload, user_context):
     global camera_config
@@ -18,13 +23,18 @@ def module_twin_callback(update_state, payload, user_context):
     data = json.loads(payload)
     logging.info(f"Retrieved updated properties: {data}")
 
-    #after the first time there will be no "desired" entry    
+    # after the first time there will be no "desired" entry
     if "desired" in data:
         data = data["desired"]
     logging.info(f"desired properties: {data}")
 
     cams = data["cameras"]
-    blob = data["blob"]
+    blob = None
+
+    # if blob is not specified we will message
+    # the images to the IoT hub
+    if "blob" in data:
+      blob = data["blob"]
 
     camera_config = dict()
     camera_config["cameras"] = cams
@@ -32,6 +42,7 @@ def module_twin_callback(update_state, payload, user_context):
 
     logging.info(f"config set: {camera_config}")
     return 0
+
 
 def main():
     global camera_config
@@ -50,15 +61,15 @@ def main():
 
         if not debug:
             client.set_module_twin_callback(module_twin_callback, 0)
-    
+
     blob_service_client = None
 
     while True:
         # Should be properly asynchronous, but since we don't change things often
-        if camera_config is None or "cameras" not in camera_config or "blob" not in camera_config:
+        if camera_config is None or "cameras" not in camera_config:
             time.sleep(5)
             continue
-        if blob_service_client is None:
+        if camera_config["blob"] is not None and blob_service_client is None:
             blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
             logging.info(f"Created blob service client: {blob_service_client.account_name}")
 
@@ -69,10 +80,11 @@ def main():
                 continue
 
             curtime = time.time()
-            
+
             # not enough time has passed since the last collection
             if key in intervals_per_cam and curtime - intervals_per_cam[key] < cam["interval"]:
-                logging.info(f"Waiting {cam['interval'] - (curtime - intervals_per_cam[key])} for {key}")
+                logging.info(
+                    f"Waiting {cam['interval'] - (curtime - intervals_per_cam[key])} for {key}")
                 continue
 
             if local:
@@ -82,14 +94,24 @@ def main():
             img = grab_image_from_stream(vid_file)
             logging.info(f"Grabbed image from {cam['rtsp']}")
 
-            camId= f"{cam['counter']}/{key}"
-            curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
-            
+            camId = f"{cam['counter']}/{key}"
+
+            # if we are sending to the blob storage
+            curtime = datetime.utcnow().isoformat()
+
+            if camera_config["blob"] is not None:
+              curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
+
             if "inference" in cam and cam["inference"]:
                 if "detector" not in cam:
-                    logging.error(f"Cannot perform inference: detector not specified for camera {key}")
+                    logging.error(
+                        f"Cannot perform inference: detector not specified for camera {key}")
                 else:
                     infer_and_report(messenger, full_cam_id, cam["detector"], img, curtimename)
+
+            # message the image upstream
+            
+            messenger.send_image(full_cam_id, curtime, cv2.imencode(".jpg", img)[1])
 
             logging.info(f"Sent {cam['rtsp']} to {cam['counter']}")
 
@@ -97,6 +119,7 @@ def main():
             intervals_per_cam[key] = curtime
 
         time.sleep(1)
+
 
 def infer_and_report(messenger, cam_id, detector, img, curtimename):
     try:
@@ -110,6 +133,7 @@ def infer_and_report(messenger, cam_id, detector, img, curtimename):
     except Exception as e:
         logging.error(f"Exception occured during inference: {e}")
 
+
 def infer(detector, img):
     im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     im = cv2.resize(im, (300, 300), interpolation=cv2.INTER_LINEAR)
@@ -121,7 +145,7 @@ def infer(detector, img):
     proc_time = time.time() - start
     resp.raise_for_status()
     result = resp.json()
-    
+
     return result["classes"], result["scores"], result["bboxes"], proc_time
 
 
@@ -130,19 +154,29 @@ def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
     time.sleep(0.01)
     messenger.send_inference(cam, classes, scores, boxes, curtimename)
 
+def get_image_local_name(curtime):
+  return os.path.abspath(curtime.strftime("%Y_%m_%d_%H_%M_%S_%f") + ".jpg")
+
 def send_img_to_blob(blob_service_client, img, camId):
 
     curtime = datetime.datetime.utcnow()
-    name = f"{curtime.isoformat()}Z"
-    local_name = os.path.abspath(curtime.strftime("%Y_%m_%d_%H_%M_%S_%f")[:-4] + ".jpg")
-    day=curtime.strftime("%Y-%m-%d")
+    name = curtime.isoformat()
+
+    # used to write temporary local file 
+    # because that's how the SDK works.
+    # the file name is used upload to blob
+    local_name = get_image_local_name(curtime)
+    day = curtime.strftime("%Y-%m-%d")
+
     blob_client = blob_service_client.get_blob_client("still-images", f"{camId}/{day}/{name}.jpg")
     cv2.imwrite(local_name, img)
+
     with open(local_name, "rb") as data:
         blob_client.upload_blob(data)
 
     os.remove(local_name)
     return name, f"{camId}/{day}"
+
 
 def grab_image_from_stream(cam):
 
@@ -155,29 +189,31 @@ def grab_image_from_stream(cam):
         try:
             video_capture = cv2.VideoCapture(cam)
             video_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            
+
             frame = video_capture.read()[1]
             video_capture.release()
             break
         except:
             # try to re-capture the stream
-            logging.info("Could not capture video. Recapturing and retrying...")
+            logging.info(
+                "Could not capture video. Recapturing and retrying...")
             time.sleep(wait)
 
-    if frame is None:               
+    if frame is None:
         logging.info("Failed to capture frame, sending blank image")
         frame = np.zeros((300, 300, 3))
 
     return frame
 
+
 if __name__ == "__main__":
-    debug = False
-    local = False
+    debug = False # remote debugging (running in the container will listen on port 5678)
+    local = False # running raw python code
 
     if debug and not local:
 
         logging.info("Please attach a debugger to port 5678")
-        
+
         import ptvsd
         ptvsd.enable_attach(('0.0.0.0', 5678))
         ptvsd.wait_for_attach()

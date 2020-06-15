@@ -24,7 +24,7 @@ dependencies:
     - pillow==6.1.0
     - pywavelets==1.0.3
     - scikit-image==0.15.0
-    - azure-iothub-device-client~=1.4.3
+    - azure-iot-device~=2.1.2
     - azure-storage-blob
     - setuptools
     - ptvsd==4.1.3
