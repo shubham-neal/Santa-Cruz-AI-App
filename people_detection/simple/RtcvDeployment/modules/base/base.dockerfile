@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/azureml/o16n-sample-user-base/ubuntu-miniconda
+#FROM mcr.microsoft.com/azureml/o16n-sample-user-base/ubuntu-miniconda
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
