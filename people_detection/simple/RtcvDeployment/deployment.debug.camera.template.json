@@ -1,0 +1,110 @@
+{
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "modules": {
+          "camerastream": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.CameraStream}",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/tmp/video:/tmp/video"
+                  ],
+                  "PortBindings": {
+                    "5678/tcp": [
+                      {
+                        "HostPort": "5678"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runtime": {
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "registryCredentials": {
+              "rtptofficial": {
+                "address": "$ACR_NAME_RTPT",
+                "password": "$ACR_PASSWORD_RTPT",
+                "username": "$ACR_USERNAME_RTPT"
+              }
+            }
+          },
+          "type": "docker"
+        },
+        "schemaVersion": "1.0",
+        "systemModules": {
+          "edgeAgent": {
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": ""
+            },
+            "type": "docker"
+          },
+          "edgeHub": {
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ],
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always"
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "routes": {
+          "route": "FROM /messages/* INTO $upstream"
+        },
+        "schemaVersion": "1.0",
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "camerastream": {
+      "properties.desired": {
+        "cameras": {
+          "cam001": {
+            "space": "Office",
+            "rtsp": "/tmp/video/zoffice.mp4",
+            "inference": false,
+            "interval": 0.3,
+            "enabled": true
+          }
+        }
+      }
+    }
+
+  }
+}
