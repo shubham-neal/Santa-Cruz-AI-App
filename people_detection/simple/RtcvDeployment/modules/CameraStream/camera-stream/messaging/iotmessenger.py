@@ -13,7 +13,7 @@ class IoTMessaging:
   timeout = 10000
 
   def __init__(self):
-    self.client = IoTHubModuleClient().create_from_edge_environment()
+    self.client = IoTHubModuleClient.create_from_edge_environment()
 
     # set the time until a message times out
     self.output_queue = "iotHub"
