@@ -21,8 +21,7 @@ class IoTMessaging:
   def send_event(self, body, msg_type="message"):
 
     message = Message(json.dumps(body))
-    message.properties().add("iothub-message-schema", "image-upload;v1")
-    message.properties().add("type", msg_type)
+    message.custom_properties["type"] = msg_type
     self.client.send_message(message)
 
 class IoTInferenceMessenger(IoTMessaging):
@@ -43,7 +42,7 @@ class IoTInferenceMessenger(IoTMessaging):
         body["bbymax"] = bbox[2]
         body["bbxmax"] = bbox[3]
 
-        self.send_event(message)
+        self.send_event(body)
         logging.info(f"Sent: {body}")
 
   def send_upload(self, camId, featureCount, curtimename, proc_time):
