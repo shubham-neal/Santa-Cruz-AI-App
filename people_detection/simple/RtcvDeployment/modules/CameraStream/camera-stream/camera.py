@@ -8,6 +8,7 @@ import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
 import threading
+from queue import LifoQueue
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -16,6 +17,10 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 
 camera_config = None
 intervals_per_cam = dict()
+keep_listeing_for_frames = False
+
+# queue to hold about 1 sec of video
+frame_queue = LifoQueue(30)
 
 def parse_twin(data):
     global camera_config
@@ -47,7 +52,7 @@ def module_twin_callback(client):
     parse_twin(payload)
 
 def main():
-    global camera_config
+    global camera_config, keep_listeing_for_frames
 
     if local:
       # if we are not local this will be overridden anyway
@@ -66,6 +71,7 @@ def main():
       twin_update_listener.start()
 
     blob_service_client = None
+    frame_grab_listener = None
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
@@ -90,18 +96,38 @@ def main():
 
         if not cam["enabled"]:
             continue
-
+        
+        if key not in intervals_per_cam:
+          intervals_per_cam[key] = dict()
+          
         curtime = time.time()
 
         # not enough time has passed since the last collection
-        if key in intervals_per_cam and curtime - intervals_per_cam[key] < cam["interval"]:
+        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < cam["interval"]:
             continue
 
         if local:
             vid_file = os.path.join(os.path.dirname(__file__), cam["rtsp"])
         else:
             vid_file = cam["rtsp"]
-        img = grab_image_from_stream(vid_file)
+
+        # start queuing up images on a different thread
+        if 'rtsp' not in intervals_per_cam[key] or intervals_per_cam[key]['rtsp'] != cam['rtsp'] or intervals_per_cam[key]['interval'] != cam['interval']:
+          intervals_per_cam[key]['rtsp'] = cam['rtsp']
+
+          if frame_grab_listener is not None:
+            keep_listeing_for_frames = False
+            frame_grab_listener.join()
+            logging.info(f"Stopped listening for {intervals_per_cam[key]['rtsp']}")
+
+          keep_listeing_for_frames = True
+          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], cam['interval']))
+          frame_grab_listener.daemon = True
+          frame_grab_listener.start()
+          logging.info(f"Started listening for {cam['rtsp']}")
+
+        # block until we get something
+        img = frame_queue.get()
         logging.info(f"Grabbed image from {cam['rtsp']}")
 
         camId = f"{cam['space']}/{key}"
@@ -122,7 +148,7 @@ def main():
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
-        intervals_per_cam[key] = curtime
+        intervals_per_cam[key]['interval'] = curtime
 
 
 def infer_and_report(messenger, cam_id, detector, img, curtimename):
@@ -185,31 +211,37 @@ def send_img_to_blob(blob_service_client, img, camId):
   return name, f"{camId}/{day}"
 
 
-def grab_image_from_stream(cam):
+def grab_image_from_stream(cam, interval):
 
   repeat = 3
-  wait = 3
+  wait = 0.5
   frame = None
 
-  for _ in range(repeat):
-    try:
-        video_capture = cv2.VideoCapture(cam)
-        video_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+  video_capture = cv2.VideoCapture(cam)
 
-        frame = video_capture.read()[1]
-        video_capture.release()
-        break
-    except:
-        # try to re-capture the stream
-        logging.info("Could not capture video. Recapturing and retrying...")
-        time.sleep(wait)
+  while keep_listeing_for_frames:
+    for _ in range(repeat):
+      try:
+          res, frame = video_capture.read()
+          if not res:
+            video_capture = cv2.VideoCapture(cam)
+            res, frame = video_capture.read()
+          time.sleep(interval/2)
+          break
+      except:
+          # try to re-capture the stream
+          logging.info("Could not capture video. Recapturing and retrying...")
+          time.sleep(wait)
 
-  if frame is None:
-    logging.info("Failed to capture frame, sending blank image")
-    frame = np.zeros((300, 300, 3))
+    if frame is None:
+      logging.info("Failed to capture frame, sending blank image")
+      continue
 
-  return frame
+    with frame_queue.mutex:
+      if frame_queue.full():
+        frame_queue.queue.clear()
 
+    frame_queue.put(frame) 
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
