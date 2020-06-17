@@ -97,6 +97,7 @@
     },
     "camerastream": {
       "properties.desired": {
+        "blob": "$CAMERA_BLOB_SAS",
         "cameras": {
           "cam001": {
             "space": "Office",
