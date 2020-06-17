@@ -85,7 +85,7 @@ def main():
       logging.info(f"Created blob service client: {blob_service_client.account_name}")
 
     while True:
-        
+       
       for key, cam in camera_config["cameras"].items():
 
         if not cam["enabled"]:
@@ -106,6 +106,7 @@ def main():
 
         camId = f"{cam['space']}/{key}"
 
+        curtimename = None
         if camera_config["blob"] is not None:
             curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
 
@@ -115,8 +116,10 @@ def main():
           else:
               infer_and_report(messenger, full_cam_id, cam["detector"], img, curtimename)
 
-        # message the image upstream
-        logging.info(f"Sent {cam['rtsp']} to {cam['space']}")
+        # message the image capture upstream
+        if curtimename is not None:
+          messenger.send_image(camId, curtimename)
+          logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
         intervals_per_cam[key] = curtime
@@ -164,7 +167,7 @@ def get_image_local_name(curtime):
 def send_img_to_blob(blob_service_client, img, camId):
 
   curtime = datetime.datetime.utcnow()
-  name = curtime.isoformat()
+  name = curtime.isoformat() + "Z"
 
   # used to write temporary local file
   # because that's how the SDK works.
