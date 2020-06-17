@@ -87,7 +87,6 @@ def main():
     while True:
         
       for key, cam in camera_config["cameras"].items():
-        logging.info(f"Processing camera: {key}")
 
         if not cam["enabled"]:
             continue
