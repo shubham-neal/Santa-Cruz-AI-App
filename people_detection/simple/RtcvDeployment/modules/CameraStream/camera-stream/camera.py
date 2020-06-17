@@ -96,7 +96,6 @@ def main():
 
         # not enough time has passed since the last collection
         if key in intervals_per_cam and curtime - intervals_per_cam[key] < cam["interval"]:
-            logging.info(f"Waiting {cam['interval'] - (curtime - intervals_per_cam[key])} for {key}")
             continue
 
         if local:
