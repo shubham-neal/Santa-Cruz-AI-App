@@ -1,5 +1,4 @@
 config/
-.env
 *.log
 .ipynb_checkpoints/
 .vscode/

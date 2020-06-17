@@ -72,12 +72,12 @@ def main():
     while camera_config is None:
       time.sleep(1)
 
+    if camera_config["blob"] is not None:
+      blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
+      logging.info(f"Created blob service client: {blob_service_client.account_name}")
+
     while True:
         
-      if camera_config["blob"] is not None and blob_service_client is None:
-        blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
-        logging.info(f"Created blob service client: {blob_service_client.account_name}")
-
       for key, cam in camera_config["cameras"].items():
         logging.info(f"Processing camera: {key}")
 
@@ -100,9 +100,6 @@ def main():
 
         camId = f"{cam['space']}/{key}"
 
-        # if we are sending to the blob storage
-        curtime = datetime.datetime.utcnow().isoformat()
-
         if camera_config["blob"] is not None:
             curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
 
@@ -113,15 +110,10 @@ def main():
               infer_and_report(messenger, full_cam_id, cam["detector"], img, curtimename)
 
         # message the image upstream
-
-        messenger.send_image(camId, curtime, cv2.imencode(".jpg", img)[1])
-
         logging.info(f"Sent {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
         intervals_per_cam[key] = curtime
-
-      time.sleep(1)
 
 
 def infer_and_report(messenger, cam_id, detector, img, curtimename):

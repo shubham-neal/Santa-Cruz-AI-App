@@ -103,7 +103,7 @@
             "space": "Office",
             "rtsp": "/tmp/video/zoffice.mp4",
             "inference": false,
-            "interval": 0.3,
+            "interval": 60,
             "enabled": true
           }
         }
