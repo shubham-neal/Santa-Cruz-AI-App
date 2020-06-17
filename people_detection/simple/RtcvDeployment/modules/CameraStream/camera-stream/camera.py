@@ -69,8 +69,16 @@ def main():
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
-    while camera_config is None:
+    for i in range(5):
+      if camera_config is not None:
+        break
       time.sleep(1)
+
+    if camera_config is None:
+      payload = client.get_twin()
+      parse_twin(payload)
+
+    logging.info("Created camera configuration from twin")
 
     if camera_config["blob"] is not None:
       blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
