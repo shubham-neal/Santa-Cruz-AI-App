@@ -204,7 +204,7 @@ def grab_image_from_stream(cam):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = True
+    debug = False
     local = False  # running raw python code
 
     if debug and not local:
