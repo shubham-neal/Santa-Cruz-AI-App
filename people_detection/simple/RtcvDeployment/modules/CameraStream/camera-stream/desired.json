@@ -3,7 +3,7 @@
   "blob": "BlobEndpoint=https://storagejxbbu.blob.core.windows.net/;QueueEndpoint=https://storagejxbbu.queue.core.windows.net/;FileEndpoint=https://storagejxbbu.file.core.windows.net/;TableEndpoint=https://storagejxbbu.table.core.windows.net/;SharedAccessSignature=sv=2019-02-02&ss=b&srt=co&sp=wc&se=2022-02-14T14:44:03Z&st=2020-02-14T06:44:03Z&spr=https&sig=Q6px%2FpmbopU1vlmKi8amWf1msvzJTybkeyCo9yVQxfA%3D",
   "cameras": {
     "cam001": {
-      "counter": "debug",
+      "space": "debug",
       "rtsp": "videos/shelf.mp4",
       "interval": 1,
       "inference": true,
@@ -11,13 +11,13 @@
       "enabled": true
     },
     "cam002": {
-      "counter": "cereal_2",
+      "space": "cereal_2",
       "rtsp": "videos/shelf.mp4",
       "interval": 300,
       "enabled": false
     },
     "cam003": {
-      "counter": "cereal_3",
+      "space": "cereal_3",
       "rtsp": "videos/shelf.mp4",
       "interval": 300,
       "enabled": false

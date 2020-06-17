@@ -11,14 +11,17 @@
             "settings": {
               "image": "${MODULES.CameraStream}",
               "createOptions": {
+                "ExposedPorts" : {
+                  "56780/tcp": {}
+                },
                 "HostConfig": {
                   "Binds": [
                     "/tmp/video:/tmp/video"
                   ],
                   "PortBindings": {
-                    "5678/tcp": [
+                    "56780/tcp": [
                       {
-                        "HostPort": "5678"
+                        "HostPort": "56780"
                       }
                     ]
                   }
@@ -105,6 +108,5 @@
         }
       }
     }
-
   }
 }

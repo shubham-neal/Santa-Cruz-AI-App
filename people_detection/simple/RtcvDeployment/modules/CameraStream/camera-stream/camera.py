@@ -17,10 +17,9 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 camera_config = None
 intervals_per_cam = dict()
 
-def parse_twin(payload):
+def parse_twin(data):
     global camera_config
 
-    data = json.loads(payload)
     logging.info(f"Retrieved updated properties: {data}")
 
     if "desired" in data:
@@ -50,7 +49,7 @@ def module_twin_callback(client):
 def main():
     global camera_config
 
-    if local or debug:
+    if local:
       # if we are not local this will be overridden anyway
       fn = os.path.join(os.path.dirname(__file__), "desired.json")
 
@@ -62,20 +61,19 @@ def main():
       messenger = IoTInferenceMessenger()
       client = messenger.client
 
-      if not debug:
-        twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
-        twin_update_listener.daemon = True
-        twin_update_listener.start()
+      twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
+      twin_update_listener.daemon = True
+      twin_update_listener.start()
 
     blob_service_client = None
 
+    # Should be properly asynchronous, but since we don't change things often
+    # Wait for it to come back from twin update the very first time
+    while camera_config is None:
+      time.sleep(1)
+
     while True:
-      # Should be properly asynchronous, but since we don't change things often
-      if camera_config is None:
-        payload = client.get_twin()
-        parse_twin(payload)
         
-        continue
       if camera_config["blob"] is not None and blob_service_client is None:
         blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
         logging.info(f"Created blob service client: {blob_service_client.account_name}")
@@ -100,10 +98,10 @@ def main():
         img = grab_image_from_stream(vid_file)
         logging.info(f"Grabbed image from {cam['rtsp']}")
 
-        camId = f"{cam['counter']}/{key}"
+        camId = f"{cam['space']}/{key}"
 
         # if we are sending to the blob storage
-        curtime = datetime.utcnow().isoformat()
+        curtime = datetime.datetime.utcnow().isoformat()
 
         if camera_config["blob"] is not None:
             curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
@@ -116,9 +114,9 @@ def main():
 
         # message the image upstream
 
-        messenger.send_image(full_cam_id, curtime, cv2.imencode(".jpg", img)[1])
+        messenger.send_image(camId, curtime, cv2.imencode(".jpg", img)[1])
 
-        logging.info(f"Sent {cam['rtsp']} to {cam['counter']}")
+        logging.info(f"Sent {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
         intervals_per_cam[key] = curtime
@@ -214,15 +212,15 @@ def grab_image_from_stream(cam):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = False
+    debug = True
     local = False  # running raw python code
 
     if debug and not local:
 
-        logging.info("Please attach a debugger to port 5678")
+        logging.info("Please attach a debugger to port 56780")
 
         import ptvsd
-        ptvsd.enable_attach(('0.0.0.0', 5678))
+        ptvsd.enable_attach(('0.0.0.0', 56780))
         ptvsd.wait_for_attach()
         ptvsd.break_into_debugger()
 
