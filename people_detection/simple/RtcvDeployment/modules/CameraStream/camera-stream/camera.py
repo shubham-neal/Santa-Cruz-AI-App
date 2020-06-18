@@ -8,7 +8,7 @@ import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
 import threading
-from queue import LifoQueue
+from queue import LifoQueue, Full
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -75,7 +75,7 @@ def main():
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
-    for i in range(5):
+    for i in range(20):
       if camera_config is not None:
         break
       time.sleep(1)
@@ -237,11 +237,12 @@ def grab_image_from_stream(cam, interval):
       logging.info("Failed to capture frame, sending blank image")
       continue
 
-    with frame_queue.mutex:
-      if frame_queue.full():
-        frame_queue.queue.clear()
-
-    frame_queue.put(frame) 
+    try:
+      frame_queue.put_nowait(frame)
+    except Full:
+      while not frame_queue.empty():
+        frame_queue.get()
+      frame_queue.put(frame)
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
