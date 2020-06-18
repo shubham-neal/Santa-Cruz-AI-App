@@ -8,7 +8,7 @@ import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
 import threading
-from queue import LifoQueue, Full
+from queue import Queue, Full
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -19,8 +19,7 @@ camera_config = None
 intervals_per_cam = dict()
 keep_listeing_for_frames = False
 
-# queue to hold about 1 sec of video
-frame_queue = LifoQueue(30)
+frame_queue = Queue(5)
 
 def parse_twin(data):
     global camera_config
@@ -128,6 +127,7 @@ def main():
 
         # block until we get something
         img = frame_queue.get()
+    
         logging.info(f"Grabbed image from {cam['rtsp']}")
 
         camId = f"{cam['space']}/{key}"
@@ -226,7 +226,6 @@ def grab_image_from_stream(cam, interval):
           if not res:
             video_capture = cv2.VideoCapture(cam)
             res, frame = video_capture.read()
-          time.sleep(interval/2)
           break
       except:
           # try to re-capture the stream
@@ -243,7 +242,7 @@ def grab_image_from_stream(cam, interval):
       while not frame_queue.empty():
         frame_queue.get()
       frame_queue.put(frame)
-
+  
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
     debug = False
