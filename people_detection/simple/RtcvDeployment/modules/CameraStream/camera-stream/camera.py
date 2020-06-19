@@ -19,7 +19,7 @@ camera_config = None
 intervals_per_cam = dict()
 keep_listeing_for_frames = False
 
-frame_queue = Queue(5)
+frame_queue = Queue(30)
 
 def parse_twin(data):
     global camera_config
@@ -121,7 +121,11 @@ def main():
             logging.info(f"Stopped listening for {intervals_per_cam[key]['rtsp']}")
 
           keep_listeing_for_frames = True
-          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], float(cam['interval'])))
+          # if we are streaming from a file then pass current expected wait interval. Else - 0
+          # the interval will be used to simulate an 30 fps playback
+          cur_interval = 0 if cam['rtsp'].s.startswith("rtsp") else float(cam['interval'])
+
+          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], cur_interval))
           frame_grab_listener.daemon = True
           frame_grab_listener.start()
           logging.info(f"Started listening for {cam['rtsp']}")
@@ -212,7 +216,7 @@ def send_img_to_blob(blob_service_client, img, camId):
   return name, f"{camId}/{day}"
 
 
-def grab_image_from_stream(cam, interval):
+def grab_image_from_stream(cam, interval = 0):
 
   repeat = 3
   wait = 0.5
@@ -220,10 +224,17 @@ def grab_image_from_stream(cam, interval):
 
   video_capture = cv2.VideoCapture(cam)
 
+  fps = None
+  delay = None
+  fps_set = False
+
   while keep_listeing_for_frames:
+    start = time.time()
+
     for _ in range(repeat):
       try:
           res, frame = video_capture.read()
+
           if not res:
             video_capture = cv2.VideoCapture(cam)
             res, frame = video_capture.read()
@@ -237,13 +248,30 @@ def grab_image_from_stream(cam, interval):
       logging.info("Failed to capture frame, sending blank image")
       continue
 
+    # retrieve camera properties. 
+    # fps may not always be available
+    if not fps_set and fps is None:
+      fps = video_capture.get(cv2.CAP_PROP_FPS)
+      fps_set = True
+      
+      if fps is not None and fps > 0:
+        delay = 1. / fps
+        
+      logging.info(f"Retrieved FPS: {fps}")
+
+    # we are reading from a file, simulate 30 fps streaming
+    # delay appropriately before enqueueing
+    if interval > 0:
+      cur_delay = delay - (time.time() - start)
+      if cur_delay > 0:
+        time.sleep(cur_delay)
+
     try:
       frame_queue.put_nowait(frame)
     except Full:
-      while not frame_queue.empty():
-        frame_queue.get()
+      frame_queue.get()
       frame_queue.put(frame)
-  
+
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
     debug = False
