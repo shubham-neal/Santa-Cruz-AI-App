@@ -102,7 +102,7 @@ def main():
         curtime = time.time()
 
         # not enough time has passed since the last collection
-        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < float(cam["interval"]):
+        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < float(cam['interval']):
             continue
 
         if local:
@@ -121,7 +121,7 @@ def main():
             logging.info(f"Stopped listening for {intervals_per_cam[key]['rtsp']}")
 
           keep_listeing_for_frames = True
-          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], cam['interval']))
+          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], float(cam['interval'])))
           frame_grab_listener.daemon = True
           frame_grab_listener.start()
           logging.info(f"Started listening for {cam['rtsp']}")
