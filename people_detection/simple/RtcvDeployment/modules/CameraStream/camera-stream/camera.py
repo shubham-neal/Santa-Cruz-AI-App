@@ -123,7 +123,7 @@ def main():
           keep_listeing_for_frames = True
           # if we are streaming from a file then pass current expected wait interval. Else - 0
           # the interval will be used to simulate an 30 fps playback
-          cur_interval = 0 if cam['rtsp'].s.startswith("rtsp") else float(cam['interval'])
+          cur_interval = 0 if cam['rtsp'].startswith("rtsp") else float(cam['interval'])
 
           frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], cur_interval))
           frame_grab_listener.daemon = True
