@@ -266,15 +266,11 @@ def grab_image_from_stream(cam, interval = 0):
       if cur_delay > 0:
         time.sleep(cur_delay)
 
-    # if we are full try to wait for some time before the queue clears.
-    # not to long.
-    for _ in range(5):
-      try:
-        frame_queue.put_nowait(frame)
-        break
-      except Full:
-        time.sleep(.5)
-        
+    try:
+      frame_queue.put_nowait(frame)
+    except Full:
+      frame_queue.get()
+      frame_queue.put(frame)
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
