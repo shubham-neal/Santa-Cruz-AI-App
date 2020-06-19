@@ -19,7 +19,7 @@ camera_config = None
 intervals_per_cam = dict()
 keep_listeing_for_frames = False
 
-frame_queue = Queue(30)
+frame_queue = Queue()
 
 def parse_twin(data):
     global camera_config
@@ -226,6 +226,7 @@ def grab_image_from_stream(cam, interval = 0):
 
   fps = None
   delay = None
+  time_delay = None
   fps_set = False
   cur_frame = 0
 
@@ -257,8 +258,14 @@ def grab_image_from_stream(cam, interval = 0):
       
       if fps is not None and fps > 0:
         delay = int(math.ceil(fps * interval))
+        time_delay = 1. / fps
         
       logging.info(f"Retrieved FPS: {fps}")
+
+    if interval > 0 and time_delay is not None:
+      cur_delay = time_delay - time.time() + start
+      if cur_delay > 0:
+        time.sleep(cur_delay)
 
     # we are reading from a file, simulate 30 fps streaming
     # delay appropriately before enqueueing
@@ -266,11 +273,7 @@ def grab_image_from_stream(cam, interval = 0):
     if interval > 0 and delay is not None and (cur_frame - 1) % delay != 0:
       continue
 
-    try:
-      frame_queue.put_nowait(frame)
-    except Full:
-      frame_queue.get()
-      frame_queue.put(frame)
+    frame_queue.put_nowait(frame)
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
