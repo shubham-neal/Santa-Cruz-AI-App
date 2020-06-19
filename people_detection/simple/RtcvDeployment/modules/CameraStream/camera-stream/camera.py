@@ -263,7 +263,7 @@ def grab_image_from_stream(cam, interval = 0):
     # we are reading from a file, simulate 30 fps streaming
     # delay appropriately before enqueueing
     cur_frame += 1
-    if interval > 0 and cur_frame - 1 % delay != 0:
+    if interval > 0 and (cur_frame - 1) % delay != 0:
       continue
 
     try:
