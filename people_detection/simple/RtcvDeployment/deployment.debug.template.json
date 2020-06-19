@@ -284,7 +284,7 @@
               "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
               "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
               "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
-              "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":[[0.29,0.01],[0.29,0.75],[0.82,0.75],[0.82,0.01],[0.29,0.01]],\"threshold\":10.0}]}"
+              "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
             }
           }
         }
