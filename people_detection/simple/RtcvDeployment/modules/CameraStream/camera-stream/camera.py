@@ -1,7 +1,7 @@
 import cv2
 import os
 import logging
-import time
+import time, math
 import json
 import datetime
 import numpy as np
@@ -227,6 +227,7 @@ def grab_image_from_stream(cam, interval = 0):
   fps = None
   delay = None
   fps_set = False
+  cur_frame = 0
 
   while keep_listeing_for_frames:
     start = time.time()
@@ -255,16 +256,15 @@ def grab_image_from_stream(cam, interval = 0):
       fps_set = True
       
       if fps is not None and fps > 0:
-        delay = 1. / fps
+        delay = int(math.ceil(fps * interval))
         
       logging.info(f"Retrieved FPS: {fps}")
 
     # we are reading from a file, simulate 30 fps streaming
     # delay appropriately before enqueueing
-    if interval > 0:
-      cur_delay = delay - (time.time() - start)
-      if cur_delay > 0:
-        time.sleep(cur_delay)
+    cur_frame += 1
+    if interval > 0 and cur_frame - 1 % delay != 0:
+      continue
 
     try:
       frame_queue.put_nowait(frame)
