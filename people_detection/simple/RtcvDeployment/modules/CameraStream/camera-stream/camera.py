@@ -102,7 +102,7 @@ def main():
         curtime = time.time()
 
         # not enough time has passed since the last collection
-        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < cam["interval"]:
+        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < float(cam["interval"]):
             continue
 
         if local:
