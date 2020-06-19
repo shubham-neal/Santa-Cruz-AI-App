@@ -101,9 +101,9 @@
         "cameras": {
           "cam001": {
             "space": "Office",
-            "rtsp": "/tmp/video/zoffice.mp4",
+            "rtsp": "$CROSSING_VIDEO_URL",
             "inference": false,
-            "interval": 60,
+            "interval": "$UPLOAD_FREQ_SEC",
             "enabled": true
           }
         }

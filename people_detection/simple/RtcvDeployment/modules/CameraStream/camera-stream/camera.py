@@ -111,11 +111,12 @@ def main():
             vid_file = cam["rtsp"]
 
         # start queuing up images on a different thread
-        if 'rtsp' not in intervals_per_cam[key] or intervals_per_cam[key]['rtsp'] != cam['rtsp'] or intervals_per_cam[key]['interval'] != cam['interval']:
+        if 'rtsp' not in intervals_per_cam[key] or intervals_per_cam[key]['rtsp'] != cam['rtsp']:
           intervals_per_cam[key]['rtsp'] = cam['rtsp']
 
+          keep_listeing_for_frames = False
+          # stop an existing thread
           if frame_grab_listener is not None:
-            keep_listeing_for_frames = False
             frame_grab_listener.join()
             logging.info(f"Stopped listening for {intervals_per_cam[key]['rtsp']}")
 
