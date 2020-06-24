@@ -3,9 +3,7 @@
 # python ssd_object_detection.py --prototxt MobileNetSSD_deploy.prototxt --model MobileNetSSD_deploy.caffemodel --input guitar.mp4 --output output.avi --display 0 --use-gpu 1
 
 # import the necessary packages
-from imutils.video import FPS
 import numpy as np
-import argparse
 import imutils
 import cv2
 import os, logging

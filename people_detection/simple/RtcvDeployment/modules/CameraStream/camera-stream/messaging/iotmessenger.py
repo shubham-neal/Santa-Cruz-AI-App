@@ -4,7 +4,6 @@ from azure.iot.device import IoTHubModuleClient, Message
 
 import logging
 import json
-import base64
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
