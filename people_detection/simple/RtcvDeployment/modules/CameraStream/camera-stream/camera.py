@@ -8,7 +8,7 @@ import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
 import threading
-from queue import Queue, Full
+from streamer.videostream import VideoStream
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -17,9 +17,6 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 
 camera_config = None
 intervals_per_cam = dict()
-keep_listeing_for_frames = False
-
-frame_queue = Queue()
 
 def parse_twin(data):
     global camera_config
@@ -51,26 +48,16 @@ def module_twin_callback(client):
     parse_twin(payload)
 
 def main():
-    global camera_config, keep_listeing_for_frames
+    global camera_config
 
-    if local:
-      # if we are not local this will be overridden anyway
-      fn = os.path.join(os.path.dirname(__file__), "desired.json")
+    messenger = IoTInferenceMessenger()
+    client = messenger.client
 
-      with open(fn, "r") as f:
-          camera_config = json.load(f)
-
-    messenger = None
-    if not local:
-      messenger = IoTInferenceMessenger()
-      client = messenger.client
-
-      twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
-      twin_update_listener.daemon = True
-      twin_update_listener.start()
+    twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
+    twin_update_listener.daemon = True
+    twin_update_listener.start()
 
     blob_service_client = None
-    frame_grab_listener = None
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
@@ -98,37 +85,25 @@ def main():
         
         if key not in intervals_per_cam:
           intervals_per_cam[key] = dict()
-          
-        curtime = time.time()
+          intervals_per_cam[key]['rtsp'] = cam['rtsp']
+          intervals_per_cam[key]['interval'] = float(cam['interval'])
+          intervals_per_cam[key]['video'] = VideoStream(cam['rtsp'], cam['interval'])
+          intervals_per_cam[key]['video'].start()
 
+        curtime = time.time()
+        current_source = intervals_per_cam[key]
+        
         # not enough time has passed since the last collection
-        if 'interval' in intervals_per_cam[key] and curtime - intervals_per_cam[key]['interval'] < float(cam['interval']):
+        if curtime - current_source['interval'] < float(cam['interval']):
             continue
 
-        if local:
-            vid_file = os.path.join(os.path.dirname(__file__), cam["rtsp"])
-        else:
-            vid_file = cam["rtsp"]
-
         # start queuing up images on a different thread
-        if 'rtsp' not in intervals_per_cam[key] or intervals_per_cam[key]['rtsp'] != cam['rtsp']:
-          intervals_per_cam[key]['rtsp'] = cam['rtsp']
+        if current_source['rtsp'] != cam['rtsp'] or current_source['interval'] != float(cam['interval']):
+          current_source['rtsp'] = cam['rtsp']
+          current_source['interva']
 
-          keep_listeing_for_frames = False
           # stop an existing thread
-          if frame_grab_listener is not None:
-            frame_grab_listener.join()
-            logging.info(f"Stopped listening for {intervals_per_cam[key]['rtsp']}")
-
-          keep_listeing_for_frames = True
-          # if we are streaming from a file then pass current expected wait interval. Else - 0
-          # the interval will be used to simulate an 30 fps playback
-          cur_interval = 0 if cam['rtsp'].startswith("rtsp") else float(cam['interval'])
-
-          frame_grab_listener = threading.Thread(target=grab_image_from_stream, args=(cam['rtsp'], cur_interval))
-          frame_grab_listener.daemon = True
-          frame_grab_listener.start()
-          logging.info(f"Started listening for {cam['rtsp']}")
+          current_source['video'].cam = cam['rtsp']
 
         # block until we get something
         img = frame_queue.get()
@@ -153,15 +128,12 @@ def main():
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
-        intervals_per_cam[key]['interval'] = curtime
+        current_source['interval'] = curtime
 
 
 def infer_and_report(messenger, cam_id, detector, img, curtimename):
   try:
     classes, scores, boxes, proc_time = infer(detector, img)
-
-    if local:
-        return
 
     report(messenger, cam_id, classes, scores,
             boxes, curtimename, proc_time)
@@ -215,72 +187,11 @@ def send_img_to_blob(blob_service_client, img, camId):
   os.remove(local_name)
   return name, f"{camId}/{day}"
 
-
-def grab_image_from_stream(cam, interval = 0):
-
-  repeat = 3
-  wait = 0.5
-  frame = None
-
-  video_capture = cv2.VideoCapture(cam)
-
-  fps = None
-  delay = None
-  time_delay = None
-  fps_set = False
-  cur_frame = 0
-
-  while keep_listeing_for_frames:
-    start = time.time()
-
-    for _ in range(repeat):
-      try:
-          res, frame = video_capture.read()
-
-          if not res:
-            video_capture = cv2.VideoCapture(cam)
-            res, frame = video_capture.read()
-          break
-      except:
-          # try to re-capture the stream
-          logging.info("Could not capture video. Recapturing and retrying...")
-          time.sleep(wait)
-
-    if frame is None:
-      logging.info("Failed to capture frame, sending blank image")
-      continue
-
-    # retrieve camera properties. 
-    # fps may not always be available
-    if not fps_set and fps is None:
-      fps = video_capture.get(cv2.CAP_PROP_FPS)
-      fps_set = True
-      
-      if fps is not None and fps > 0:
-        delay = int(math.ceil(fps * interval))
-        time_delay = 1. / fps
-        
-      logging.info(f"Retrieved FPS: {fps}")
-
-    if interval > 0 and time_delay is not None:
-      cur_delay = time_delay - time.time() + start
-      if cur_delay > 0:
-        time.sleep(cur_delay)
-
-    # we are reading from a file, simulate 30 fps streaming
-    # delay appropriately before enqueueing
-    cur_frame += 1
-    if interval > 0 and delay is not None and (cur_frame - 1) % delay != 0:
-      continue
-
-    frame_queue.put_nowait(frame)
-
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
     debug = False
-    local = False  # running raw python code
 
-    if debug and not local:
+    if debug:
 
         logging.info("Please attach a debugger to port 56780")
 
