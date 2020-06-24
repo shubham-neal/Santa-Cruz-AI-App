@@ -43,16 +43,16 @@ class App extends React.Component {
                     aggregator={this.state.aggregator} 
                     fps={this.fps}
                 />
-                {/* <Edit
+                <Edit
                     aggregator={this.state.aggregator}
                     fps={this.fps}
-                    handleUpdateAggregator={this.handleUpdateAggregator}
-                /> */}
+                    updateAggregator={this.updateAggregator}
+                />
             </React.Fragment>
         );
     }
 
-    handleUpdateAggregator = (aggregator) => {
+    updateAggregator = (aggregator) => {
         this.setState({
             aggregator: aggregator
         });

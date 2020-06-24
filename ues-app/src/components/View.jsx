@@ -50,26 +50,26 @@ export class View extends React.Component {
     }
 
     draw() {
-        const ctx = this.canvasRef.current?.getContext("2d");
-        if (ctx) {
-            ctx.clearRect(0, 0, this.state.width, this.state.height);
-            this.drawZones(ctx, this.props.aggregator.zones);
-            this.drawLines(ctx, this.props.aggregator.lines);
-            this.drawDetections(ctx, this.props.frame.detections);
+        const canvasContext = this.canvasRef.current?.getContext("2d");
+        if (canvasContext) {
+            canvasContext.clearRect(0, 0, this.props.width, this.props.height);
+            this.drawZones(canvasContext, this.props.aggregator.zones);
+            this.drawLines(canvasContext, this.props.aggregator.lines);
+            this.drawDetections(canvasContext, this.props.frame.detections);
         }
     }
 
-    drawLines(ctx, lines) {
+    drawLines(canvasContext, lines) {
         let l = lines.length;
         for (let i = 0; i < l; i++) {
             const line = lines[i];
-            this.drawLine(ctx, line);
+            this.drawLine(canvasContext, line);
         }
     }
 
-    drawLine(ctx, line) {
-        ctx.strokeStyle = 'violet';
-        ctx.lineWidth = 3;
+    drawLine(canvasContext, line) {
+        canvasContext.strokeStyle = 'violet';
+        canvasContext.lineWidth = 3;
 
         let l = line.length;
         for (let i = 0; i < l; i++) {
@@ -78,26 +78,26 @@ export class View extends React.Component {
                 y: this.props.height * line[i][1]
             };
             if (i === 0) {
-                ctx.moveTo(point.x, point.y);
+                canvasContext.moveTo(point.x, point.y);
             } else {
-                ctx.lineTo(point.x, point.y);
+                canvasContext.lineTo(point.x, point.y);
             }
         }
-        ctx.closePath();
-        ctx.stroke();
+        canvasContext.closePath();
+        canvasContext.stroke();
     }
 
-    drawZones(ctx, zones) {
+    drawZones(canvasContext, zones) {
         let l = zones.length;
         for (let i = 0; i < l; i++) {
             const zone = zones[i];
-            this.drawZone(ctx, zone);
+            this.drawZone(canvasContext, zone);
         }
     }
 
-    drawZone(ctx, zone) {
-        ctx.strokeStyle = 'violet';
-        ctx.lineWidth = 3;
+    drawZone(canvasContext, zone) {
+        canvasContext.strokeStyle = 'violet';
+        canvasContext.lineWidth = 3;
 
         let l = zone.polygon.length;
         for (let i = 0; i < l; i++) {
@@ -106,30 +106,31 @@ export class View extends React.Component {
                 y: this.props.height * zone.polygon[i][1]
             };
             if (i === 0) {
-                ctx.moveTo(point.x, point.y);
+                canvasContext.beginPath();
+                canvasContext.moveTo(point.x, point.y);
             } else {
-                ctx.lineTo(point.x, point.y);
+                canvasContext.lineTo(point.x, point.y);
             }
         }
-        ctx.closePath();
-        ctx.stroke();
+        canvasContext.closePath();
+        canvasContext.stroke();
     }
 
-    drawDetections(ctx, detections) {
+    drawDetections(canvasContext, detections) {
         const l = detections.length;
         for (let i = 0; i < l; i++) {
             const detection = detections[i];
-            this.drawDetection(ctx, detection);
+            this.drawDetection(canvasContext, detection);
         }
     }
 
-    drawDetection(ctx, detection) {
-        ctx.strokeStyle = 'yellow';
-        ctx.lineWidth = 2;
-        const x = this.state.width * detection.rectangle.left;
-        const y = this.state.height * detection.rectangle.top;
-        const w = this.state.width * detection.rectangle.width;
-        const h = this.state.height * detection.rectangle.height;
-        ctx.strokeRect(x, y, w, h);
+    drawDetection(canvasContext, detection) {
+        canvasContext.strokeStyle = 'yellow';
+        canvasContext.lineWidth = 2;
+        const x = this.props.width * detection.rectangle.left;
+        const y = this.props.height * detection.rectangle.top;
+        const w = this.props.width * detection.rectangle.width;
+        const h = this.props.height * detection.rectangle.height;
+        canvasContext.strokeRect(x, y, w, h);
     }
 }
