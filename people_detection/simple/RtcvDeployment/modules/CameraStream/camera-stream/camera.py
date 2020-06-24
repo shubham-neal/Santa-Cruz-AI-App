@@ -64,7 +64,7 @@ def main():
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
-    for i in range(20):
+    for _ in range(20):
       if camera_config is not None:
         break
       time.sleep(1)
@@ -85,26 +85,31 @@ def main():
 
         if not cam["enabled"]:
             continue
+
+        curtime = time.time()
         
         if key not in intervals_per_cam:
           intervals_per_cam[key] = dict()
-          intervals_per_cam[key]['rtsp'] = cam['rtsp']
-          intervals_per_cam[key]['interval'] = float(cam['interval'])
-          intervals_per_cam[key]['video'] = VideoStream(cam['rtsp'], cam['interval'])
-          intervals_per_cam[key]['video'].start()
+          current_source = intervals_per_cam[key]
+          current_source['timer'] = 0
+          current_source['rtsp'] = cam['rtsp']
+          current_source['interval'] = float(cam['interval'])
+          current_source['video'] = VideoStream(cam['rtsp'], cam['interval'])
+          current_source['video'].start()
 
-        curtime = time.time()
-        current_source = intervals_per_cam[key]
+        # this will keep track of how long we need to wait between
+        # bursts of activity
         video_streamer = current_source['video']
 
         # not enough time has passed since the last collection
-        if curtime - current_source['interval'] < float(cam['interval']):
+        if curtime - current_source['timer'] < float(cam['interval']):
             continue
 
+        current_source['timer'] = curtime
         # here we account for the new configuration properties
         if current_source['rtsp'] != cam['rtsp'] or current_source['interval'] != float(cam['interval']):
           current_source['rtsp'] = cam['rtsp']
-          current_source['interva'] = float(cam['interval'])
+          current_source['interval'] = float(cam['interval'])
 
           # stop an existing thread
           video_streamer.reset(current_source['rtsp'], current_source['interval'])
@@ -126,10 +131,6 @@ def main():
         if curtimename is not None:
           messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
-
-        # update collection time for camera
-        current_source['interval'] = curtime
-
 
 def infer(detector, img):
   im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
