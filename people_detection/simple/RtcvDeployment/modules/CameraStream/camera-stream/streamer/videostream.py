@@ -42,6 +42,23 @@ def stop(self):
   self.frame_grabber.join()
   self.frame_grabber = None
 
+def reset(self, stream_source, interval):
+  '''
+  Any change to stream source or interval will re-set streaming
+  '''
+  
+  if stream_source == "":
+    raise ValueError("stream cannot be empty")
+  if interval <= 0 or interval >= 24 * 3600:
+    raise ValueError("pulse interval should be positive, shorter than a day")
+
+  self.stop()
+
+  self.cam = stream_source
+  self.interval = interval 
+
+  self.start()
+
 def start(self):
   if self.frame_grabber is not None:
     self.stop()

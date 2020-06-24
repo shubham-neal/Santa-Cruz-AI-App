@@ -9,6 +9,7 @@ from azure.storage.blob import BlobServiceClient
 import requests
 import threading
 from streamer.videostream import VideoStream
+from detector.ssd_object_detection import Detector
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -49,6 +50,8 @@ def module_twin_callback(client):
 
 def main():
     global camera_config
+
+    detector = Detector()
 
     messenger = IoTInferenceMessenger()
     client = messenger.client
@@ -92,54 +95,40 @@ def main():
 
         curtime = time.time()
         current_source = intervals_per_cam[key]
-        
+        video_streamer = current_source['video']
+
         # not enough time has passed since the last collection
         if curtime - current_source['interval'] < float(cam['interval']):
             continue
 
-        # start queuing up images on a different thread
+        # here we account for the new configuration properties
         if current_source['rtsp'] != cam['rtsp'] or current_source['interval'] != float(cam['interval']):
           current_source['rtsp'] = cam['rtsp']
-          current_source['interva']
+          current_source['interva'] = float(cam['interval'])
 
           # stop an existing thread
-          current_source['video'].cam = cam['rtsp']
+          video_streamer.reset(current_source['rtsp'], current_source['interval'])
 
         # block until we get something
-        img = frame_queue.get()
-    
-        logging.info(f"Grabbed image from {cam['rtsp']}")
+        frame_id, img = video_streamer.get_frame_with_id()
+        logging.info(f"Grabbed frame {frame_id} from {cam['rtsp']}")
 
         camId = f"{cam['space']}/{key}"
 
+        # send to blob storage and retrieve the timestamp by which we will identify the video
         curtimename = None
         if camera_config["blob"] is not None:
-            curtimename, full_cam_id = send_img_to_blob(blob_service_client, img, camId)
+            curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
 
-        if "inference" in cam and cam["inference"]:
-          if "detector" not in cam:
-              logging.error(f"Cannot perform inference: detector not specified for camera {key}")
-          else:
-              infer_and_report(messenger, full_cam_id, cam["detector"], img, curtimename)
+        detections = detector.detect(img)
 
         # message the image capture upstream
         if curtimename is not None:
-          messenger.send_image(camId, curtimename)
+          messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
         # update collection time for camera
         current_source['interval'] = curtime
-
-
-def infer_and_report(messenger, cam_id, detector, img, curtimename):
-  try:
-    classes, scores, boxes, proc_time = infer(detector, img)
-
-    report(messenger, cam_id, classes, scores,
-            boxes, curtimename, proc_time)
-
-  except Exception as e:
-    logging.error(f"Exception occured during inference: {e}")
 
 
 def infer(detector, img):
