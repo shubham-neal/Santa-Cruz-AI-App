@@ -64,11 +64,6 @@ def main():
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
-    for _ in range(20):
-      if camera_config is not None:
-        break
-      time.sleep(1)
-
     if camera_config is None:
       payload = client.get_twin()
       parse_twin(payload)
@@ -179,7 +174,7 @@ def send_img_to_blob(blob_service_client, img, camId):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = False
+    debug = True
 
     if debug:
 
