@@ -9,17 +9,15 @@ export class Edit extends React.Component {
             lines: [],
             zones: []
         },
-        frame: {
-            detections: []
-        },
         fps: 30
     }
     constructor(props) {
         super(props);
         this.state = {
+            aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
             selectedZoneIndex: 0,
             selectedPointIndex: -1,
-            selectedPointRadius: 0.01
+            selectedPointRadius: 0.025
         };
 
         this.canvasRef = React.createRef();
@@ -32,6 +30,12 @@ export class Edit extends React.Component {
         setInterval(() => {
             this.draw();
         }, 1000/this.props.fps);
+    }
+
+    componentDidUpdate() {
+        // this.setState({
+        //     aggregator: JSON.parse(JSON.stringify(this.props.aggregator))
+        // })
     }
 
     render() {
@@ -58,7 +62,7 @@ export class Edit extends React.Component {
                         onMouseOut={this.handleMouseOut}
                     />
                     {
-                        this.props.aggregator.zones.map((zone, index) => {
+                        this.state.aggregator.zones.map((zone, index) => {
                             return (
                                 <div
                                     key={index}
@@ -105,6 +109,7 @@ export class Edit extends React.Component {
         this.setState({
             selectedPointIndex: -1
         });
+        this.props.updateAggregator(this.state.aggregator);
     }
 
     handleKeyUp = (e) => {
@@ -118,9 +123,9 @@ export class Edit extends React.Component {
     addPoint = (e) => {
         if (this.canvasRef.current && this.state.selectedPointIndex === -1) {
             const rect = this.canvasRef.current?.getBoundingClientRect();
-            const x = this.clamp((e.clientX - rect.left) / this.state.width, 0, 1);
-            const y = this.clamp((e.clientY - rect.top) / this.state.height, 0, 1);
-            this.state.zones[this.state.selectedZoneIndex].polygon.push([x, y]);
+            const x = this.clamp((e.clientX - rect.left) / this.props.width, 0, 1);
+            const y = this.clamp((e.clientY - rect.top) / this.props.height, 0, 1);
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.push([x, y]);
         }
     }
 
@@ -129,11 +134,11 @@ export class Edit extends React.Component {
             this.canvasRef.current &&
             this.state.selectedZoneIndex !== -1 &&
             this.state.selectedPointIndex !== -1 &&
-            this.state.zones[this.state.selectedZoneIndex].polygon.length > 1
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.length > 1
         ) {
-            const point = this.state.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex];
+            const point = this.state.aggregator.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex];
 
-            this.state.zones[this.state.selectedZoneIndex].polygon.splice(this.state.selectedPointIndex, 0, [point[0], point[1]]);
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.splice(this.state.selectedPointIndex, 0, [point[0], point[1]]);
 
             this.setState({
                 selectedPointIndex: -1
@@ -147,13 +152,13 @@ export class Edit extends React.Component {
             this.canvasRef.current &&
             this.state.selectedZoneIndex !== -1 &&
             this.state.selectedPointIndex !== -1 &&
-            this.state.zones[this.state.selectedZoneIndex].polygon.length > this.state.selectedPointIndex
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.length > this.state.selectedPointIndex
         ) {
             const rect = this.canvasRef.current?.getBoundingClientRect();
-            const x = this.clamp((e.clientX - rect.left) / this.state.width, 0, 1);
-            const y = this.clamp((e.clientY - rect.top) / this.state.height, 0, 1);
+            const x = this.clamp((e.clientX - rect.left) / this.props.width, 0, 1);
+            const y = this.clamp((e.clientY - rect.top) / this.props.height, 0, 1);
             // eslint-disable-next-line react/no-direct-mutation-state
-            this.state.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex] = [x, y];
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex] = [x, y];
         }
     }
 
@@ -161,9 +166,9 @@ export class Edit extends React.Component {
         if (
             this.state.selectedZoneIndex !== -1 &&
             this.state.selectedPointIndex !== -1 &&
-            this.state.zones[this.state.selectedZoneIndex].polygon.length > this.state.selectedPointIndex
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.length > this.state.selectedPointIndex
         ) {
-            this.state.zones[this.state.selectedZoneIndex].polygon.splice(this.state.selectedPointIndex, 1);
+            this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.splice(this.state.selectedPointIndex, 1);
             this.setState({
                 selectedPointIndex: -1
             });
@@ -173,8 +178,8 @@ export class Edit extends React.Component {
     selectPoint = () => {
         if (this.canvasRef.current && this.state.selectedZoneIndex !== -1) {
             const rect = this.canvasRef.current?.getBoundingClientRect();
-            const x = this.clamp((this.mousePos.x - rect.left) / this.state.width, 0, 1);
-            const y = this.clamp((this.mousePos.y - rect.top) / this.state.height, 0, 1);
+            const x = this.clamp((this.mousePos.x - rect.left) / this.props.width, 0, 1);
+            const y = this.clamp((this.mousePos.y - rect.top) / this.props.height, 0, 1);
             const nearestPointIndex = this.findNearestPoint({ x: x, y: y });
 
             if (nearestPointIndex !== this.state.selectedPointIndex) {
@@ -192,9 +197,9 @@ export class Edit extends React.Component {
     findNearestPoint = (point) => {
         let nearestPointIndex = -1;
         let nearestPointDistance = -1;
-        const l = this.state.zones[this.state.selectedZoneIndex].polygon.length;
+        const l = this.state.aggregator.zones[this.state.selectedZoneIndex].polygon.length;
         for (let i = 0; i < l; i++) {
-            const p = this.state.zones[this.state.selectedZoneIndex].polygon[i];
+            const p = this.state.aggregator.zones[this.state.selectedZoneIndex].polygon[i];
             const distance = Math.hypot(point.x - p[0], point.y - p[1]);
             if (distance <= nearestPointDistance || nearestPointDistance === -1) {
                 nearestPointDistance = distance;
@@ -206,90 +211,92 @@ export class Edit extends React.Component {
 
     draw = () => {
         setInterval(() => {
-            const ctx = this.canvasRef.current?.getContext("2d");
-            if (ctx) {
-                ctx.clearRect(0, 0, this.state.width, this.state.height);
-                this.drawZones(ctx);
-                this.selectPoint();
-                this.drawSelectedPoint(ctx);
+            const canvasContext = this.canvasRef.current?.getContext("2d");
+            if (canvasContext) {
+                canvasContext.clearRect(0, 0, this.props.width, this.props.height);
+                this.drawZones(canvasContext);
+                if(this.mouseInside) {
+                    this.selectPoint();
+                    this.drawSelectedPoint(canvasContext);
+                }
             }
         }, 1000 / this.state.fps);
     }
 
-    drawZones = (ctx) => {
-        ctx.strokeStyle = 'violet';
-        ctx.lineWidth = 3;
+    drawZones = (canvasContext) => {
+        canvasContext.strokeStyle = 'violet';
+        canvasContext.lineWidth = 3;
 
-        const zl = this.state.zones.length;
+        const zl = this.state.aggregator.zones.length;
         for (let z = 0; z < zl; z++) {
-            const zone = this.state.zones[z];
+            const zone = this.state.aggregator.zones[z];
             const pl = zone.polygon.length;
             for (let p = 0; p < pl; p++) {
                 if (p > 0) {
                     const start = {
-                        x: this.state.width * zone.polygon[p - 1][0],
-                        y: this.state.height * zone.polygon[p - 1][1]
+                        x: this.props.width * zone.polygon[p - 1][0],
+                        y: this.props.height * zone.polygon[p - 1][1]
                     };
                     const end = {
-                        x: this.state.width * zone.polygon[p][0],
-                        y: this.state.height * zone.polygon[p][1]
+                        x: this.props.width * zone.polygon[p][0],
+                        y: this.props.height * zone.polygon[p][1]
                     };
-                    ctx.setLineDash([]);
-                    ctx.beginPath();
-                    ctx.moveTo(start.x, start.y);
-                    ctx.lineTo(end.x, end.y);
-                    ctx.closePath();
-                    ctx.stroke();
+                    canvasContext.setLineDash([]);
+                    canvasContext.beginPath();
+                    canvasContext.moveTo(start.x, start.y);
+                    canvasContext.lineTo(end.x, end.y);
+                    canvasContext.closePath();
+                    canvasContext.stroke();
                 }
             }
             if (pl > 2) {
                 const first = {
-                    x: this.state.width * zone.polygon[0][0],
-                    y: this.state.height * zone.polygon[0][1]
+                    x: this.props.width * zone.polygon[0][0],
+                    y: this.props.height * zone.polygon[0][1]
                 };
                 const last = {
-                    x: this.state.width * zone.polygon[pl - 1][0],
-                    y: this.state.height * zone.polygon[pl - 1][1]
+                    x: this.props.width * zone.polygon[pl - 1][0],
+                    y: this.props.height * zone.polygon[pl - 1][1]
                 };
                 if (this.state.selectedZoneIndex === z && this.mouseInside) {
-                    ctx.setLineDash([3, 5]);
+                    canvasContext.setLineDash([3, 5]);
                 } else {
-                    ctx.setLineDash([]);
+                    canvasContext.setLineDash([]);
                 }
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(first.x, first.y);
-                ctx.closePath();
-                ctx.stroke();
+                canvasContext.beginPath();
+                canvasContext.moveTo(last.x, last.y);
+                canvasContext.lineTo(first.x, first.y);
+                canvasContext.closePath();
+                canvasContext.stroke();
             }
             if (this.state.selectedZoneIndex === z && this.mouseInside) {
                 for (let p = 0; p < pl; p++) {
                     const point = {
-                        x: this.state.width * zone.polygon[p][0],
-                        y: this.state.height * zone.polygon[p][1]
+                        x: this.props.width * zone.polygon[p][0],
+                        y: this.props.height * zone.polygon[p][1]
                     };
-                    ctx.setLineDash([]);
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-                    ctx.closePath();
-                    ctx.stroke();
+                    canvasContext.setLineDash([]);
+                    canvasContext.beginPath();
+                    canvasContext.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                    canvasContext.closePath();
+                    canvasContext.stroke();
                 }
             }
         }
     }
 
-    drawSelectedPoint = (ctx) => {
+    drawSelectedPoint = (canvasContext) => {
         if (this.state.selectedZoneIndex !== -1 && this.state.selectedPointIndex !== -1) {
-            ctx.strokeStyle = 'yellow';
-            ctx.lineWidth = 3;
+            canvasContext.strokeStyle = 'yellow';
+            canvasContext.lineWidth = 3;
 
             const point = {
-                x: this.state.width * this.state.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex][0],
-                y: this.state.height * this.state.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex][1]
+                x: this.props.width * this.state.aggregator.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex][0],
+                y: this.props.height * this.state.aggregator.zones[this.state.selectedZoneIndex].polygon[this.state.selectedPointIndex][1]
             };
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            ctx.stroke();
+            canvasContext.beginPath();
+            canvasContext.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+            canvasContext.stroke();
         }
     }
 }

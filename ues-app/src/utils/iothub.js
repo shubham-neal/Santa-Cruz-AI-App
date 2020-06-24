@@ -31,7 +31,7 @@ EventHubClient
                     // console.log(message);
                     console.log(`partition id: ${id}`);
                     if (message.hasOwnProperty("body") && message.body.hasOwnProperty("detections")) {
-                        console.log(JSON.stringify(message.body));
+                        // console.log(JSON.stringify(message.body));
                         webSocket.send(JSON.stringify(message));
                     } else {//if(message.hasOwnProperty("applicationProperties") && message.applicationProperties.hasOwnProperty("type")) {
                         //console.log(JSON.stringify(message));
