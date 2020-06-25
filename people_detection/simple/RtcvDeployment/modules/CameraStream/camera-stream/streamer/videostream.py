@@ -97,6 +97,8 @@ class VideoStream:
     frame = None
 
     cur_frame = 0
+    # this is used for frame delays if the video is on an infinite loop
+    continuous_frame = 0
 
     # will create a new video capture and determine streaming speed
     self.setup_stream()
@@ -132,10 +134,12 @@ class VideoStream:
       # we are reading from a file, simulate 30 self.fps streaming
       # delay appropriately before enqueueing
       cur_frame += 1
-      if self.delay_frames is not None and (cur_frame - 1) % self.delay_frames != 0:
+
+      continuous_frame += 1
+      if self.delay_frames is not None and (continuous_frame - 1) % self.delay_frames != 0:
         continue
 
-      self.frame_queue.put_nowait((cur_frame, frame))
+      self.frame_queue.put_nowait((continuous_frame, frame))
 
     self.video_capture.release()
     self.video_capture = None

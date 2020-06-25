@@ -53,8 +53,7 @@ class IoTInferenceMessenger(IoTMessaging):
       logging.info(f"Sent: {body}")
 
   def send_image_and_detection(self, camId, imgname, frame_id, detections):
-      body = {"cameraId": camId, "image_name": imgname, "frameId": frame_id}
-      body = {**body, **detections}
+      body = {"cameraId": camId, "image_name": imgname, "frameId": frame_id, "detections": detections}
 
       self.send_event(body, "image")
       logging.info(f"Sent image: {imgname}")
