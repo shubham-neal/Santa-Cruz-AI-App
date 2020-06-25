@@ -16,7 +16,7 @@ class App extends React.Component {
                 lines: [],
                 zones: [{
                     name: "queue",
-                    polygon: [[0.5, 0.25], [0.58, 0.25], [0.58, 0.5], [0.5, 0.5], [0.5, 0.25]],
+                    polygon: [],//[[0.5, 0.25], [0.58, 0.25], [0.58, 0.5], [0.5, 0.5], [0.5, 0.25]],
                     threshold: 10.0
                 }]
             },

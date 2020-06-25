@@ -33,9 +33,7 @@ export class Edit extends React.Component {
     }
 
     componentDidUpdate() {
-        // this.setState({
-        //     aggregator: JSON.parse(JSON.stringify(this.props.aggregator))
-        // })
+        // TODO: update when you get the zones/lines from manifest file
     }
 
     render() {
