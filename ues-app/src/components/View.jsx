@@ -5,6 +5,7 @@ export class View extends React.Component {
         border: '2px solid black',
         width: 300,
         height: 300,
+        fps: 30,
         aggregator: {
             lines: [],
             zones: []
@@ -12,7 +13,7 @@ export class View extends React.Component {
         frame: {
             detections: []
         },
-        fps: 30
+        image: new Image()
     }
     constructor(props) {
         super(props);
@@ -29,7 +30,7 @@ export class View extends React.Component {
     }
 
     render() {
-        return this.props.frame ? (
+        return (
             <React.Fragment>
                 <div style={{
                     margin: 10,
@@ -46,13 +47,14 @@ export class View extends React.Component {
                     />
                 </div>
             </React.Fragment>
-        ) : null;
+        );
     }
 
     draw() {
         const canvasContext = this.canvasRef.current?.getContext("2d");
         if (canvasContext) {
             canvasContext.clearRect(0, 0, this.props.width, this.props.height);
+            canvasContext.drawImage(this.props.image, 0, 0, this.props.width, this.props.height);
             this.drawZones(canvasContext, this.props.aggregator.zones);
             this.drawLines(canvasContext, this.props.aggregator.lines);
             this.drawDetections(canvasContext, this.props.frame.detections);
