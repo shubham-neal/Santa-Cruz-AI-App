@@ -57,7 +57,7 @@ RUN pip install -r /tmp/requirements.txt
 RUN cd /opencv && mkdir build && cd build && \
    cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	-D CMAKE_INSTALL_PREFIX=/usr/local \
-	-D INSTALL_PYTHON_EXAMPLES=ON \
+	-D INSTALL_PYTHON_EXAMPLES=OFF \
 	-D INSTALL_C_EXAMPLES=OFF \
 	-D OPENCV_ENABLE_NONFREE=ON \
 	-D WITH_CUDA=ON \
@@ -74,6 +74,6 @@ RUN cd /opencv && mkdir build && cd build && \
         -D BUILD_TESTS=OFF \
         -D BUILD_PERF_TESTS=OFF \
         -D BUILD_opencv_python_tests=OFF \
-	-D BUILD_EXAMPLES=ON ..
+	-D BUILD_EXAMPLES=OFF ..
 
 RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig      
