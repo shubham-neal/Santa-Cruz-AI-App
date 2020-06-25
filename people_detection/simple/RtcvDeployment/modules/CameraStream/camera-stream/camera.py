@@ -192,7 +192,7 @@ def send_img_to_blob(blob_service_client, img, camId):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = True
+    debug = False
 
     if debug:
 
