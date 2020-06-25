@@ -4,7 +4,6 @@ from azure.iot.device import IoTHubModuleClient, Message
 
 import logging
 import json
-import base64
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -53,8 +52,9 @@ class IoTInferenceMessenger(IoTMessaging):
       self.send_event(body)
       logging.info(f"Sent: {body}")
 
-  def send_image(self, camId, imgname):
-      body = {"cameraId": camId, "image_name": imgname}
+  def send_image_and_detection(self, camId, imgname, frame_id, detections):
+      body = {"cameraId": camId, "image_name": imgname, "frameId": frame_id}
+      body = {**body, **detections}
 
       self.send_event(body, "image")
       logging.info(f"Sent image: {imgname}")

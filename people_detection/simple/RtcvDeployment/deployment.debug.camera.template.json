@@ -6,6 +6,14 @@
           "camerastream": {
             "version": "1.0",
             "type": "docker",
+            "env" : {
+              "DISPLAY": {
+                "value": "$DISPLAY"
+              },
+              "QT_X11_NO_MITSHM": {
+                "value": "1"
+              }
+            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
@@ -15,7 +23,9 @@
                   "56780/tcp": {}
                 },
                 "HostConfig": {
+                  "IpcMode": "host",
                   "Binds": [
+                    "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
                   ],
                   "PortBindings": {
