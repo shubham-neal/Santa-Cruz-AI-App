@@ -10,7 +10,7 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 def main_debug():
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
 
-  detector = Detector(use_gpu=False)
+  detector = Detector(use_gpu=True)
   vid_stream = VideoStream(video_file, interval= 0.03)
   vid_stream.start()
 
