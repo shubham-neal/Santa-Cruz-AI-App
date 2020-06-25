@@ -28,7 +28,7 @@ EventHubClient
                 id,
                 (message) => {
                     console.log("START OF MESSAGE");
-                    // console.log(message);
+                    console.log(JSON.stringify(message));
                     console.log(`partition id: ${id}`);
                     if (message.hasOwnProperty("body") && message.body.hasOwnProperty("detections")) {
                         // console.log(JSON.stringify(message.body));

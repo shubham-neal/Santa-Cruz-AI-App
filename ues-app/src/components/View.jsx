@@ -18,7 +18,7 @@ export class View extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            
+
         };
         this.canvasRef = React.createRef();
     }
@@ -26,7 +26,7 @@ export class View extends React.Component {
     componentDidMount() {
         setInterval(() => {
             this.draw();
-        }, 1000/this.props.fps);
+        }, 1000 / this.props.fps);
     }
 
     render() {
@@ -129,10 +129,18 @@ export class View extends React.Component {
     drawDetection(canvasContext, detection) {
         canvasContext.strokeStyle = 'yellow';
         canvasContext.lineWidth = 2;
-        const x = this.props.width * detection.rectangle.left;
-        const y = this.props.height * detection.rectangle.top;
-        const w = this.props.width * detection.rectangle.width;
-        const h = this.props.height * detection.rectangle.height;
-        canvasContext.strokeRect(x, y, w, h);
+        if (detection.bbox) {
+            const x = this.props.width * detection.bbox[0];
+            const y = this.props.height * detection.bbox[1];
+            const w = this.props.width * Math.abs(detection.bbox[2] - detection.bbox[0]);
+            const h = this.props.height * Math.abs(detection.bbox[3] - detection.bbox[1]);
+            canvasContext.strokeRect(x, y, w, h);
+        } else if(detection.rectangle){
+            const x = this.props.width * detection.rectangle.left;
+            const y = this.props.height * detection.rectangle.top;
+            const w = this.props.width * detection.rectangle.width;
+            const h = this.props.height * detection.rectangle.height;
+            canvasContext.strokeRect(x, y, w, h);
+        }
     }
 }
