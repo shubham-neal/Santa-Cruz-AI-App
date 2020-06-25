@@ -5,11 +5,11 @@ export class Edit extends React.Component {
         border: '2px solid #ee82ee',
         width: 300,
         height: 300,
+        fps: 30,
         aggregator: {
             lines: [],
             zones: []
-        },
-        fps: 30
+        }
     }
     constructor(props) {
         super(props);

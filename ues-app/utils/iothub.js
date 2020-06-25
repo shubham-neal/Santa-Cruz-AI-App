@@ -33,8 +33,9 @@ EventHubClient
                     if (message.hasOwnProperty("body") && message.body.hasOwnProperty("detections")) {
                         // console.log(JSON.stringify(message.body));
                         webSocket.send(JSON.stringify(message));
-                    } else {//if(message.hasOwnProperty("applicationProperties") && message.applicationProperties.hasOwnProperty("type")) {
-                        //console.log(JSON.stringify(message));
+                    } else if(message.hasOwnProperty("applicationProperties") && message.applicationProperties.hasOwnProperty("type")) {
+                        // console.log(JSON.stringify(message));
+                        webSocket.send(JSON.stringify(message));
                     }
                     console.log("END OF MESSAGE");
                     //webSocket.send(JSON.stringify(message));
