@@ -10,6 +10,7 @@ import requests
 import threading
 from streamer.videostream import VideoStream
 from detector.ssd_object_detection import Detector
+from azure.iot.device.exceptions import ConnectionFailedError
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -45,7 +46,19 @@ def parse_twin(data):
 def module_twin_callback(client):
 
   while True:
-    payload = client.receive_twin_desired_properties_patch()
+    # for debugging try and establish a connection
+    # otherwise we don't care. If it can't connect let iotedge restart it
+    if debug:
+      for _ in range(30):
+        try:
+          payload = client.receive_twin_desired_properties_patch()
+          break
+        except ConnectionFailedError:
+          logging.warn("Connection failed, retrying")
+          time.sleep(1)
+    else:
+      payload = client.receive_twin_desired_properties_patch()
+
     parse_twin(payload)
 
 def main():
@@ -64,6 +77,11 @@ def main():
 
     # Should be properly asynchronous, but since we don't change things often
     # Wait for it to come back from twin update the very first time
+    for i in range(20):
+      if camera_config is None:
+        time.sleep(0.5)
+      break
+    
     if camera_config is None:
       payload = client.get_twin()
       parse_twin(payload)

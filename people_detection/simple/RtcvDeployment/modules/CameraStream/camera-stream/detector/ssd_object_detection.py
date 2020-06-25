@@ -72,9 +72,9 @@ class Detector:
 					if self.class_idx is not None and idx != self.class_idx:
 						continue
 					
-					(startX, startY, endX, endY) = detections[0, 0, i, 3:7] 
+					[startX, startY, endX, endY] = detections[0, 0, i, 3:7].astype("float")
 
-					results.append({"bbox": (startX, startY, endX, endY), "label": self.CLASSES[idx], "confidence": confidence, "class": idx })
+					results.append({"bbox": [startX, startY, endX, endY], "label": self.CLASSES[idx], "confidence": str(confidence), "class": idx })
 
 			return results
 
