@@ -89,7 +89,7 @@ def main():
           current_source['timer'] = 0
           current_source['rtsp'] = cam['rtsp']
           current_source['interval'] = float(cam['interval'])
-          current_source['video'] = VideoStream(cam['rtsp'], cam['interval'])
+          current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
           current_source['video'].start()
 
         # this will keep track of how long we need to wait between
