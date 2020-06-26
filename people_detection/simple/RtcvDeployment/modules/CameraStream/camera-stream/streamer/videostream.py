@@ -22,7 +22,7 @@ class VideoStream:
       raise ValueError("pulse interval should be positive, shorter than a day")
 
     self.keep_listeing_for_frames = True
-    self.frame_queue = Queue()
+    self.frame_queue = Queue(100)
     self.cam = stream_source
     self.interval = interval 
     self.frame_grabber = None
@@ -139,7 +139,7 @@ class VideoStream:
       if self.delay_frames is not None and (continuous_frame - 1) % self.delay_frames != 0:
         continue
 
-      self.frame_queue.put_nowait((continuous_frame, frame))
+      self.frame_queue.put((continuous_frame, frame))
 
     self.video_capture.release()
     self.video_capture = None
