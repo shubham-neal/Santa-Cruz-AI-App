@@ -38,7 +38,7 @@ steps:
       
       [ -v RESOURCE_GROUP ] && sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"$RESOURCE_GROUP\"#g' "$VARIABLES_FILE_PATH"
       
-      [ -v LOCATIONE ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
+      [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
       
