@@ -138,14 +138,16 @@ def main():
         if camera_config["blob"] is not None:
             curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
 
-        detections = detector.detect(img)
+        # TODO: queue up detections
+        if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
+          detections = detector.detect(img, frame_id, curtimename)
 
         # message the image capture upstream
         if curtimename is not None:
           messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
-def infer(detector, img):
+def infer(detector, img, frame_id, img_name):
   im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
   im = cv2.resize(im, (300, 300), interpolation=cv2.INTER_LINEAR)
 

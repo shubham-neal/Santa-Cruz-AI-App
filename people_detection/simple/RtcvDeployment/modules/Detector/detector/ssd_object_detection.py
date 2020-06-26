@@ -24,8 +24,8 @@ class Detector:
   def __init__(self, use_gpu=True, confidence=0.5, people_only=True):
     self.confidence = confidence
     
-    prototxt = os.path.join(os.path.dirname(__file__), "MobileNetSSD_deploy.prototxt")
-    caffemodel = os.path.join(os.path.dirname(__file__), "MobileNetSSD_deploy.caffemodel")
+    prototxt = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.prototxt")
+    caffemodel = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.caffemodel")
 
     self.net = cv2.dnn.readNetFromCaffe(prototxt, caffemodel)
     self.class_idx = None
@@ -36,10 +36,13 @@ class Detector:
 
     # check if we are going to use GPU
     if use_gpu:
-      # set CUDA as the preferable backend and target
-      self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-      self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-      logging.info("Set preferable backend and target to CUDA...")
+      try:
+        # set CUDA as the preferable backend and target
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        logging.info("Set preferable backend and target to CUDA...")
+      except:
+        logging.warn("Could not set the backend to CUDA")
 
   def detect(self, frame):
 
@@ -51,7 +54,15 @@ class Detector:
       # pass the blob through the network and obtain the detections and
       # predictions
       self.net.setInput(blob)
-      detections = self.net.forward()
+      try:
+        detections = self.net.forward()
+      except:
+        
+        logging.warn("Could not run on GPU. Switching to CPU")
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
+        detections = self.net.forward()
 
       # loop over the detections
       results = []
