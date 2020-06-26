@@ -1,0 +1,208 @@
+# This pipeline automates the deployment and setup for required resources for Person Tracking App
+
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+
+# This step updates the values in variable.template file using the pipeline variables
+# This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
+- task: Bash@3
+  enabled: true
+  displayName: 'Update values in variable.template file using pipeline variables'
+  env:
+    SP_APP_PWD: $(SP_APP_PWD)
+    EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Write your commands here
+      
+      echo "Updating values in variables script"
+      
+      echo $VARIABLES_FILE_PATH
+      
+      echo "Starting updates"
+      
+      [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v RESOURCE_GROUP ] && sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"$RESOURCE_GROUP\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v LOCATIONE ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v DEVICE_NAME ] && sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"$DEVICE_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v AZURE_MONITOR_SP_NAME ] && sed -i 's#^\(AZURE_MONITOR_SP_NAME[ ]*=\).*#\1\"$AZURE_MONITOR_SP_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v EDGE_DEVICE_IP ] && sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v EDGE_DEVICE_USERNAME ] && sed -i 's#^\(EDGE_DEVICE_USERNAME[ ]*=\).*#\1\"$EDGE_DEVICE_USERNAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v EDGE_DEVICE_PASSWORD ] && sed -i 's#^\(EDGE_DEVICE_PASSWORD[ ]*=\).*#\1\"$EDGE_DEVICE_PASSWORD\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v MANIFEST_TEMPLATE_NAME ] && sed -i 's#^\(MANIFEST_TEMPLATE_NAME[ ]*=\).*#\1\"$MANIFEST_TEMPLATE_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v MANIFEST_ENVIRONMENT_VARIABLES_FILENAME ] && sed -i 's#^\(MANIFEST_ENVIRONMENT_VARIABLES_FILENAME[ ]*=\).*#\1\"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v PRE_GENERATED_MANIFEST_FILENAME ] && sed -i 's#^\(PRE_GENERATED_MANIFEST_FILENAME[ ]*=\).*#\1\"$PRE_GENERATED_MANIFEST_FILENAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v PUSH_RESULTS_TO_ADLS ] && sed -i 's#^\(PUSH_RESULTS_TO_ADLS[ ]*=\).*#\1\"$PUSH_RESULTS_TO_ADLS\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v BLOBCONTAINER_NAME ] && sed -i 's#^\(BLOBCONTAINER_NAME[ ]*=\).*#\1\"$BLOBCONTAINER_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v ADLS_ENDPOINT_NAME ] && sed -i 's#^\(ADLS_ENDPOINT_NAME[ ]*=\).*#\1\"$ADLS_ENDPOINT_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v IOTHUB_ADLS_ROUTENAME ] && sed -i 's#^\(IOTHUB_ADLS_ROUTENAME[ ]*=\).*#\1\"$IOTHUB_ADLS_ROUTENAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v DEPLOYMENT_NAME ] && sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"$DEPLOYMENT_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v LOG_FILE ] && sed -i 's#^\(LOG_FILE[ ]*=\).*#\1\"$LOG_FILE\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v USE_EXISTING_RG ] && sed -i 's#^\(USE_EXISTING_RG[ ]*=\).*#\1\"$USE_EXISTING_RG\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v USE_EXISTING_IOT_HUB_DEVICE ] && sed -i 's#^\(USE_EXISTING_IOT_HUB_DEVICE[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB_DEVICE\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v PUSH_RESULTS_TO_EVENT_HUB ] && sed -i 's#^\(PUSH_RESULTS_TO_EVENT_HUB[ ]*=\).*#\1\"$PUSH_RESULTS_TO_EVENT_HUB\"#g' "$VARIABLES_FILE_PATH"
+
+      [ -v EVENTHUB_NAMESPACE ] && sed -i 's#^\(EVENTHUB_NAMESPACE[ ]*=\).*#\1\"$EVENTHUB_NAMESPACE\"#g' "$VARIABLES_FILE_PATH"
+
+      [ -v EVENTHUB_NAME ] && sed -i 's#^\(EVENTHUB_NAME[ ]*=\).*#\1\"$EVENTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v EVENTHUB_ENDPOINT_NAME ] && sed -i 's#^\(EVENTHUB_ENDPOINT_NAME[ ]*=\).*#\1\"$EVENTHUB_ENDPOINT_NAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v EVENTHUB_ROUTENAME ] && sed -i 's#^\(EVENTHUB_ROUTENAME[ ]*=\).*#\1\"$EVENTHUB_ROUTENAME\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v CREATE_AZURE_MONITOR ] && sed -i 's#^\(CREATE_AZURE_MONITOR[ ]*=\).*#\1\"$CREATE_AZURE_MONITOR\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v USE_INTERACTIVE_LOGIN_FOR_AZURE ] && sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"$USE_INTERACTIVE_LOGIN_FOR_AZURE\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE ] && sed -i 's#^\(IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE[ ]*=\).*#\1\"$IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v USE_EXISTING_IOT_HUB ] && sed -i 's#^\(USE_EXISTING_IOT_HUB[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB\"#g' "$VARIABLES_FILE_PATH"
+
+# This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
+- task: Bash@3
+  enabled: true
+  displayName: 'Setup current container and run setup.sh script'
+  env:
+    SP_APP_PWD: $(SP_APP_PWD)
+    EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+  inputs:
+    targetType: 'inline'
+    script: |
+      echo "Starting script"
+      
+      if [ -v WORKING_DIRECTORY ] && [ ! -z WORKING_DIRECTORY ]; then
+          echo "changing directory"
+          cd "$WORKING_DIRECTORY"
+      fi
+      
+      
+      if(! apt list --installed | grep -c -w sshpass); then 
+          echo "Installing sshpass"
+          sudo apt-get install sshpass 
+      
+      fi
+
+      if(! apt list --installed | grep -c -w jq); then 
+          echo "Installing jq"
+          sudo apt-get install jq 
+      
+      fi
+      
+      if(! apt list --installed | grep -c -w curl); then 
+          echo "Installing curl"
+          sudo apt-get install curl 
+      
+      fi
+      #Install IoT Extension if it's not present
+      
+      [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]] &&  az extension add --name azure-cli-iot-ext
+      
+      
+      if(! apt list --installed | grep -c -w python-pip); then 
+          echo "installing pip"
+          sudo apt-get install python-pip
+      
+      fi
+      
+      if (! pip list --format=columns | grep -c -w iotedgedev); then
+          echo "Installing iotedgedev"
+          #sudo pip install iotedgedev
+      fi
+      
+      WasIPRuleUpdated="0"
+
+      if [ "$IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED" == "true" ]; then
+      
+      az login --service-principal --username $SP_APP_ID --password $SP_APP_PWD --tenant $TENANT_ID
+      
+      	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
+      
+      
+      	if [ -z $sourceAddressPrefix ]; then
+      		CurrentIPArray=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefixes" --output "tsv")
+      		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
+      		
+      		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
+      			echo "IP is already added in network security rule"
+      		else
+      			echo "Updating IP rule to add current IP"
+      			UpdatedIPArray=$CurrentIPArray" "$ContainerIPAddress
+      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray
+      			echo "Update is complete"
+      			WasIPRuleUpdated="1"
+      		fi
+      		
+      	else
+      		echo "IP Address is type is not enabled in the NSG rule, we are not adding IP address explictily"
+      	fi
+      fi
+      
+      echo "Adding executable bit to setup.sh"
+      
+      chmod +x setup.sh
+      
+      echo "Running the script"
+      
+      # source "./setup.sh"
+      
+      echo "WasIPRuleUpdate= $WasIPRuleUpdated"
+      
+      if [ "$WasIPRuleUpdated" == "1" ]; then
+      	
+      	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
+      
+      
+      	if [ -z $sourceAddressPrefix ]; then
+      		CurrentIPArray=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefixes" --output "tsv")
+      		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
+      		
+      		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
+            echo "CurrentIPArray=$CurrentIPArray"
+      			UpdatedIPArray=${CurrentIPArray/$ContainerIPAddress/""}
+            echo "UpdatedIPArray=$UpdatedIPArray"
+      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray
+      		fi
+      		
+      	else
+      		echo "IP Address is type is not enabled in the NSG rule, we can not update the IP address explictily"
+      	fi
+      fi
+      
+      
+      echo "Task is complete"
