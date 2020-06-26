@@ -78,8 +78,7 @@ export class Edit extends React.Component {
                                             selectedPointIndex: -1
                                         })
                                     }}>
-                                        {zone.name}
-                                        {zone.threshold}
+                                        {JSON.stringify({name: zone.name, threshold: zone.threshold})}
                                 </div>
                             )
                         })

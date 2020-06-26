@@ -59,21 +59,39 @@ class App extends React.Component {
     render() {
         return (
             <React.Fragment>
-                <View
-                    fps={this.state.fps}
-                    width={this.state.width}
-                    height={this.state.height}
-                    aggregator={this.state.aggregator}
-                    frame={this.state.frame}
-                    image={this.state.image}
-                />
-                <Edit
-                    fps={this.state.fps}
-                    width={this.state.width}
-                    height={this.state.height}
-                    aggregator={this.state.aggregator}
-                    updateAggregator={this.updateAggregator}
-                />
+                <div
+                    style={{
+                        position: 'relative'
+                    }}
+                >
+                    <div
+                        style={{
+                            position: 'absolute'
+                        }}
+                    >
+                        <View
+                            fps={this.state.fps}
+                            width={this.state.width}
+                            height={this.state.height}
+                            aggregator={this.state.aggregator}
+                            frame={this.state.frame}
+                            image={this.state.image}
+                        />
+                    </div>
+                    <div
+                        style={{
+                            position: 'absolute'
+                        }}
+                    >
+                        <Edit
+                            fps={this.state.fps}
+                            width={this.state.width}
+                            height={this.state.height}
+                            aggregator={this.state.aggregator}
+                            updateAggregator={this.updateAggregator}
+                        />
+                    </div>
+                </div>
             </React.Fragment>
         );
     }
@@ -115,6 +133,8 @@ class App extends React.Component {
     updateAggregator = (aggregator) => {
         this.setState({
             aggregator: aggregator
+        }, () => {
+            // console.log(JSON.stringify(aggregator));
         });
     }
 }

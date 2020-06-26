@@ -3,7 +3,7 @@ const wss = new WebSocket.Server({ port: 8080 })
 const { EventHubClient, EventPosition } = require('@azure/event-hubs');
 const connectionString = 'HostName=iot-unifiededge-001.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=kvujEICkipUjqIOi+fDfjyy9yYByy3Ge8QYoz5BhEWk=';
 // 'Endpoint=sb://unifiededge.servicebus.windows.net/;SharedAccessKeyName=iothubroutes_iot-unifiededge-001;SharedAccessKey=5+KdOjkqQ1LFZkp2VCX2WQBRFZ2F71gyLueTbhPplr0=;EntityPath=uploadhub'
-
+// https://ms.portal.azure.com/#blade/Microsoft_Azure_IotHub/StandaloneFrameBlade/path/%2Fdevices%2Fdevice%3FdeviceId%3Dbrain-box%26edgeDevice%3Dtrue/title/brain-box/resourceId/%2Fsubscriptions%2F7c9469c0-29ac-424a-85ab-d01f2cea1c38%2FresourceGroups%2Frg-unifiededge-dev-001%2Fproviders%2FMicrosoft.Devices%2FIotHubs%2Fiot-unifiededge-001
 let eventHubClient;
 let webSocket = null;
 wss.on('connection', ws => {
