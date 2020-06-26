@@ -23,6 +23,8 @@ class App extends React.Component {
             frame: {
                 detections: []
             },
+            collisions: 0,
+            detections: 0,
             image: new Image()
         }
         this.account = 'adlsunifiededgedev001';
@@ -42,8 +44,32 @@ class App extends React.Component {
             const data = JSON.parse(e.data);
             if (data && data.hasOwnProperty('body')) {
                 if (data.body.hasOwnProperty('detections')) {
+                    let collisions = 0;
+                    let detections = 0;
+                    const l = data.body.detections.length;
+                    for(let i = 0; i < l; i++) {
+                        const detection = data.body.detections[i];
+                        if(detection.bbox) {
+                            const polygon = [
+                                [detection.bbox[0], detection.bbox[1]],
+                                [detection.bbox[2], detection.bbox[1]],
+                                [detection.bbox[2], detection.bbox[3]],
+                                [detection.bbox[0], detection.bbox[3]],
+                                [detection.bbox[0], detection.bbox[1]],
+                            ];
+                            if(this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                                detection.collides = true;
+                                collisions = collisions + 1;
+                            } else {
+                                detection.collides = false;
+                            }
+                        }
+                        detections = detections + 1;
+                    }
                     this.setState({
-                        frame: data.body
+                        frame: data.body,
+                        collisions: collisions,
+                        detections: detections
                     });
                 }
                 if (data.body.hasOwnProperty("image_name")) {
@@ -77,6 +103,18 @@ class App extends React.Component {
                             frame={this.state.frame}
                             image={this.state.image}
                         />
+                        <div>
+                            People in frame    
+                        </div>
+                        <div>
+                            {this.state.detections}
+                        </div>
+                        <div>
+                            People in zones    
+                        </div>
+                        <div>
+                            {this.state.collisions}
+                        </div>
                     </div>
                     <div
                         style={{
@@ -136,6 +174,105 @@ class App extends React.Component {
         }, () => {
             // console.log(JSON.stringify(aggregator));
         });
+    }
+
+    // collisions
+    isBBoxInZones(bbox, zones) {
+        const l = zones.length;
+        for (let i = 0; i < l; i++) {
+            const zone = zones[i];
+            if (this.isBBoxInZone(bbox, zone)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    isBBoxInZone(bbox, zone) {
+        const polygon = [];
+        let l = zone.polygon.length;
+        if (l > 0) {
+            for (let i = 0; i < l; i++) {
+                polygon.push({ x: zone.polygon[i][0], y: zone.polygon[i][1] });
+            }
+            l = bbox.length;
+            for (let i = 1; i < l; i++) {
+                const point = { x: bbox[i][0], y: bbox[0][1] };
+                if (this.isPointInPolygon(point, polygon)) {
+                    return true;
+                }
+            }
+            if (bbox.length > 1 && polygon.length > 1 && this.doAnyLinesIntersect(bbox, polygon)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    doAnyLinesIntersect = (bbox, polygon) => {
+        let l = polygon.length;
+        for (let i = 1; i < l; i++) {
+            const from1 = polygon[i - 1];
+            const to1 = polygon[i];
+            let l2 = bbox.length;
+            for (let j = 1; j < l2; j++) {
+                const from2 = { x: bbox[j - 1][0], y: bbox[j - 1][1] };
+                const to2 = { x: bbox[j][0], y: bbox[j][1] };
+                if (this.doLinesIntersect(from1, to1, from2, to2) !== undefined) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    doLinesIntersect = (from1, to1, from2, to2) => {
+        const dX = to1.x - from1.x;
+        const dY = to1.y - from1.y;
+
+        const determinant = dX * (to2.y - from2.y) - (to2.x - from2.x) * dY;
+        if (determinant === 0) return undefined; // parallel lines
+
+        const lambda = ((to2.y - from2.y) * (to2.x - from1.x) + (from2.x - to2.x) * (to2.y - from1.y)) / determinant;
+        const gamma = ((from1.y - to1.y) * (to2.x - from1.x) + dX * (to2.y - from1.y)) / determinant;
+
+        // check if there is an intersection
+        if (!(0 <= lambda && lambda <= 1) || !(0 <= gamma && gamma <= 1)) return undefined;
+
+        return {
+            x: from1.x + lambda * dX,
+            y: from1.y + lambda * dY,
+        };
+    }
+
+    isPointInPolygon(p, polygon) {
+        let isInside = false;
+        let minX = polygon[0].x;
+        let maxX = polygon[0].x;
+        let minY = polygon[0].y;
+        let maxY = polygon[0].y;
+        for (let n = 1; n < polygon.length; n++) {
+            const q = polygon[n];
+            minX = Math.min(q.x, minX);
+            maxX = Math.max(q.x, maxX);
+            minY = Math.min(q.y, minY);
+            maxY = Math.max(q.y, maxY);
+        }
+
+        if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
+            return false;
+        }
+
+        var i = 0, j = polygon.length - 1;
+        for (i, j; i < polygon.length; j = i++) {
+            if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
+                p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
+                isInside = !isInside;
+            }
+        }
+
+        return isInside;
     }
 }
 
