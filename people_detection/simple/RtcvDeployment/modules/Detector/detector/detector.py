@@ -17,11 +17,11 @@ def main_debug(displaying):
   while True:
     _, frame = vid_stream.get_frame_with_id()
     detections = detector.detect(frame)
-    logging.info(detections)
+    #logging.info(detections)
 
     if not displaying:
       continue
-      
+
     frame = detector.display(frame, detections)
     # # check to see if the output frame should be displayed to our
     # # screen
