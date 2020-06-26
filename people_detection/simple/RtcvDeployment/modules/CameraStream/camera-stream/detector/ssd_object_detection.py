@@ -21,7 +21,7 @@ class Detector:
 	COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
 		# load our serialized model from disk
-	def __init__(self, use_gpu=False, confidence=0.5, people_only=True):
+	def __init__(self, use_gpu=True, confidence=0.5, people_only=True):
 		self.confidence = confidence
 		
 		prototxt = os.path.join(os.path.dirname(__file__), "MobileNetSSD_deploy.prototxt")
