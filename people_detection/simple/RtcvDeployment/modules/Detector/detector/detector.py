@@ -46,8 +46,8 @@ def start_app():
     # set protocol to 1.1 so we keep the connection open
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
-    app.run(debug=False, host="0.0.0.0", port=5010)
-    #app.run(debug=False, host="detector", port=5010)
+    #app.run(debug=False, host="0.0.0.0", port=5010)
+    app.run(debug=False, host="detector", port=5010)
 
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
