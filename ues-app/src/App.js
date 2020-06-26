@@ -58,7 +58,10 @@ class App extends React.Component {
                                 [detection.bbox[0], detection.bbox[1]],
                             ];
                             if(this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                                detection.collides = true;
                                 collisions = collisions + 1;
+                            } else {
+                                detection.collides = false;
                             }
                         }
                         detections = detections + 1;

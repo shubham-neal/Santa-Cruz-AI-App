@@ -135,7 +135,7 @@ export class View extends React.Component {
                 [detection.bbox[0], detection.bbox[3]],
                 [detection.bbox[0], detection.bbox[1]],
             ];
-            if (this.isBBoxInZones(polygon, this.props.aggregator.zones)) {
+            if (detection.collides) {
                 canvasContext.strokeStyle = 'yellow';
                 canvasContext.lineWidth = 4;
             } else {
