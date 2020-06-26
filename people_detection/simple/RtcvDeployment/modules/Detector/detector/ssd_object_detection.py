@@ -54,7 +54,15 @@ class Detector:
       # pass the blob through the network and obtain the detections and
       # predictions
       self.net.setInput(blob)
-      detections = self.net.forward()
+      try:
+        detections = self.net.forward()
+      except:
+        
+        logging.warn("Could not run on GPU. Switching to CPU")
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
+        detections = self.net.forward()
 
       # loop over the detections
       results = []

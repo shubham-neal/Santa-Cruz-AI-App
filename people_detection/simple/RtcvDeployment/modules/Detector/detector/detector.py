@@ -53,13 +53,13 @@ def start_app():
 def detect_in_frame():
   # we are sending a json object
   data = request.get_json()
-  frame = np.array(data['img'])
+  frame = np.array(data['img']).astype('uint8')
 
   results = {'frameId': data['frameId'], 'image_name': data['image_name']}
   detections = detector.detect(frame)
 
-  detections = {**detections, **results}
-  return jsonify(detections)
+  results["detections"] = detections
+  return jsonify(results)
 
 if __name__== "__main__":
 
