@@ -64,23 +64,99 @@ export class View extends React.Component {
     isBBoxInZone(bbox, zone) {
         const polygon = [];
         let l = zone.polygon.length;
-        for (let i = 0; i < l; i++) {
-            polygon.push({ x: zone.polygon[i][0], y: zone.polygon[i][1] });
-        }
-        l = bbox.length;
-        for (let i = 1; i < l; i++) {
-            const point = { x: bbox[0], y: bbox[1] };
-            if (this.isPointInPolygon(point, polygon)) {
+        if (l > 0) {
+            for (let i = 0; i < l; i++) {
+                polygon.push({ x: zone.polygon[i][0], y: zone.polygon[i][1] });
+            }
+            l = bbox.length;
+            for (let i = 1; i < l; i++) {
+                const point = { x: bbox[i][0], y: bbox[0][1] };
+                if (this.isPointInPolygon(point, polygon)) {
+                    return true;
+                }
+            }
+            if (bbox.length > 1 && polygon.length > 1 && this.doAnyLinesIntersect(bbox, polygon)) {
                 return true;
             }
         }
         return false;
     }
 
+    // doAnyLinesIntersect = (bbox, polygon) => {
+    //     let l = polygon.length;
+    //     for (let i = 1; i < l; i++) {
+    //         const x1 = polygon[i - 1].x;
+    //         const y1 = polygon[i - 1].y;
+    //         const x2 = polygon[i].x;
+    //         const y2 = polygon[i].y;
+    //         let l2 = bbox.length;
+    //         for (let j = 1; j < l2; j++) {
+    //             const x3 = bbox[j - 1][0];
+    //             const y3 = bbox[j - 1][1];
+    //             const x4 = bbox[j][0];
+    //             const y4 = bbox[j][1];
+    //             return this.doLineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4);
+    //         }
+    //     }
+
+    //     return false;
+    // }
+
+    doAnyLinesIntersect = (bbox, polygon) => {
+        let l = polygon.length;
+        for (let i = 1; i < l; i++) {
+            const from1 = polygon[i - 1];
+            const to1 = polygon[i];
+            let l2 = bbox.length;
+            for (let j = 1; j < l2; j++) {
+                const from2 = { x: bbox[j - 1][0], y: bbox[j - 1][1] };
+                const to2 = { x: bbox[j][0], y: bbox[j][1] };
+                if(this.intersection(from1, to1, from2, to2) !== undefined) {
+                    return true;
+                }
+                // this.doLineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4);
+            }
+        }
+
+        return false;
+    }
+
+    intersection = (from1, to1, from2, to2) => {
+        const dX = to1.x - from1.x;
+        const dY = to1.y - from1.y;
+      
+        const determinant = dX * (to2.y - from2.y) - (to2.x - from2.x) * dY;
+        if (determinant === 0) return undefined; // parallel lines
+      
+        const lambda = ((to2.y - from2.y) * (to2.x - from1.x) + (from2.x - to2.x) * (to2.y - from1.y)) / determinant;
+        const gamma = ((from1.y - to1.y) * (to2.x - from1.x) + dX * (to2.y - from1.y)) / determinant;
+      
+        // check if there is an intersection
+        if (!(0 <= lambda && lambda <= 1) || !(0 <= gamma && gamma <= 1)) return undefined;
+      
+        return {
+          x: from1.x + lambda * dX,
+          y: from1.y + lambda * dY,
+        };
+      }
+
+    doLineSegmentsIntersect = (x1, y1, x2, y2, x3, y3, x4, y4) => {
+        const a_dx = x2 - x1;
+        const a_dy = y2 - y1;
+        const b_dx = x4 - x3;
+        const b_dy = y4 - y3;
+        const s = (-a_dy * (x1 - x3) + a_dx * (y1 - y3)) / (-b_dx * a_dy + a_dx * b_dy);
+        const t = (+b_dx * (y1 - y3) - b_dy * (x1 - x3)) / (-b_dx * a_dy + a_dx * b_dy);
+        return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
+    }
+
+    // TODO: check for line intersects
     isPointInPolygon(p, polygon) {
         let isInside = false;
-        let minX = polygon.x, maxX = polygon.x;
-        let minY = polygon.y, maxY = polygon.y;
+        let minX = polygon[0].x;
+        let maxX = polygon[0].x;
+        let minY = polygon[0].y;
+        let maxY = polygon[0].y;
         for (let n = 1; n < polygon.length; n++) {
             const q = polygon[n];
             minX = Math.min(q.x, minX);
@@ -182,7 +258,14 @@ export class View extends React.Component {
 
     drawDetection(canvasContext, detection) {
         if (detection.bbox) {
-            if(this.isBBoxInZones(detection.bbox, this.props.aggregator.zones)) {
+            const polygon = [
+                [detection.bbox[0], detection.bbox[1]],
+                [detection.bbox[2], detection.bbox[1]],
+                [detection.bbox[2], detection.bbox[3]],
+                [detection.bbox[0], detection.bbox[3]],
+                [detection.bbox[0], detection.bbox[1]],
+            ];
+            if (this.isBBoxInZones(polygon, this.props.aggregator.zones)) {
                 canvasContext.strokeStyle = 'yellow';
                 canvasContext.lineWidth = 4;
             } else {
