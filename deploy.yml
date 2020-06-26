@@ -179,7 +179,7 @@ steps:
       
       echo "Running the script"
       
-      # source "./setup.sh"
+      source "./setup.sh"
       
       echo "WasIPRuleUpdate= $WasIPRuleUpdated"
       
