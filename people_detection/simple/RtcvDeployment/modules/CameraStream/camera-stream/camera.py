@@ -9,8 +9,8 @@ from azure.storage.blob import BlobServiceClient
 import requests
 import threading
 from streamer.videostream import VideoStream
-from detector.ssd_object_detection import Detector
 from azure.iot.device.exceptions import ConnectionFailedError
+import imutils
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -63,8 +63,6 @@ def module_twin_callback(client):
 
 def main():
     global camera_config
-
-    detector = Detector()
 
     messenger = IoTInferenceMessenger()
     client = messenger.client
@@ -140,7 +138,7 @@ def main():
 
         # TODO: queue up detections
         if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-          detections = detector.detect(img, frame_id, curtimename)
+          detections = infer(cam['detector'], img, frame_id, curtimename)
 
         # message the image capture upstream
         if curtimename is not None:
@@ -148,10 +146,10 @@ def main():
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
 def infer(detector, img, frame_id, img_name):
-  im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-  im = cv2.resize(im, (300, 300), interpolation=cv2.INTER_LINEAR)
 
-  data = json.dumps({"img": im.tolist()})
+  im = imutils.resize(img, width=400)
+
+  data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
   headers = {'Content-Type': "application/json"}
   start = time.time()
   resp = requests.post(detector, data, headers=headers)
@@ -159,7 +157,7 @@ def infer(detector, img, frame_id, img_name):
   resp.raise_for_status()
   result = resp.json()
 
-  return result["classes"], result["scores"], result["bboxes"], proc_time
+  return result
 
 
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
