@@ -82,26 +82,6 @@ export class View extends React.Component {
         return false;
     }
 
-    // doAnyLinesIntersect = (bbox, polygon) => {
-    //     let l = polygon.length;
-    //     for (let i = 1; i < l; i++) {
-    //         const x1 = polygon[i - 1].x;
-    //         const y1 = polygon[i - 1].y;
-    //         const x2 = polygon[i].x;
-    //         const y2 = polygon[i].y;
-    //         let l2 = bbox.length;
-    //         for (let j = 1; j < l2; j++) {
-    //             const x3 = bbox[j - 1][0];
-    //             const y3 = bbox[j - 1][1];
-    //             const x4 = bbox[j][0];
-    //             const y4 = bbox[j][1];
-    //             return this.doLineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4);
-    //         }
-    //     }
-
-    //     return false;
-    // }
-
     doAnyLinesIntersect = (bbox, polygon) => {
         let l = polygon.length;
         for (let i = 1; i < l; i++) {
@@ -111,46 +91,34 @@ export class View extends React.Component {
             for (let j = 1; j < l2; j++) {
                 const from2 = { x: bbox[j - 1][0], y: bbox[j - 1][1] };
                 const to2 = { x: bbox[j][0], y: bbox[j][1] };
-                if(this.intersection(from1, to1, from2, to2) !== undefined) {
+                if (this.doLinesIntersect(from1, to1, from2, to2) !== undefined) {
                     return true;
                 }
-                // this.doLineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4);
             }
         }
 
         return false;
     }
 
-    intersection = (from1, to1, from2, to2) => {
+    doLinesIntersect = (from1, to1, from2, to2) => {
         const dX = to1.x - from1.x;
         const dY = to1.y - from1.y;
-      
+
         const determinant = dX * (to2.y - from2.y) - (to2.x - from2.x) * dY;
         if (determinant === 0) return undefined; // parallel lines
-      
+
         const lambda = ((to2.y - from2.y) * (to2.x - from1.x) + (from2.x - to2.x) * (to2.y - from1.y)) / determinant;
         const gamma = ((from1.y - to1.y) * (to2.x - from1.x) + dX * (to2.y - from1.y)) / determinant;
-      
+
         // check if there is an intersection
         if (!(0 <= lambda && lambda <= 1) || !(0 <= gamma && gamma <= 1)) return undefined;
-      
-        return {
-          x: from1.x + lambda * dX,
-          y: from1.y + lambda * dY,
-        };
-      }
 
-    doLineSegmentsIntersect = (x1, y1, x2, y2, x3, y3, x4, y4) => {
-        const a_dx = x2 - x1;
-        const a_dy = y2 - y1;
-        const b_dx = x4 - x3;
-        const b_dy = y4 - y3;
-        const s = (-a_dy * (x1 - x3) + a_dx * (y1 - y3)) / (-b_dx * a_dy + a_dx * b_dy);
-        const t = (+b_dx * (y1 - y3) - b_dy * (x1 - x3)) / (-b_dx * a_dy + a_dx * b_dy);
-        return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
+        return {
+            x: from1.x + lambda * dX,
+            y: from1.y + lambda * dY,
+        };
     }
 
-    // TODO: check for line intersects
     isPointInPolygon(p, polygon) {
         let isInside = false;
         let minX = polygon[0].x;
