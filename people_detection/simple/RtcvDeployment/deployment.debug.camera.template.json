@@ -56,7 +56,7 @@
               "image": "${MODULES.Detector}",
               "createOptions": {
                 "ExposedPorts" : {
-                  "56781/tcp": {}
+                  "5010/tcp": {}
                 },
                 "HostConfig": {
                   "IpcMode": "host",
@@ -67,9 +67,9 @@
                   "Runtime": "nvidia",
                   "ShmSize": 536870912,
                   "PortBindings": {
-                    "56781/tcp": [
+                    "5010/tcp": [
                       {
-                        "HostPort": "56780"
+                        "HostPort": "5010"
                       }
                     ]
                   }
@@ -151,7 +151,8 @@
           "cam001": {
             "space": "Office",
             "rtsp": "$CROSSING_VIDEO_URL",
-            "inference": false,
+            "detector": "http://detector:5010",
+            "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
             "enabled": true
           }
