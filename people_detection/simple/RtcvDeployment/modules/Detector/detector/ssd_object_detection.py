@@ -36,10 +36,13 @@ class Detector:
 
     # check if we are going to use GPU
     if use_gpu:
-      # set CUDA as the preferable backend and target
-      self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-      self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-      logging.info("Set preferable backend and target to CUDA...")
+      try:
+        # set CUDA as the preferable backend and target
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        logging.info("Set preferable backend and target to CUDA...")
+      except:
+        logging.warn("Could not set the backend to CUDA")
 
   def detect(self, frame):
 
