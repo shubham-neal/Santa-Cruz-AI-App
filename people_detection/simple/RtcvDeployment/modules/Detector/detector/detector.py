@@ -7,7 +7,7 @@ from videostream import VideoStream
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
 
-def main_debug():
+def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
 
   detector = Detector(use_gpu=True)
@@ -17,7 +17,11 @@ def main_debug():
   while True:
     _, frame = vid_stream.get_frame_with_id()
     detections = detector.detect(frame)
+    logging.info(detections)
 
+    if not displaying:
+      continue
+      
     frame = detector.display(frame, detections)
     # # check to see if the output frame should be displayed to our
     # # screen
@@ -34,5 +38,5 @@ if __name__== "__main__":
 
   debug = True
   if debug:
-    main_debug()
+    main_debug(False)
 
