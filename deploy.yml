@@ -163,7 +163,7 @@ steps:
       		else
       			echo "Updating IP rule to add current IP"
       			UpdatedIPArray=$CurrentIPArray" "$ContainerIPAddress
-      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray
+      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
       			echo "Update is complete"
       			WasIPRuleUpdated="1"
       		fi
@@ -196,7 +196,7 @@ steps:
             echo "CurrentIPArray=$CurrentIPArray"
       			UpdatedIPArray=${CurrentIPArray/$ContainerIPAddress/""}
             echo "UpdatedIPArray=$UpdatedIPArray"
-      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray
+      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
       		fi
       		
       	else
