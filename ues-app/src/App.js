@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
@@ -24,7 +25,15 @@ class App extends React.Component {
             },
             collisions: 0,
             detections: 0,
-            image: new Image()
+            totalCollisions: 0,
+            totalDetections: 0,
+            maxCollisionsPerSecond: 0,
+            maxDetectionsPerSecond: 0,
+            image: new Image(),
+            chartData: {
+                labels: [],
+                datasets: []
+            }
         }
         this.account = 'adlsunifiededgedev001';
         this.containerName = 'still-images';
@@ -65,10 +74,14 @@ class App extends React.Component {
                         }
                         detections = detections + 1;
                     }
+                    const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
+                    const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
                     this.setState({
                         frame: data.body,
                         collisions: collisions,
-                        detections: detections
+                        detections: detections,
+                        maxCollisionsPerSecond: collisions > maxCollisionsPerSecond ? collisions : maxCollisionsPerSecond,
+                        maxDetectionsPerSecond: detections > maxDetectionsPerSecond ? detections : maxDetectionsPerSecond
                     });
                 }
                 if (data.body.hasOwnProperty("image_name")) {
@@ -79,34 +92,140 @@ class App extends React.Component {
         connection.onerror = (error) => {
             console.log(`WebSocket error: ${error}`);
         }
+
+        setInterval(() => {
+            const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
+            const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
+            this.setState({
+                totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
+                totalDetections: this.state.totalDetections + maxDetectionsPerSecond
+            }, () => {
+                this.setState({
+                    maxCollisionsPerSecond: 0,
+                    maxDetectionsPerSecond: 0
+                }, () => {
+                    this.updateChart(
+                        [0, 1, 2, 3, 4, 5],
+                        [12, 19, 3, 5, 2, 3],
+                        [6, 13, 2, 3, 1, 2]
+                    );
+                })
+            });
+        }, 1000);
     }
 
     render() {
         return (
             <React.Fragment>
-                <Camera
-                    fps={this.state.fps}
-                    width={this.state.width}
-                    height={this.state.height}
-                    aggregator={this.state.aggregator}
-                    frame={this.state.frame}
-                    image={this.state.image}
-                    updateAggregator={this.updateAggregator}
-                />
                 <div
                     style={{
-                        margin: 10
+                        display: 'flex',
+                        flexDirection: 'row'
                     }}
                 >
-                    <div>
-                        People in frame: {this.state.detections}
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                    >
+                        <Camera
+                            fps={this.state.fps}
+                            width={this.state.width}
+                            height={this.state.height}
+                            aggregator={this.state.aggregator}
+                            frame={this.state.frame}
+                            image={this.state.image}
+                            updateAggregator={this.updateAggregator}
+                        />
+                        <div
+                            style={{
+                                width: this.state.width,
+                                height: this.state.height,
+                                padding: 10
+                            }}
+                        >
+                            <Line
+                                data={this.state.chartData}
+                                options={{
+                                    maintainAspectRatio: true,
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom'
+                                    },
+                                    layout: {
+                                        padding: {
+                                            left: 10,
+                                            right: 0,
+                                            top: 0,
+                                            bottom: 0
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Count of people vs Time'
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
-                    <div>
-                        People in zones: {this.state.collisions}
+                    <div
+                        style={{
+                            margin: 10
+                        }}
+                    >
+                        <div>
+                            People detections in frame: <b>{this.state.detections}</b>
+                        </div>
+                        <div>
+                            People detections in zone: <b>{this.state.collisions}</b>
+                        </div>
+                        <div>
+                            Max people detections in frame per second: <b>{this.state.maxDetectionsPerSecond}</b>
+                        </div>
+                        <div>
+                            Max people detections in zone per second: <b>{this.state.maxCollisionsPerSecond}</b>
+                        </div>
+                        <div>
+                            Total max people detections in frame per second: <b>{this.state.totalDetections}</b>
+                        </div>
+                        <div>
+                            Total max people detections in zone per second: <b>{this.state.totalCollisions}</b>
+                        </div>
                     </div>
                 </div>
             </React.Fragment>
         );
+    }
+
+    updateChart = (times, inFrame, inZones) => {
+        const chartData = {
+            labels: times,
+            datasets: [{
+                label: 'Max people detections in frame per second',
+                data: inFrame,
+                backgroundColor: [
+                    'transparent'
+                ],
+                borderColor: [
+                    'lightblue'
+                ],
+                borderWidth: 1
+            }, {
+                label: 'Max people detections in zone per second',
+                data: inZones,
+                backgroundColor: [
+                    'transparent'
+                ],
+                borderColor: [
+                    'yellow'
+                ],
+                borderWidth: 2
+            }]
+        };
+        this.setState({
+            chartData: chartData
+        });
     }
 
     formatDate = (date) => {
