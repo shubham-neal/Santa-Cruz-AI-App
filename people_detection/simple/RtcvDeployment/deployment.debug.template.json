@@ -353,7 +353,8 @@
             "detector": "$PEOPLE_DETECTOR",
             "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
-            "enabled": true
+            "enabled": true,
+            "gpu": true
           }
         }
       }

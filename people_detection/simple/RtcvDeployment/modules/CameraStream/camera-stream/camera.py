@@ -9,8 +9,9 @@ from azure.storage.blob import BlobServiceClient
 import requests
 import threading
 from streamer.videostream import VideoStream
-from detector.ssd_object_detection import Detector
 from azure.iot.device.exceptions import ConnectionFailedError
+import imutils
+from net.ssd_object_detection import Detector
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -37,7 +38,9 @@ def parse_twin(data):
     if "blob" in data:
       blob = data["blob"]
 
-    camera_config = dict()
+    if camera_config is None:
+      camera_config = dict()
+      
     camera_config["cameras"] = cams
     camera_config["blob"] = blob
 
@@ -48,23 +51,12 @@ def module_twin_callback(client):
   while True:
     # for debugging try and establish a connection
     # otherwise we don't care. If it can't connect let iotedge restart it
-    if debug:
-      for _ in range(30):
-        try:
-          payload = client.receive_twin_desired_properties_patch()
-          break
-        except ConnectionFailedError:
-          logging.warn("Connection failed, retrying")
-          time.sleep(1)
-    else:
-      payload = client.receive_twin_desired_properties_patch()
+    payload = client.receive_twin_desired_properties_patch()
 
     parse_twin(payload)
 
 def main():
     global camera_config
-
-    detector = Detector()
 
     messenger = IoTInferenceMessenger()
     client = messenger.client
@@ -110,6 +102,9 @@ def main():
           current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
           current_source['video'].start()
 
+          #TODO: This should not be here.
+          current_source['detector'] = Detector(cam['gpu'])
+
         # this will keep track of how long we need to wait between
         # bursts of activity
         video_streamer = current_source['video']
@@ -126,6 +121,7 @@ def main():
 
           # stop an existing thread
           video_streamer.reset(current_source['rtsp'], current_source['interval'])
+          logging.info("Updated twin properties.")
 
         # block until we get something
         frame_id, img = video_streamer.get_frame_with_id()
@@ -139,19 +135,21 @@ def main():
             curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
 
         # TODO: queue up detections
+        detections = []
         if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-          detections = detector.detect(img, frame_id, curtimename)
-
+          #detections = infer(cam['detector'], img, frame_id, curtimename)
+          detections = current_source['detector'].detect(img)
+          
         # message the image capture upstream
         if curtimename is not None:
           messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
           logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
 def infer(detector, img, frame_id, img_name):
-  im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-  im = cv2.resize(im, (300, 300), interpolation=cv2.INTER_LINEAR)
 
-  data = json.dumps({"img": im.tolist()})
+  im = imutils.resize(img, width=400)
+
+  data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
   headers = {'Content-Type': "application/json"}
   start = time.time()
   resp = requests.post(detector, data, headers=headers)
@@ -159,7 +157,7 @@ def infer(detector, img, frame_id, img_name):
   resp.raise_for_status()
   result = resp.json()
 
-  return result["classes"], result["scores"], result["bboxes"], proc_time
+  return result["detections"]
 
 
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
