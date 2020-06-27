@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import { defaults } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
 
@@ -29,12 +30,18 @@ class App extends React.Component {
             totalDetections: 0,
             maxCollisionsPerSecond: 0,
             maxDetectionsPerSecond: 0,
+            maxPerSecond: {
+                times: [],
+                collisions: [],
+                detections: []
+            },
             image: new Image(),
             chartData: {
                 labels: [],
                 datasets: []
             }
         }
+        defaults.global.animation = false;
         this.account = 'adlsunifiededgedev001';
         this.containerName = 'still-images';
         this.blobPath = 'Office/cam001';
@@ -96,6 +103,18 @@ class App extends React.Component {
         setInterval(() => {
             const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
+
+            // track per second
+            this.state.maxPerSecond.times.push(this.formatTime(new Date()));
+            this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
+            this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
+            if(this.state.maxPerSecond.times.length > 10) {
+                this.state.maxPerSecond.times.shift();
+                this.state.maxPerSecond.collisions.shift();
+                this.state.maxPerSecond.detections.shift();
+            }
+            this.updateChart();
+
             this.setState({
                 totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
                 totalDetections: this.state.totalDetections + maxDetectionsPerSecond
@@ -103,18 +122,34 @@ class App extends React.Component {
                 this.setState({
                     maxCollisionsPerSecond: 0,
                     maxDetectionsPerSecond: 0
-                }, () => {
-                    this.updateChart(
-                        [0, 1, 2, 3, 4, 5],
-                        [12, 19, 3, 5, 2, 3],
-                        [6, 13, 2, 3, 1, 2]
-                    );
                 })
             });
         }, 1000);
     }
 
     render() {
+        const chart = (<Line redraw
+            data={this.state.chartData}
+            options={{
+                maintainAspectRatio: true,
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                },
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 0,
+                        top: 0,
+                        bottom: 0
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Count of people vs Time'
+                }
+            }}
+        />);
         return (
             <React.Fragment>
                 <div
@@ -145,28 +180,7 @@ class App extends React.Component {
                                 padding: 10
                             }}
                         >
-                            <Line
-                                data={this.state.chartData}
-                                options={{
-                                    maintainAspectRatio: true,
-                                    legend: {
-                                        display: true,
-                                        position: 'bottom'
-                                    },
-                                    layout: {
-                                        padding: {
-                                            left: 10,
-                                            right: 0,
-                                            top: 0,
-                                            bottom: 0
-                                        }
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Count of people vs Time'
-                                    }
-                                }}
-                            />
+                            {chart}
                         </div>
                     </div>
                     <div
@@ -216,34 +230,36 @@ class App extends React.Component {
         );
     }
 
-    updateChart = (times, inFrame, inZones) => {
-        const chartData = {
-            labels: times,
-            datasets: [{
-                label: 'Max people detections in frame per second',
-                data: inFrame,
-                backgroundColor: [
-                    'transparent'
-                ],
-                borderColor: [
-                    'lightblue'
-                ],
-                borderWidth: 1
-            }, {
-                label: 'Max people detections in zone per second',
-                data: inZones,
-                backgroundColor: [
-                    'transparent'
-                ],
-                borderColor: [
-                    'yellow'
-                ],
-                borderWidth: 2
-            }]
-        };
-        this.setState({
-            chartData: chartData
-        });
+    updateChart = () => {
+        if (this.state.maxPerSecond.times.length > 0) {
+            const chartData = {
+                labels: this.state.maxPerSecond.times,
+                datasets: [{
+                    label: 'Max people detections in frame per second',
+                    data: this.state.maxPerSecond.detections,
+                    backgroundColor: [
+                        'transparent'
+                    ],
+                    borderColor: [
+                        'lightblue'
+                    ],
+                    borderWidth: 1
+                }, {
+                    label: 'Max people detections in zone per second',
+                    data: this.state.maxPerSecond.collisions,
+                    backgroundColor: [
+                        'transparent'
+                    ],
+                    borderColor: [
+                        'yellow'
+                    ],
+                    borderWidth: 2
+                }]
+            };
+            this.setState({
+                chartData: chartData
+            });
+        }
     }
 
     formatDate = (date) => {
@@ -253,6 +269,11 @@ class App extends React.Component {
             month: '2-digit',
             day: '2-digit'
         });
+    }
+
+    formatTime = (date) => {
+        // Note: en-EN won't return in without the AM/PM
+        return date.toLocaleTimeString('it-IT');
     }
 
     async updateImage(imageName) {
