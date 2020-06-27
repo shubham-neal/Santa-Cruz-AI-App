@@ -175,22 +175,40 @@ class App extends React.Component {
                         }}
                     >
                         <div>
-                            People detections in frame: <b>{this.state.detections}</b>
+                            People detections in frame:
                         </div>
                         <div>
-                            People detections in zone: <b>{this.state.collisions}</b>
+                            <b>{this.state.detections}</b>
                         </div>
                         <div>
-                            Max people detections in frame per second: <b>{this.state.maxDetectionsPerSecond}</b>
+                            People detections in zone:
                         </div>
                         <div>
-                            Max people detections in zone per second: <b>{this.state.maxCollisionsPerSecond}</b>
+                            <b>{this.state.collisions}</b>
                         </div>
                         <div>
-                            Total max people detections in frame per second: <b>{this.state.totalDetections}</b>
+                            Max people detections in frame per second:
                         </div>
                         <div>
-                            Total max people detections in zone per second: <b>{this.state.totalCollisions}</b>
+                            <b>{this.state.maxDetectionsPerSecond}</b>
+                        </div>
+                        <div>
+                            Max people detections in zone per second:
+                        </div>
+                        <div>
+                            <b>{this.state.maxCollisionsPerSecond}</b>
+                        </div>
+                        <div>
+                            Total max people detections in frame per second:
+                        </div>
+                        <div>
+                            <b>{this.state.totalDetections}</b>
+                        </div>
+                        <div>
+                            Total max people detections in zone per second:
+                        </div>
+                        <div>
+                            <b>{this.state.totalCollisions}</b>
                         </div>
                     </div>
                 </div>
