@@ -1,7 +1,6 @@
 import React from 'react';
 import './App.css';
-import { View } from './components/View';
-import { Edit } from './components/Edit';
+import { Camera } from './components/Camera';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 
@@ -16,7 +15,7 @@ class App extends React.Component {
                 lines: [],
                 zones: [{
                     name: "queue",
-                    polygon: [],//[[0.5, 0.25], [0.58, 0.25], [0.58, 0.5], [0.5, 0.5], [0.5, 0.25]],
+                    polygon: [],
                     threshold: 10.0
                 }]
             },
@@ -47,9 +46,9 @@ class App extends React.Component {
                     let collisions = 0;
                     let detections = 0;
                     const l = data.body.detections.length;
-                    for(let i = 0; i < l; i++) {
+                    for (let i = 0; i < l; i++) {
                         const detection = data.body.detections[i];
-                        if(detection.bbox) {
+                        if (detection.bbox) {
                             const polygon = [
                                 [detection.bbox[0], detection.bbox[1]],
                                 [detection.bbox[2], detection.bbox[1]],
@@ -57,7 +56,7 @@ class App extends React.Component {
                                 [detection.bbox[0], detection.bbox[3]],
                                 [detection.bbox[0], detection.bbox[1]],
                             ];
-                            if(this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                            if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
                                 detection.collides = true;
                                 collisions = collisions + 1;
                             } else {
@@ -85,49 +84,25 @@ class App extends React.Component {
     render() {
         return (
             <React.Fragment>
+                <Camera
+                    fps={this.state.fps}
+                    width={this.state.width}
+                    height={this.state.height}
+                    aggregator={this.state.aggregator}
+                    frame={this.state.frame}
+                    image={this.state.image}
+                    updateAggregator={this.updateAggregator}
+                />
                 <div
                     style={{
-                        position: 'relative'
+                        margin: 10
                     }}
                 >
-                    <div
-                        style={{
-                            position: 'absolute'
-                        }}
-                    >
-                        <View
-                            fps={this.state.fps}
-                            width={this.state.width}
-                            height={this.state.height}
-                            aggregator={this.state.aggregator}
-                            frame={this.state.frame}
-                            image={this.state.image}
-                        />
-                        <div>
-                            People in frame    
-                        </div>
-                        <div>
-                            {this.state.detections}
-                        </div>
-                        <div>
-                            People in zones    
-                        </div>
-                        <div>
-                            {this.state.collisions}
-                        </div>
+                    <div>
+                        People in frame: {this.state.detections}
                     </div>
-                    <div
-                        style={{
-                            position: 'absolute'
-                        }}
-                    >
-                        <Edit
-                            fps={this.state.fps}
-                            width={this.state.width}
-                            height={this.state.height}
-                            aggregator={this.state.aggregator}
-                            updateAggregator={this.updateAggregator}
-                        />
+                    <div>
+                        People in zones: {this.state.collisions}
                     </div>
                 </div>
             </React.Fragment>
