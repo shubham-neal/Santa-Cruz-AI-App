@@ -48,16 +48,7 @@ def module_twin_callback(client):
   while True:
     # for debugging try and establish a connection
     # otherwise we don't care. If it can't connect let iotedge restart it
-    if debug:
-      for _ in range(30):
-        try:
-          payload = client.receive_twin_desired_properties_patch()
-          break
-        except ConnectionFailedError:
-          logging.warn("Connection failed, retrying")
-          time.sleep(1)
-    else:
-      payload = client.receive_twin_desired_properties_patch()
+    payload = client.receive_twin_desired_properties_patch()
 
     parse_twin(payload)
 
@@ -137,9 +128,10 @@ def main():
             curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
 
         # TODO: queue up detections
+        detections = []
         if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
           detections = infer(cam['detector'], img, frame_id, curtimename)
-
+          
         # message the image capture upstream
         if curtimename is not None:
           messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
@@ -157,7 +149,7 @@ def infer(detector, img, frame_id, img_name):
   resp.raise_for_status()
   result = resp.json()
 
-  return result
+  return result["detections"]
 
 
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
