@@ -2,7 +2,7 @@ import React from 'react';
 
 export class Camera extends React.Component {
     static defaultProps = {
-        border: '2px solid #ee82ee',
+        border: '2px solid black',
         width: 300,
         height: 300,
         fps: 30,

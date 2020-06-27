@@ -39,7 +39,8 @@ class App extends React.Component {
             chartData: {
                 labels: [],
                 datasets: []
-            }
+            },
+            signedIn: false
         }
         defaults.global.animation = false;
         this.account = 'adlsunifiededgedev001';
@@ -101,133 +102,209 @@ class App extends React.Component {
         }
 
         setInterval(() => {
-            const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-            const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-
-            // track per second
-            this.state.maxPerSecond.times.push(this.formatTime(new Date()));
-            this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
-            this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
-            if(this.state.maxPerSecond.times.length > 10) {
-                this.state.maxPerSecond.times.shift();
-                this.state.maxPerSecond.collisions.shift();
-                this.state.maxPerSecond.detections.shift();
-            }
-            this.updateChart();
-
-            this.setState({
-                totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
-                totalDetections: this.state.totalDetections + maxDetectionsPerSecond
-            }, () => {
+            if(this.state.signedIn) {
+                const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
+                const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
+    
+                // track per second
+                this.state.maxPerSecond.times.push(this.formatTime(new Date()));
+                this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
+                this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
+                if (this.state.maxPerSecond.times.length > 10) {
+                    this.state.maxPerSecond.times.shift();
+                    this.state.maxPerSecond.collisions.shift();
+                    this.state.maxPerSecond.detections.shift();
+                }
+                this.updateChart();
+    
                 this.setState({
-                    maxCollisionsPerSecond: 0,
-                    maxDetectionsPerSecond: 0
-                })
-            });
+                    totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
+                    totalDetections: this.state.totalDetections + maxDetectionsPerSecond
+                }, () => {
+                    this.setState({
+                        maxCollisionsPerSecond: 0,
+                        maxDetectionsPerSecond: 0
+                    })
+                });
+            }
         }, 1000);
     }
 
     render() {
-        const chart = (<Line redraw
-            data={this.state.chartData}
-            options={{
-                maintainAspectRatio: true,
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                },
-                layout: {
-                    padding: {
-                        left: 10,
-                        right: 0,
-                        top: 0,
-                        bottom: 0
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'Count of people vs Time'
-                }
-            }}
-        />);
-        return (
+        return this.state.signedIn ? (
             <React.Fragment>
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'row'
-                    }}
-                >
+                <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: 10,
+                    padding: 10
+                }}>
                     <div
                         style={{
                             display: 'flex',
-                            flexDirection: 'column'
+                            flexDirection: 'row',
+                            backgroundColor: 'white',
+                            margin: 10,
+                            padding: 10
                         }}
                     >
-                        <Camera
-                            fps={this.state.fps}
-                            width={this.state.width}
-                            height={this.state.height}
-                            aggregator={this.state.aggregator}
-                            frame={this.state.frame}
-                            image={this.state.image}
-                            updateAggregator={this.updateAggregator}
-                        />
                         <div
                             style={{
-                                width: this.state.width,
-                                height: this.state.height,
-                                padding: 10
+                                display: 'flex',
+                                flexDirection: 'column'
                             }}
                         >
-                            {chart}
+                            <div>
+                                <span
+                                    style={{
+                                        margin: 5,
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid black'
+                                    }}
+                                >
+                                    Demo
+                                </span>
+                                <span
+                                    style={{
+                                        margin: 5
+                                    }}
+                                >
+                                    Live
+                                </span>
+                            </div>
+                            <Camera
+                                fps={this.state.fps}
+                                width={this.state.width}
+                                height={this.state.height}
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                image={this.state.image}
+                                updateAggregator={this.updateAggregator}
+                            />
+                            <div
+                                style={{
+                                    width: this.state.width,
+                                    height: this.state.height,
+                                    padding: 10
+                                }}
+                            >
+                                <Line redraw
+                                    data={this.state.chartData}
+                                    options={{
+                                        maintainAspectRatio: true,
+                                        legend: {
+                                            display: true,
+                                            position: 'bottom'
+                                        },
+                                        layout: {
+                                            padding: {
+                                                left: 10,
+                                                right: 0,
+                                                top: 0,
+                                                bottom: 0
+                                            }
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: 'Count of people vs Time'
+                                        }
+                                    }}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div
-                        style={{
-                            margin: 10
-                        }}
-                    >
-                        <div>
-                            People detections in frame:
-                        </div>
-                        <div>
-                            <b>{this.state.detections}</b>
-                        </div>
-                        <div>
-                            People detections in zone:
-                        </div>
-                        <div>
-                            <b>{this.state.collisions}</b>
-                        </div>
-                        <div>
-                            Max people detections in frame per second:
-                        </div>
-                        <div>
-                            <b>{this.state.maxDetectionsPerSecond}</b>
-                        </div>
-                        <div>
-                            Max people detections in zone per second:
-                        </div>
-                        <div>
-                            <b>{this.state.maxCollisionsPerSecond}</b>
-                        </div>
-                        <div>
-                            Total max people detections in frame per second:
-                        </div>
-                        <div>
-                            <b>{this.state.totalDetections}</b>
-                        </div>
-                        <div>
-                            Total max people detections in zone per second:
-                        </div>
-                        <div>
-                            <b>{this.state.totalCollisions}</b>
+                        <div
+                            style={{
+                                margin: 10
+                            }}
+                        >
+                            <div
+                                style={{
+                                    marginBottom: 10,
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                Real time metrics
+                            </div>
+                            <div>
+                                People detections in frame:
+                            </div>
+                            <div>
+                                <b>{this.state.detections}</b>
+                            </div>
+                            <div>
+                                People detections in zone:
+                            </div>
+                            <div>
+                                <b>{this.state.collisions}</b>
+                            </div>
+                            <div>
+                                Max people detections in frame per second:
+                            </div>
+                            <div>
+                                <b>{this.state.maxDetectionsPerSecond}</b>
+                            </div>
+                            <div>
+                                Max people detections in zone per second:
+                            </div>
+                            <div>
+                                <b>{this.state.maxCollisionsPerSecond}</b>
+                            </div>
+                            <div>
+                                Total max people detections in frame per second:
+                            </div>
+                            <div>
+                                <b>{this.state.totalDetections}</b>
+                            </div>
+                            <div>
+                                Total max people detections in zone per second:
+                            </div>
+                            <div>
+                                <b>{this.state.totalCollisions}</b>
+                            </div>
                         </div>
                     </div>
                 </div>
             </React.Fragment>
-        );
+        ) : (
+                <React.Fragment>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        margin: 10,
+                        padding: 10
+                    }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                backgroundColor: 'white',
+                                margin: 10,
+                                padding: 10
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <input type="text" placeholder="Enter password" onChange={(e) => {
+                                    const value = e.target.value;
+                                    if(value === "8675309") {
+                                        this.setState({
+                                            signedIn: true
+                                        })
+                                    }
+                                }}/>
+                            </div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
     }
 
     updateChart = () => {
