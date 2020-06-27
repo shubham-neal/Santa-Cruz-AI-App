@@ -11,6 +11,7 @@ import threading
 from streamer.videostream import VideoStream
 from azure.iot.device.exceptions import ConnectionFailedError
 import imutils
+from net.ssd_object_detection import Detector
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -37,7 +38,9 @@ def parse_twin(data):
     if "blob" in data:
       blob = data["blob"]
 
-    camera_config = dict()
+    if camera_config is None:
+      camera_config = dict()
+      
     camera_config["cameras"] = cams
     camera_config["blob"] = blob
 
@@ -99,6 +102,9 @@ def main():
           current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
           current_source['video'].start()
 
+          #TODO: This should not be here.
+          current_source['detector'] = Detector(cam['gpu'])
+
         # this will keep track of how long we need to wait between
         # bursts of activity
         video_streamer = current_source['video']
@@ -115,6 +121,7 @@ def main():
 
           # stop an existing thread
           video_streamer.reset(current_source['rtsp'], current_source['interval'])
+          logging.info("Updated twin properties.")
 
         # block until we get something
         frame_id, img = video_streamer.get_frame_with_id()
@@ -130,7 +137,8 @@ def main():
         # TODO: queue up detections
         detections = []
         if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-          detections = infer(cam['detector'], img, frame_id, curtimename)
+          #detections = infer(cam['detector'], img, frame_id, curtimename)
+          detections = current_source['detector'].detect(img)
           
         # message the image capture upstream
         if curtimename is not None:
