@@ -1,11 +1,10 @@
 import React from 'react';
 import './App.css';
 import io from 'socket.io-client';
-import { defaults } from 'react-chartjs-2';
-import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
 import { Password } from './components/Password';
 import { RealTimeMetrics } from './components/RealTimeMetrics';
+import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 
@@ -29,23 +28,9 @@ class App extends React.Component {
             },
             collisions: 0,
             detections: 0,
-            totalCollisions: 0,
-            totalDetections: 0,
-            maxCollisionsPerSecond: 0,
-            maxDetectionsPerSecond: 0,
-            maxPerSecond: {
-                times: [],
-                collisions: [],
-                detections: []
-            },
             image: new Image(),
-            chartData: {
-                labels: [],
-                datasets: []
-            },
             accessGranted: true
         }
-        defaults.global.animation = false;
         this.account = 'adlsunifiededgedev001';
         this.containerName = 'still-images';
         this.blobPath = 'Office/cam001';
@@ -61,12 +46,13 @@ class App extends React.Component {
         socket.on('message', (message) => {
             const data = JSON.parse(message);
             if (data && data.hasOwnProperty('body')) {
-                if (data.body.hasOwnProperty('detections')) {
+                const frame = data.body;
+                if (frame.hasOwnProperty('detections')) {
                     let collisions = 0;
                     let detections = 0;
-                    const l = data.body.detections.length;
+                    const l = frame.detections.length;
                     for (let i = 0; i < l; i++) {
-                        const detection = data.body.detections[i];
+                        const detection = frame.detections[i];
                         if (detection.bbox) {
                             const polygon = [
                                 [detection.bbox[0], detection.bbox[1]],
@@ -84,49 +70,17 @@ class App extends React.Component {
                         }
                         detections = detections + 1;
                     }
-                    const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-                    const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
                     this.setState({
-                        frame: data.body,
+                        frame: frame,
                         collisions: collisions,
-                        detections: detections,
-                        maxCollisionsPerSecond: collisions > maxCollisionsPerSecond ? collisions : maxCollisionsPerSecond,
-                        maxDetectionsPerSecond: detections > maxDetectionsPerSecond ? detections : maxDetectionsPerSecond
+                        detections: detections
                     });
                 }
-                if (data.body.hasOwnProperty("image_name")) {
-                    this.updateImage(data.body.image_name);
+                if (frame.hasOwnProperty("image_name")) {
+                    this.updateImage(frame.image_name);
                 }
             }
         });
-
-        setInterval(() => {
-            if (this.state.accessGranted) {
-                const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-                const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-
-                // track per second
-                this.state.maxPerSecond.times.push(this.formatTime(new Date()));
-                this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
-                this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
-                if (this.state.maxPerSecond.times.length > 10) {
-                    this.state.maxPerSecond.times.shift();
-                    this.state.maxPerSecond.collisions.shift();
-                    this.state.maxPerSecond.detections.shift();
-                }
-                this.updateChart();
-
-                this.setState({
-                    totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
-                    totalDetections: this.state.totalDetections + maxDetectionsPerSecond
-                }, () => {
-                    this.setState({
-                        maxCollisionsPerSecond: 0,
-                        maxDetectionsPerSecond: 0
-                    })
-                });
-            }
-        }, 1000);
     }
 
     render() {
@@ -182,36 +136,12 @@ class App extends React.Component {
                                 image={this.state.image}
                                 updateAggregator={this.updateAggregator}
                             />
-                            <div
-                                style={{
-                                    width: this.state.width,
-                                    height: this.state.height,
-                                    padding: 10
-                                }}
-                            >
-                                <Line redraw
-                                    data={this.state.chartData}
-                                    options={{
-                                        maintainAspectRatio: true,
-                                        legend: {
-                                            display: true,
-                                            position: 'bottom'
-                                        },
-                                        layout: {
-                                            padding: {
-                                                left: 10,
-                                                right: 0,
-                                                top: 0,
-                                                bottom: 0
-                                            }
-                                        },
-                                        title: {
-                                            display: true,
-                                            text: 'Count of people vs Time'
-                                        }
-                                    }}
-                                />
-                            </div>
+                            <CountOfPeopleVsTime
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                            />
                         </div>
                         <RealTimeMetrics
                             aggregator={this.state.aggregator}
@@ -227,37 +157,7 @@ class App extends React.Component {
             );
     }
 
-    updateChart = () => {
-        if (this.state.maxPerSecond.times.length > 0) {
-            const chartData = {
-                labels: this.state.maxPerSecond.times,
-                datasets: [{
-                    label: 'Max people detections in frame per second',
-                    data: this.state.maxPerSecond.detections,
-                    backgroundColor: [
-                        'transparent'
-                    ],
-                    borderColor: [
-                        'lightblue'
-                    ],
-                    borderWidth: 1
-                }, {
-                    label: 'Max people detections in zone per second',
-                    data: this.state.maxPerSecond.collisions,
-                    backgroundColor: [
-                        'transparent'
-                    ],
-                    borderColor: [
-                        'yellow'
-                    ],
-                    borderWidth: 2
-                }]
-            };
-            this.setState({
-                chartData: chartData
-            });
-        }
-    }
+    // utils
 
     formatDate = (date) => {
         // Note: en-EN won't return in year-month-day order
@@ -272,6 +172,8 @@ class App extends React.Component {
         // Note: en-EN won't return in without the AM/PM
         return date.toLocaleTimeString('it-IT');
     }
+
+    // image
 
     async updateImage(imageName) {
         const blobName = `${this.blobPath}/${imageName.split('T')[0]}/${imageName}.jpg`;

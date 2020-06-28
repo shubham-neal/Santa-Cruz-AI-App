@@ -1,4 +1,6 @@
 import React from 'react';
+import { defaults } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 
 export class CountOfPeopleVsTime extends React.Component {
     static defaultProps = {
@@ -30,6 +32,7 @@ export class CountOfPeopleVsTime extends React.Component {
                 datasets: []
             }
         }
+        defaults.global.animation = false;
     }
 
     componentDidMount() {
@@ -54,6 +57,8 @@ export class CountOfPeopleVsTime extends React.Component {
                 this.setState({
                     maxCollisionsPerSecond: 0,
                     maxDetectionsPerSecond: 0
+                }, () => {
+                    this.updateChart();
                 })
             });
         }, 1000);
@@ -72,64 +77,71 @@ export class CountOfPeopleVsTime extends React.Component {
     }
 
     render() {
-        const names = this.props.aggregator.zones.map((zone, index) => {
-            return (
-                <span key={index}>{index > 0 ? ',' : null}{zone.name}</span>
-            )
-        });
         return (
             <React.Fragment>
                 <div
                     style={{
-                        margin: 10
+                        width: this.state.width,
+                        height: this.state.height,
+                        padding: 10
                     }}
                 >
-                    <div
-                        style={{
-                            marginBottom: 10,
-                            fontWeight: 'bold'
+                    <Line redraw
+                        data={this.state.chartData}
+                        options={{
+                            maintainAspectRatio: true,
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+                            layout: {
+                                padding: {
+                                    left: 10,
+                                    right: 0,
+                                    top: 0,
+                                    bottom: 0
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Count of people vs Time'
+                            }
                         }}
-                    >
-                        Real time metrics
-                    </div>
-                    <div>
-                        People detections in frame
-                    </div>
-                    <div>
-                        <b>{this.props.detections}</b>
-                    </div>
-                    <div>
-                        People detections in zones ({names})
-                    </div>
-                    <div>
-                        <b>{this.props.collisions}</b>
-                    </div>
-                    <div>
-                        Max people detections in frame per second
-                            </div>
-                    <div>
-                        <b>{this.state.maxDetectionsPerSecond}</b>
-                    </div>
-                    <div>
-                        Max people detections in zones ({names}) per second
-                    </div>
-                    <div>
-                        <b>{this.state.maxCollisionsPerSecond}</b>
-                    </div>
-                    <div>
-                        Total max people detections in frame per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalDetections}</b>
-                    </div>
-                    <div>
-                        Total max people detections in zones ({names}) per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalCollisions}</b>
-                    </div>
+                    />
                 </div>
             </React.Fragment>
         );
+    }
+
+    updateChart = () => {
+        if (this.state.maxPerSecond.times.length > 0) {
+            const chartData = {
+                labels: this.state.maxPerSecond.times,
+                datasets: [{
+                    label: 'Max people detections in frame per second',
+                    data: this.state.maxPerSecond.detections,
+                    backgroundColor: [
+                        'transparent'
+                    ],
+                    borderColor: [
+                        'lightblue'
+                    ],
+                    borderWidth: 1
+                }, {
+                    label: 'Max people detections in zone per second',
+                    data: this.state.maxPerSecond.collisions,
+                    backgroundColor: [
+                        'transparent'
+                    ],
+                    borderColor: [
+                        'yellow'
+                    ],
+                    borderWidth: 2
+                }]
+            };
+            this.setState({
+                chartData: chartData
+            });
+        }
     }
 }
