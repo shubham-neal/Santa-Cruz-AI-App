@@ -52,7 +52,7 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        var socket = io('ws://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+        var socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
         socket.on('connect', function () {
             console.log('connected!');
         });
