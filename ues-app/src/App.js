@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import { defaults } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
+import { Password } from './components/Password';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 
@@ -41,7 +42,7 @@ class App extends React.Component {
                 labels: [],
                 datasets: []
             },
-            signedIn: false
+            accessGranted: true
         }
         defaults.global.animation = false;
         this.account = 'adlsunifiededgedev001';
@@ -98,58 +99,8 @@ class App extends React.Component {
             }
         });
 
-        // const url = 'ws://ues-messages-app.azurewebsites.net:8080';
-        // const connection = new WebSocket(url);
-        // connection.onopen = () => {
-        //     connection.send('Client connected...');
-        // }
-        // connection.onmessage = (e) => {
-        //     const data = JSON.parse(e.data);
-        //     if (data && data.hasOwnProperty('body')) {
-        //         if (data.body.hasOwnProperty('detections')) {
-        //             let collisions = 0;
-        //             let detections = 0;
-        //             const l = data.body.detections.length;
-        //             for (let i = 0; i < l; i++) {
-        //                 const detection = data.body.detections[i];
-        //                 if (detection.bbox) {
-        //                     const polygon = [
-        //                         [detection.bbox[0], detection.bbox[1]],
-        //                         [detection.bbox[2], detection.bbox[1]],
-        //                         [detection.bbox[2], detection.bbox[3]],
-        //                         [detection.bbox[0], detection.bbox[3]],
-        //                         [detection.bbox[0], detection.bbox[1]],
-        //                     ];
-        //                     if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
-        //                         detection.collides = true;
-        //                         collisions = collisions + 1;
-        //                     } else {
-        //                         detection.collides = false;
-        //                     }
-        //                 }
-        //                 detections = detections + 1;
-        //             }
-        //             const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-        //             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-        //             this.setState({
-        //                 frame: data.body,
-        //                 collisions: collisions,
-        //                 detections: detections,
-        //                 maxCollisionsPerSecond: collisions > maxCollisionsPerSecond ? collisions : maxCollisionsPerSecond,
-        //                 maxDetectionsPerSecond: detections > maxDetectionsPerSecond ? detections : maxDetectionsPerSecond
-        //             });
-        //         }
-        //         if (data.body.hasOwnProperty("image_name")) {
-        //             this.updateImage(data.body.image_name);
-        //         }
-        //     }
-        // }
-        // connection.onerror = (error) => {
-        //     console.log(`WebSocket error: ${error}`);
-        // }
-
         setInterval(() => {
-            if (this.state.signedIn) {
+            if (this.state.accessGranted) {
                 const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
                 const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
 
@@ -178,7 +129,7 @@ class App extends React.Component {
     }
 
     render() {
-        return this.state.signedIn ? (
+        return this.state.accessGranted ? (
             <React.Fragment>
                 <div style={{
                     display: "flex",
@@ -281,7 +232,7 @@ class App extends React.Component {
                                 <b>{this.state.detections}</b>
                             </div>
                             <div>
-                                People detections in zone:
+                                People detections in <b>{this.state.aggregator.zones[0].name}</b>:
                             </div>
                             <div>
                                 <b>{this.state.collisions}</b>
@@ -293,7 +244,7 @@ class App extends React.Component {
                                 <b>{this.state.maxDetectionsPerSecond}</b>
                             </div>
                             <div>
-                                Max people detections in zone per second:
+                                Max people detections in <b>{this.state.aggregator.zones[0].name}</b> per second:
                             </div>
                             <div>
                                 <b>{this.state.maxCollisionsPerSecond}</b>
@@ -305,7 +256,7 @@ class App extends React.Component {
                                 <b>{this.state.totalDetections}</b>
                             </div>
                             <div>
-                                Total max people detections in zone per second:
+                                Total max people detections in <b>{this.state.aggregator.zones[0].name}</b> per second:
                             </div>
                             <div>
                                 <b>{this.state.totalCollisions}</b>
@@ -315,42 +266,7 @@ class App extends React.Component {
                 </div>
             </React.Fragment>
         ) : (
-                <React.Fragment>
-                    <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        margin: 10,
-                        padding: 10
-                    }}>
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                backgroundColor: 'white',
-                                margin: 10,
-                                padding: 10
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}
-                            >
-                                <input type="text" placeholder="Enter password" onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === "8675309") {
-                                        this.setState({
-                                            signedIn: true
-                                        })
-                                    }
-                                }} />
-                            </div>
-                        </div>
-                    </div>
-                </React.Fragment>
+                <Password updatePassword={this.updatePassword} />
             );
     }
 
@@ -431,6 +347,15 @@ class App extends React.Component {
         }, () => {
             // console.log(JSON.stringify(aggregator));
         });
+    }
+
+    updatePassword = (e) => {
+        const value = e.target.value;
+        if (value === '8675309') {
+            this.setState({
+                accessGranted: true
+            });
+        }
     }
 
     // collisions
