@@ -203,8 +203,6 @@ class App extends React.Component {
     updateAggregator = (aggregator) => {
         this.setState({
             aggregator: aggregator
-        }, () => {
-            // console.log(JSON.stringify(aggregator));
         });
     }
 
