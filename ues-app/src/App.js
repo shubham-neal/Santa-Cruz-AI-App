@@ -5,6 +5,7 @@ import { defaults } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
 import { Password } from './components/Password';
+import { RealTimeMetrics } from './components/RealTimeMetrics';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 
@@ -212,56 +213,12 @@ class App extends React.Component {
                                 />
                             </div>
                         </div>
-                        <div
-                            style={{
-                                margin: 10
-                            }}
-                        >
-                            <div
-                                style={{
-                                    marginBottom: 10,
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                Real time metrics
-                            </div>
-                            <div>
-                                People detections in frame:
-                            </div>
-                            <div>
-                                <b>{this.state.detections}</b>
-                            </div>
-                            <div>
-                                People detections in <b>{this.state.aggregator.zones[0].name}</b>:
-                            </div>
-                            <div>
-                                <b>{this.state.collisions}</b>
-                            </div>
-                            <div>
-                                Max people detections in frame per second:
-                            </div>
-                            <div>
-                                <b>{this.state.maxDetectionsPerSecond}</b>
-                            </div>
-                            <div>
-                                Max people detections in <b>{this.state.aggregator.zones[0].name}</b> per second:
-                            </div>
-                            <div>
-                                <b>{this.state.maxCollisionsPerSecond}</b>
-                            </div>
-                            <div>
-                                Total max people detections in frame per second:
-                            </div>
-                            <div>
-                                <b>{this.state.totalDetections}</b>
-                            </div>
-                            <div>
-                                Total max people detections in <b>{this.state.aggregator.zones[0].name}</b> per second:
-                            </div>
-                            <div>
-                                <b>{this.state.totalCollisions}</b>
-                            </div>
-                        </div>
+                        <RealTimeMetrics
+                            aggregator={this.state.aggregator}
+                            frame={this.state.frame}
+                            collisions={this.state.collisions}
+                            detections={this.state.detections}
+                        />
                     </div>
                 </div>
             </React.Fragment>

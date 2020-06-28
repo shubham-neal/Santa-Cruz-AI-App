@@ -1,6 +1,6 @@
 import React from 'react';
 
-export class RealTimeMetrics extends React.Component {
+export class CountOfPeopleVsTime extends React.Component {
     static defaultProps = {
         aggregator: {
             lines: [],
