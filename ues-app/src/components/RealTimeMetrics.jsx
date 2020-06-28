@@ -19,16 +19,7 @@ export class RealTimeMetrics extends React.Component {
             totalCollisions: 0,
             totalDetections: 0,
             maxCollisionsPerSecond: 0,
-            maxDetectionsPerSecond: 0,
-            maxPerSecond: {
-                times: [],
-                collisions: [],
-                detections: []
-            },
-            chartData: {
-                labels: [],
-                datasets: []
-            }
+            maxDetectionsPerSecond: 0
         }
     }
 
@@ -36,16 +27,6 @@ export class RealTimeMetrics extends React.Component {
         setInterval(() => {
             const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-
-            // track per second
-            this.state.maxPerSecond.times.push(new Date().toLocaleTimeString('it-IT'));
-            this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
-            this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
-            if (this.state.maxPerSecond.times.length > 10) {
-                this.state.maxPerSecond.times.shift();
-                this.state.maxPerSecond.collisions.shift();
-                this.state.maxPerSecond.detections.shift();
-            }
 
             this.setState({
                 totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,

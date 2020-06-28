@@ -10,7 +10,9 @@ export class AggregateStatsInTimeWindow extends React.Component {
             detections: []
         },
         collisions: 0,
-        detections: 0
+        detections: 0,
+        blobExists: (containerName, blobName) => { },
+        downloadBlob: (containerName, blobName) => { }
     }
 
     constructor(props) {
@@ -19,16 +21,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
             totalCollisions: 0,
             totalDetections: 0,
             maxCollisionsPerSecond: 0,
-            maxDetectionsPerSecond: 0,
-            maxPerSecond: {
-                times: [],
-                collisions: [],
-                detections: []
-            },
-            chartData: {
-                labels: [],
-                datasets: []
-            }
+            maxDetectionsPerSecond: 0
         }
     }
 
@@ -36,16 +29,6 @@ export class AggregateStatsInTimeWindow extends React.Component {
         setInterval(() => {
             const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-
-            // track per second
-            this.state.maxPerSecond.times.push(new Date().toLocaleTimeString('it-IT'));
-            this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
-            this.state.maxPerSecond.detections.push(maxDetectionsPerSecond);
-            if (this.state.maxPerSecond.times.length > 10) {
-                this.state.maxPerSecond.times.shift();
-                this.state.maxPerSecond.collisions.shift();
-                this.state.maxPerSecond.detections.shift();
-            }
 
             this.setState({
                 totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
@@ -90,7 +73,32 @@ export class AggregateStatsInTimeWindow extends React.Component {
                             fontWeight: 'bold'
                         }}
                     >
-                        Real time metrics
+                        Aggregate stats in time window
+                    </div>
+                    <div>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>Start</td>
+                                    <td><input type="date" /> <input type="time" /></td>
+                                </tr>
+                                <tr>
+                                    <td>End</td>
+                                    <td><input type="date" /> <input type="time" /></td>
+                                </tr>
+                                <tr>
+                                    <td colSpan={2}>
+                                        <input
+                                            type="button"
+                                            value="Calculate"
+                                            onClick={(e) => {
+                                                this.calculate();
+                                            }}
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     <div>
                         People detections in frame
@@ -131,5 +139,51 @@ export class AggregateStatsInTimeWindow extends React.Component {
                 </div>
             </React.Fragment>
         );
+    }
+    
+    async calculate() {
+        const exists = await this.blobExists("detectoroutput", "iot-unifiededge-001/00/2020/06/28/23");
+        if (exists) {
+            const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
+            console.log("Listing blobs by hierarchy");
+            let itr = containerClient.listBlobsFlat()
+            let iter = containerClient.listBlobsByHierarchy("/", { prefix: "iot-unifiededge-001/00/2020/06/28/23/0"});
+            const blobs = [];
+            for await (const item of iter) {
+                console.log(`\tBlobItem: name - ${item.name}, last modified - ${item.properties.lastModified}`);
+                const blob = await this.downloadBlob("detectoroutput", item.name);
+                blobs.push(blob);
+            }
+            console.log(blobs);
+        }
+    }
+
+    async blobExists(containerName, blobName) {
+        const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
+        const blobClient = containerClient.getBlobClient(blobName);
+        const exists = blobClient.exists();
+        return exists;
+    }
+
+    async downloadBlob(containerName, blobName) {
+        const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
+        const blobClient = containerClient.getBlobClient(blobName);
+        const downloadBlockBlobResponse = await blobClient.download();
+
+        const downloaded = await this.blobToString(await downloadBlockBlobResponse.blobBody);
+        const views = downloaded.replace(/\\"/g, /'/).split('\r\n');
+
+        return views;
+    }
+
+    async blobToString(blob) {
+        const fileReader = new FileReader();
+        return new Promise((resolve, reject) => {
+            fileReader.onloadend = (ev) => {
+                resolve(ev.target.result);
+            };
+            fileReader.onerror = reject;
+            fileReader.readAsText(blob);
+        });
     }
 }

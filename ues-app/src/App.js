@@ -5,8 +5,15 @@ import { Camera } from './components/Camera';
 import { Password } from './components/Password';
 import { RealTimeMetrics } from './components/RealTimeMetrics';
 import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
+import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 
-const { BlobServiceClient } = require("@azure/storage-blob");
+const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
+const account = 'adlsunifiededgedev001';
+const containerName = 'still-images';
+const blobPath = 'Office/cam001';
+const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
+const defaultAzureCredential = null; //new DefaultAzureCredential();
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`, defaultAzureCredential);
 
 class App extends React.Component {
     constructor(props) {
@@ -29,17 +36,13 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: true
+            accessGranted: true,
+            blobServiceClient: blobServiceClient
         }
-        this.account = 'adlsunifiededgedev001';
-        this.containerName = 'still-images';
-        this.blobPath = 'Office/cam001';
-        this.sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
-        this.blobServiceClient = new BlobServiceClient(`https://${this.account}.blob.core.windows.net?${this.sharedAccessSignature}`, this.defaultAzureCredential);
     }
 
     componentDidMount() {
-        var socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+        const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
         socket.on('connect', function () {
             console.log('connected!');
         });
@@ -143,12 +146,29 @@ class App extends React.Component {
                                 detections={this.state.detections}
                             />
                         </div>
-                        <RealTimeMetrics
-                            aggregator={this.state.aggregator}
-                            frame={this.state.frame}
-                            collisions={this.state.collisions}
-                            detections={this.state.detections}
-                        />
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                backgroundColor: 'white',
+                                margin: 10,
+                                padding: 10
+                            }}
+                        >
+                            <RealTimeMetrics
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                            />
+                            <AggregateStatsInTimeWindow
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                                blobServiceClient={this.state.blobServiceClient}
+                            />
+                        </div>
                     </div>
                 </div>
             </React.Fragment>
@@ -157,8 +177,7 @@ class App extends React.Component {
             );
     }
 
-    // utils
-
+    // date and time
     formatDate = (date) => {
         // Note: en-EN won't return in year-month-day order
         return date.toLocaleDateString('fr-CA', {
@@ -173,11 +192,11 @@ class App extends React.Component {
         return date.toLocaleTimeString('it-IT');
     }
 
-    // image
+    // image from blob storage
 
     async updateImage(imageName) {
-        const blobName = `${this.blobPath}/${imageName.split('T')[0]}/${imageName}.jpg`;
-        const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+        const blobName = `${blobPath}/${imageName.split('T')[0]}/${imageName}.jpg`;
+        const containerClient = blobServiceClient.getContainerClient(containerName);
         const blobClient = containerClient.getBlobClient(blobName);
 
         const downloadBlockBlobResponse = await blobClient.download();
@@ -303,7 +322,7 @@ class App extends React.Component {
             return false;
         }
 
-        var i = 0, j = polygon.length - 1;
+        let i = 0, j = polygon.length - 1;
         for (i, j; i < polygon.length; j = i++) {
             if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
                 p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
