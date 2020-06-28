@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import io from 'socket.io-client';
 import { defaults } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
 import { Camera } from './components/Camera';
@@ -51,13 +52,12 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        const url = 'ws://localhost:8080';
-        const connection = new WebSocket(url);
-        connection.onopen = () => {
-            connection.send('Client connected...');
-        }
-        connection.onmessage = (e) => {
-            const data = JSON.parse(e.data);
+        var socket = io('ws://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+        socket.on('connect', function () {
+            console.log('connected!');
+        });
+        socket.on('message', (message) => {
+            const data = JSON.parse(message);
             if (data && data.hasOwnProperty('body')) {
                 if (data.body.hasOwnProperty('detections')) {
                     let collisions = 0;
@@ -96,16 +96,63 @@ class App extends React.Component {
                     this.updateImage(data.body.image_name);
                 }
             }
-        }
-        connection.onerror = (error) => {
-            console.log(`WebSocket error: ${error}`);
-        }
+        });
+
+        // const url = 'ws://ues-messages-app.azurewebsites.net:8080';
+        // const connection = new WebSocket(url);
+        // connection.onopen = () => {
+        //     connection.send('Client connected...');
+        // }
+        // connection.onmessage = (e) => {
+        //     const data = JSON.parse(e.data);
+        //     if (data && data.hasOwnProperty('body')) {
+        //         if (data.body.hasOwnProperty('detections')) {
+        //             let collisions = 0;
+        //             let detections = 0;
+        //             const l = data.body.detections.length;
+        //             for (let i = 0; i < l; i++) {
+        //                 const detection = data.body.detections[i];
+        //                 if (detection.bbox) {
+        //                     const polygon = [
+        //                         [detection.bbox[0], detection.bbox[1]],
+        //                         [detection.bbox[2], detection.bbox[1]],
+        //                         [detection.bbox[2], detection.bbox[3]],
+        //                         [detection.bbox[0], detection.bbox[3]],
+        //                         [detection.bbox[0], detection.bbox[1]],
+        //                     ];
+        //                     if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+        //                         detection.collides = true;
+        //                         collisions = collisions + 1;
+        //                     } else {
+        //                         detection.collides = false;
+        //                     }
+        //                 }
+        //                 detections = detections + 1;
+        //             }
+        //             const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
+        //             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
+        //             this.setState({
+        //                 frame: data.body,
+        //                 collisions: collisions,
+        //                 detections: detections,
+        //                 maxCollisionsPerSecond: collisions > maxCollisionsPerSecond ? collisions : maxCollisionsPerSecond,
+        //                 maxDetectionsPerSecond: detections > maxDetectionsPerSecond ? detections : maxDetectionsPerSecond
+        //             });
+        //         }
+        //         if (data.body.hasOwnProperty("image_name")) {
+        //             this.updateImage(data.body.image_name);
+        //         }
+        //     }
+        // }
+        // connection.onerror = (error) => {
+        //     console.log(`WebSocket error: ${error}`);
+        // }
 
         setInterval(() => {
-            if(this.state.signedIn) {
+            if (this.state.signedIn) {
                 const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
                 const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-    
+
                 // track per second
                 this.state.maxPerSecond.times.push(this.formatTime(new Date()));
                 this.state.maxPerSecond.collisions.push(maxCollisionsPerSecond);
@@ -116,7 +163,7 @@ class App extends React.Component {
                     this.state.maxPerSecond.detections.shift();
                 }
                 this.updateChart();
-    
+
                 this.setState({
                     totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
                     totalDetections: this.state.totalDetections + maxDetectionsPerSecond
@@ -294,12 +341,12 @@ class App extends React.Component {
                             >
                                 <input type="text" placeholder="Enter password" onChange={(e) => {
                                     const value = e.target.value;
-                                    if(value === "8675309") {
+                                    if (value === "8675309") {
                                         this.setState({
                                             signedIn: true
                                         })
                                     }
-                                }}/>
+                                }} />
                             </div>
                         </div>
                     </div>
