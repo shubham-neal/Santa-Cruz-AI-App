@@ -21,7 +21,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
             maxDetectionsPerSecond: 0,
             calculating: false
         }
-        this.dateTimeRef = React.createRef();
+        this.startDateTimeRef = React.createRef();
+        this.endDateTimeRef = React.createRef();
     }
 
 
@@ -52,19 +53,42 @@ export class AggregateStatsInTimeWindow extends React.Component {
                                 margin: 5
                             }}
                         >
-                            End:
+                            Start:
                         </span>
                         <input
-                            ref={this.dateTimeRef}
+                            ref={this.startDateTimeRef}
+                            readOnly
                             type="datetime-local"
                             style={{
                                 margin: 5
                             }}
                         />
+                        <span
+                            style={{
+                                margin: 5
+                            }}
+                        >
+                            End:
+                        </span>
+                        <input
+                            ref={this.endDateTimeRef}
+                            type="datetime-local"
+                            style={{
+                                margin: 5
+                            }}
+                            onChange={(e) => {
+                                const startDateTime = new Date(e.target.value);
+                                let minutes = startDateTime.getMinutes();
+                                minutes = minutes - 15;
+                                startDateTime.setMinutes(minutes);
+                                const isoString = startDateTime.toISOString().slice(0, 16);
+                                this.startDateTimeRef.current.value = isoString;
+                            }}
+                        />
                         <input
                             type="button"
                             value="Calculate"
-                            disabled={this.dateTimeRef.current == null || this.dateTimeRef.current.value == "" || new Date(this.dateTimeRef.current.value) >= new Date() || new Date(this.dateTimeRef.current.value) < new Date(2020, 5, 27)}
+                            disabled={this.endDateTimeRef.current == null || this.endDateTimeRef.current.value == "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
                             style={{
                                 margin: 5
                             }}
@@ -114,7 +138,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
 
     async calculate() {
         // parse the start datetime to get a list of all the blobs
-        const startDateTime = new Date(this.dateTimeRef.current.value);
+        const startDateTime = new Date(this.endDateTimeRef.current.value);
         const endDateTime = new Date(startDateTime);
         startDateTime.setMinutes(startDateTime.getMinutes() - 15);
 
