@@ -88,7 +88,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
                         <input
                             type="button"
                             value="Calculate"
-                            disabled={this.endDateTimeRef.current == null || this.endDateTimeRef.current.value == "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
+                            disabled={this.endDateTimeRef.current === null || this.endDateTimeRef.current.value === "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
                             style={{
                                 margin: 5
                             }}
@@ -229,7 +229,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     frame.detections = item.detections;
                     frame.maxDetections = item.detections.length;
                     frame.maxCollisions = maxCollisions;
-                    if (i + 1 == l) {
+                    if (i + 1 === l) {
                         frames.push(frame);
                     }
                 } else if (Math.abs(t - time) >= 1000) {
@@ -240,14 +240,14 @@ export class AggregateStatsInTimeWindow extends React.Component {
                         maxDetections: item.detections.length,
                         maxCollisions: maxCollisions
                     }
-                    if (i + 1 == l) {
+                    if (i + 1 === l) {
                         frames.push(frame);
                     }
                 } else {
                     frame.detections = [...frame.detections, ...item.detections];
                     frame.maxDetections = item.detections.length > frame.maxDetections ? item.detections.length : frame.maxDetections;
                     frame.maxCollisions = maxCollisions > frame.maxCollisions ? maxCollisions : frame.maxCollisions;
-                    if (i + 1 == l) {
+                    if (i + 1 === l) {
                         frames.push(frame);
                     }
                 }

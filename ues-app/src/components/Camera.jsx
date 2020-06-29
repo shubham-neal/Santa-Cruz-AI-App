@@ -330,13 +330,6 @@ export class Camera extends React.Component {
 
     drawDetection(canvasContext, detection) {
         if (detection.bbox) {
-            const polygon = [
-                [detection.bbox[0], detection.bbox[1]],
-                [detection.bbox[2], detection.bbox[1]],
-                [detection.bbox[2], detection.bbox[3]],
-                [detection.bbox[0], detection.bbox[3]],
-                [detection.bbox[0], detection.bbox[1]],
-            ];
             if (detection.collides) {
                 canvasContext.strokeStyle = 'yellow';
                 canvasContext.lineWidth = 4;
