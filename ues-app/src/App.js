@@ -1,8 +1,19 @@
 import React from 'react';
 import './App.css';
+import io from 'socket.io-client';
 import { Camera } from './components/Camera';
+import { Password } from './components/Password';
+import { RealTimeMetrics } from './components/RealTimeMetrics';
+import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
+import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 
-const { BlobServiceClient } = require("@azure/storage-blob");
+const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
+const account = 'adlsunifiededgedev001';
+const containerName = 'still-images';
+const blobPath = 'Office/cam001';
+const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
+const defaultAzureCredential = null; //new DefaultAzureCredential();
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`, defaultAzureCredential);
 
 class App extends React.Component {
     constructor(props) {
@@ -24,30 +35,27 @@ class App extends React.Component {
             },
             collisions: 0,
             detections: 0,
-            image: new Image()
+            image: new Image(),
+            accessGranted: true,
+            blobServiceClient: blobServiceClient
         }
-        this.account = 'adlsunifiededgedev001';
-        this.containerName = 'still-images';
-        this.blobPath = 'Office/cam001';
-        this.sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
-        this.blobServiceClient = new BlobServiceClient(`https://${this.account}.blob.core.windows.net?${this.sharedAccessSignature}`, this.defaultAzureCredential);
     }
 
     componentDidMount() {
-        const url = 'ws://localhost:8080';
-        const connection = new WebSocket(url);
-        connection.onopen = () => {
-            connection.send('Client connected...');
-        }
-        connection.onmessage = (e) => {
-            const data = JSON.parse(e.data);
+        const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+        socket.on('connect', function () {
+            console.log('connected!');
+        });
+        socket.on('message', (message) => {
+            const data = JSON.parse(message);
             if (data && data.hasOwnProperty('body')) {
-                if (data.body.hasOwnProperty('detections')) {
+                const frame = data.body;
+                if (frame.hasOwnProperty('detections')) {
                     let collisions = 0;
                     let detections = 0;
-                    const l = data.body.detections.length;
+                    const l = frame.detections.length;
                     for (let i = 0; i < l; i++) {
-                        const detection = data.body.detections[i];
+                        const detection = frame.detections[i];
                         if (detection.bbox) {
                             const polygon = [
                                 [detection.bbox[0], detection.bbox[1]],
@@ -66,49 +74,108 @@ class App extends React.Component {
                         detections = detections + 1;
                     }
                     this.setState({
-                        frame: data.body,
+                        frame: frame,
                         collisions: collisions,
                         detections: detections
                     });
                 }
-                if (data.body.hasOwnProperty("image_name")) {
-                    this.updateImage(data.body.image_name);
+                if (frame.hasOwnProperty("image_name")) {
+                    this.updateImage(frame.image_name);
                 }
             }
-        }
-        connection.onerror = (error) => {
-            console.log(`WebSocket error: ${error}`);
-        }
+        });
     }
 
     render() {
-        return (
+        return this.state.accessGranted ? (
             <React.Fragment>
-                <Camera
-                    fps={this.state.fps}
-                    width={this.state.width}
-                    height={this.state.height}
-                    aggregator={this.state.aggregator}
-                    frame={this.state.frame}
-                    image={this.state.image}
-                    updateAggregator={this.updateAggregator}
-                />
-                <div
-                    style={{
-                        margin: 10
-                    }}
-                >
-                    <div>
-                        People in frame: {this.state.detections}
-                    </div>
-                    <div>
-                        People in zones: {this.state.collisions}
+                <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: 10,
+                    padding: 10
+                }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            backgroundColor: 'white',
+                            margin: 10,
+                            padding: 10
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}
+                        >
+                            <div>
+                                <span
+                                    style={{
+                                        margin: 5,
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid black'
+                                    }}
+                                >
+                                    Demo
+                                </span>
+                                <span
+                                    style={{
+                                        margin: 5
+                                    }}
+                                >
+                                    Live
+                                </span>
+                            </div>
+                            <Camera
+                                fps={this.state.fps}
+                                width={this.state.width}
+                                height={this.state.height}
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                image={this.state.image}
+                                updateAggregator={this.updateAggregator}
+                            />
+                            <CountOfPeopleVsTime
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                            />
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                backgroundColor: 'white',
+                                margin: 10,
+                                padding: 10
+                            }}
+                        >
+                            <RealTimeMetrics
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                            />
+                            <AggregateStatsInTimeWindow
+                                aggregator={this.state.aggregator}
+                                isBBoxInZones={this.isBBoxInZones}
+                                blobServiceClient={this.state.blobServiceClient}
+                            />
+                        </div>
                     </div>
                 </div>
             </React.Fragment>
-        );
+        ) : (
+                <Password updatePassword={this.updatePassword} />
+            );
     }
 
+    // date and time
     formatDate = (date) => {
         // Note: en-EN won't return in year-month-day order
         return date.toLocaleDateString('fr-CA', {
@@ -118,9 +185,16 @@ class App extends React.Component {
         });
     }
 
+    formatTime = (date) => {
+        // Note: en-EN won't return in without the AM/PM
+        return date.toLocaleTimeString('it-IT');
+    }
+
+    // image from blob storage
+
     async updateImage(imageName) {
-        const blobName = `${this.blobPath}/${imageName.split('T')[0]}/${imageName}.jpg`;
-        const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+        const blobName = `${blobPath}/${imageName.split('T')[0]}/${imageName}.jpg`;
+        const containerClient = blobServiceClient.getContainerClient(containerName);
         const blobClient = containerClient.getBlobClient(blobName);
 
         const downloadBlockBlobResponse = await blobClient.download();
@@ -146,13 +220,20 @@ class App extends React.Component {
     updateAggregator = (aggregator) => {
         this.setState({
             aggregator: aggregator
-        }, () => {
-            // console.log(JSON.stringify(aggregator));
         });
     }
 
+    updatePassword = (e) => {
+        const value = e.target.value;
+        if (value === '8675309') {
+            this.setState({
+                accessGranted: true
+            });
+        }
+    }
+
     // collisions
-    isBBoxInZones(bbox, zones) {
+    isBBoxInZones = (bbox, zones) => {
         const l = zones.length;
         for (let i = 0; i < l; i++) {
             const zone = zones[i];
@@ -163,7 +244,7 @@ class App extends React.Component {
         return false;
     }
 
-    isBBoxInZone(bbox, zone) {
+    isBBoxInZone = (bbox, zone) => {
         const polygon = [];
         let l = zone.polygon.length;
         if (l > 0) {
@@ -239,7 +320,7 @@ class App extends React.Component {
             return false;
         }
 
-        var i = 0, j = polygon.length - 1;
+        let i = 0, j = polygon.length - 1;
         for (i, j; i < polygon.length; j = i++) {
             if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
                 p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {

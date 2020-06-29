@@ -27,9 +27,9 @@ EventHubClient
             return eventHubClient.receive(
                 id,
                 (message) => {
-                    console.log("START OF MESSAGE");
+                    // console.log("START OF MESSAGE");
                     console.log(JSON.stringify(message));
-                    console.log(`partition id: ${id}`);
+                    // console.log(`partition id: ${id}`);
                     if (message.hasOwnProperty("body") && message.body.hasOwnProperty("detections")) {
                         // console.log(JSON.stringify(message.body));
                         webSocket.send(JSON.stringify(message));
@@ -37,7 +37,7 @@ EventHubClient
                         // console.log(JSON.stringify(message));
                         webSocket.send(JSON.stringify(message));
                     }
-                    console.log("END OF MESSAGE");
+                    // console.log("END OF MESSAGE");
                     //webSocket.send(JSON.stringify(message));
                 },
                 (error) => {

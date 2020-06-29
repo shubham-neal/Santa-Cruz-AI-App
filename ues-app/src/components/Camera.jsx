@@ -2,7 +2,7 @@ import React from 'react';
 
 export class Camera extends React.Component {
     static defaultProps = {
-        border: '2px solid #ee82ee',
+        border: '2px solid black',
         width: 300,
         height: 300,
         fps: 30,
@@ -43,26 +43,49 @@ export class Camera extends React.Component {
     render() {
         return (
             <React.Fragment>
-                <div style={{
-                    margin: 10,
-                    textAlign: 'center',
-                    border: this.props.border,
-                    width: this.props.width,
-                    height: this.props.height
-                }}>
+                <div
+                    style={{
+                        margin: 10,
+                        textAlign: 'center',
+                        width: this.props.width
+                    }}
+                    onMouseOver={this.handleMouseOver}
+                    onMouseOut={this.handleMouseOut}
+                >
                     <canvas
                         ref={this.canvasRef}
                         width={this.props.width}
                         height={this.props.height}
+                        style={{
+                            border: this.props.border
+                        }}
                         tabIndex={1}
                         onKeyUp={this.handleKeyUp}
                         onClick={this.addPoint}
                         onMouseDown={(e) => this.dragging = true}
                         onMouseUp={(e) => this.dragging = false}
                         onMouseMove={(e) => { this.updateMousePos(e); this.movePoint(e); }}
-                        onMouseOver={this.handleMouseOver}
-                        onMouseOut={this.handleMouseOut}
                     />
+                    <div
+                        style={{
+                            visibility: this.mouseInside ? 'visible' : 'hidden'
+                        }}
+                    >
+                        <span
+                            style={{
+                                margin: 5
+                            }}
+                        >
+                            Zone Name:
+                        </span>
+                        <input
+                            type="text"
+                            defaultValue={this.state.aggregator.zones[this.state.selectedZoneIndex].name}
+                            onChange={(e) => {
+                                this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
+                            }}
+                        />
+                    </div>
                 </div>
             </React.Fragment>
         );
