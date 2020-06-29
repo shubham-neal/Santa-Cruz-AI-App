@@ -163,6 +163,7 @@ class App extends React.Component {
                             />
                             <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
+                                isBBoxInZones={this.isBBoxInZones}
                                 blobServiceClient={this.state.blobServiceClient}
                             />
                         </div>
@@ -232,7 +233,7 @@ class App extends React.Component {
     }
 
     // collisions
-    isBBoxInZones(bbox, zones) {
+    isBBoxInZones = (bbox, zones) => {
         const l = zones.length;
         for (let i = 0; i < l; i++) {
             const zone = zones[i];
@@ -243,7 +244,7 @@ class App extends React.Component {
         return false;
     }
 
-    isBBoxInZone(bbox, zone) {
+    isBBoxInZone = (bbox, zone) => {
         const polygon = [];
         let l = zone.polygon.length;
         if (l > 0) {

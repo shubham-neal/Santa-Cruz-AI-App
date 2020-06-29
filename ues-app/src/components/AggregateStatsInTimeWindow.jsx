@@ -183,19 +183,27 @@ export class AggregateStatsInTimeWindow extends React.Component {
         }
 
         // calculate the max per second and total max per second metrics
+        let totalCollisions = 0;
+        let maxCollisions = 0;
         let totalDetections = 0;
         let maxDetections = 0;
 
         const fl = frames.length;
         for (let i = 0; i < fl; i++) {
             const frame = frames[i];
+            totalCollisions = totalCollisions + frame.maxCollisions;
             totalDetections = totalDetections + frame.maxDetections;
+            if(maxCollisions < frame.maxCollisions) {
+                maxCollisions = frame.maxCollisions;
+            }
             if (maxDetections < frame.maxDetections) {
                 maxDetections = frame.maxDetections;
             }
         }
 
         this.setState({
+            totalCollisions: totalCollisions,
+            maxCollisionsPerSecond: maxCollisions,
             totalDetections: totalDetections,
             maxDetectionsPerSecond: maxDetections,
             calculating: false
@@ -207,17 +215,20 @@ export class AggregateStatsInTimeWindow extends React.Component {
         let time = null;
         let frame = {
             detections: [],
-            maxDetections: 0
+            maxDetections: 0,
+            maxCollisions: 0
         }
         for (const blob of blobs) {
             const l = blob.length;
             for (let i = 0; i < l; i++) {
                 const item = blob[i];
                 const t = new Date(item.image_name).getTime();
+                const maxCollisions = this.calculateCollisions(item.detections);
                 if (time === null) {
                     time = t;
                     frame.detections = item.detections;
                     frame.maxDetections = item.detections.length;
+                    frame.maxCollisions = maxCollisions;
                     if (i + 1 == l) {
                         frames.push(frame);
                     }
@@ -226,7 +237,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     time = t;
                     frame = {
                         detections: item.detections,
-                        maxDetections: item.detections.length
+                        maxDetections: item.detections.length,
+                        maxCollisions: maxCollisions
                     }
                     if (i + 1 == l) {
                         frames.push(frame);
@@ -234,6 +246,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
                 } else {
                     frame.detections = [...frame.detections, ...item.detections];
                     frame.maxDetections = item.detections.length > frame.maxDetections ? item.detections.length : frame.maxDetections;
+                    frame.maxCollisions = maxCollisions > frame.maxCollisions ? maxCollisions : frame.maxCollisions;
                     if (i + 1 == l) {
                         frames.push(frame);
                     }
@@ -241,6 +254,27 @@ export class AggregateStatsInTimeWindow extends React.Component {
             }
         }
         return frames;
+    }
+
+    calculateCollisions = (detections) => {
+        let collisions = 0;
+        const l = detections.length;
+        for (let i = 0; i < l; i++) {
+            const detection = detections[i];
+            if (detection.bbox) {
+                const polygon = [
+                    [detection.bbox[0], detection.bbox[1]],
+                    [detection.bbox[2], detection.bbox[1]],
+                    [detection.bbox[2], detection.bbox[3]],
+                    [detection.bbox[0], detection.bbox[3]],
+                    [detection.bbox[0], detection.bbox[1]],
+                ];
+                if (this.props.isBBoxInZones(polygon, this.props.aggregator.zones)) {
+                    collisions = collisions + 1;
+                }
+            }
+        }
+        return collisions;
     }
 
     formatDate = (date) => {
