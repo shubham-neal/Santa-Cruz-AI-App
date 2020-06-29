@@ -19,7 +19,11 @@ export class AggregateStatsInTimeWindow extends React.Component {
             totalDetections: 0,
             maxCollisionsPerSecond: 0,
             maxDetectionsPerSecond: 0,
-            calculating: false
+            calculating: false,
+            startDate: "",
+            startTime: "",
+            endDate: "",
+            endTime: ""
         }
         this.startDateTimeRef = React.createRef();
         this.endDateTimeRef = React.createRef();
@@ -47,59 +51,109 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     >
                         Aggregate stats in time window
                     </div>
-                    <div>
-                        <span
-                            style={{
-                                margin: 5
-                            }}
-                        >
-                            Start:
-                        </span>
-                        <input
-                            ref={this.startDateTimeRef}
-                            readOnly
-                            type="datetime-local"
-                            style={{
-                                margin: 5
-                            }}
-                        />
-                        <span
-                            style={{
-                                margin: 5
-                            }}
-                        >
-                            End:
-                        </span>
-                        <input
-                            ref={this.endDateTimeRef}
-                            type="datetime-local"
-                            style={{
-                                margin: 5
-                            }}
-                            onChange={(e) => {
-                                const startDateTime = new Date(e.target.value);
-                                let minutes = startDateTime.getMinutes();
-                                minutes = minutes - 15;
-                                startDateTime.setMinutes(minutes);
-                                const isoString = startDateTime.toISOString().slice(0, 16);
-                                this.startDateTimeRef.current.value = isoString;
-                            }}
-                        />
-                        <input
-                            type="button"
-                            value="Calculate"
-                            disabled={this.endDateTimeRef.current === null || this.endDateTimeRef.current.value === "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
-                            style={{
-                                margin: 5
-                            }}
-                            onClick={(e) => {
-                                this.setState({
-                                    calculating: true
-                                }, () => {
-                                    this.calculate();
-                                });
-                            }}
-                        />
+                    <div
+                        style={{
+                            margin: 5
+                        }}
+                    >
+                        <table width="100%">
+                            <tbody>
+                                <tr>
+                                    <td colSpan={3}>
+                                        <input
+                                            ref={this.endDateTimeRef}
+                                            type="datetime-local"
+                                            style={{
+                                                width: '100%',
+                                                marginBottom: 10
+                                            }}
+                                            onChange={(e) => {
+                                                const endDateTime = new Date(e.target.value);
+                                                const startDateTime = new Date(e.target.value);
+                                                let minutes = startDateTime.getMinutes();
+                                                minutes = minutes - 15;
+                                                startDateTime.setMinutes(minutes);
+                                                this.setState({
+                                                    startDate: this.formatDate(startDateTime),
+                                                    startTime: this.formatTime(startDateTime),
+                                                    endDate: this.formatDate(endDateTime),
+                                                    endTime: this.formatTime(endDateTime)
+                                                });
+                                            }}
+                                        />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Start:
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            style={{
+                                                width: "100%"
+                                            }}
+                                            value={this.state.startDate}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            style={{
+                                                width: "100%"
+                                            }}
+                                            value={this.state.startTime}
+                                        />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        End:
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            style={{
+                                                width: "100%"
+                                            }}
+                                            value={this.state.endDate}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            style={{
+                                                width: "100%"
+                                            }}
+                                            value={this.state.endTime}
+                                        />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colSpan={3} align="right">
+                                        <input
+                                            type="button"
+                                            value="Calculate"
+                                            disabled={this.endDateTimeRef.current === null || this.endDateTimeRef.current.value === "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
+                                            style={{
+                                                marginTop: 10
+                                            }}
+                                            onClick={(e) => {
+                                                this.setState({
+                                                    calculating: true
+                                                }, () => {
+                                                    this.calculate();
+                                                });
+                                            }}
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     {
                         this.state.calculating ? <div>Calculating... </div> : (
@@ -116,18 +170,6 @@ export class AggregateStatsInTimeWindow extends React.Component {
                                 <div>
                                     <b>{this.state.maxCollisionsPerSecond}</b>
                                 </div>
-                                {/* <div>
-                                    Total max people detections in frame per second
-                                </div>
-                                <div>
-                                    <b>{this.state.totalDetections}</b>
-                                </div>
-                                <div>
-                                    Total max people detections in zones ({names}) per second
-                                </div>
-                                <div>
-                                    <b>{this.state.totalCollisions}</b>
-                                </div> */}
                             </React.Fragment>
                         )
                     }
@@ -193,7 +235,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
             const frame = frames[i];
             totalCollisions = totalCollisions + frame.maxCollisions;
             totalDetections = totalDetections + frame.maxDetections;
-            if(maxCollisions < frame.maxCollisions) {
+            if (maxCollisions < frame.maxCollisions) {
                 maxCollisions = frame.maxCollisions;
             }
             if (maxDetections < frame.maxDetections) {
