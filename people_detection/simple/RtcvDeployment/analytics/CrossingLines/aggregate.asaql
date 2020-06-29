@@ -1,0 +1,22 @@
+﻿with det as 
+(
+    select getarrayelement(events.detections, 0).label as label,
+         events.cameraId as name, 
+         events.image_name as image_name, 
+         events.frameId as frameId, 
+         getarraylength(events.detections) as total_detections,
+        DATEADD(hour,-8,System.Timestamp()) AS timestamp,    
+        System.Timestamp() AS time    
+
+    from iothub as events
+)
+
+SELECT
+    det.name as name,
+    sum(det.total_detections) as detections_per_interval
+INTO
+    detectionStatsOutput
+FROM
+    det
+where det.name is not null
+GROUP BY det.name, tumblingwindow(minute, 1)
