@@ -2,7 +2,14 @@ import React from 'react';
 
 export class AggregateStatsInTimeWindow extends React.Component {
     static defaultProps = {
-
+        aggregator: {
+            lines: [],
+            zones: [{
+                name: "queue",
+                polygon: [],
+                threshold: 10.0
+            }]
+        },
     }
 
     constructor(props) {
@@ -13,11 +20,9 @@ export class AggregateStatsInTimeWindow extends React.Component {
             maxCollisionsPerSecond: 0,
             maxDetectionsPerSecond: 0
         }
-        this.startDateRef = React.createRef();
-        this.startTimeRef = React.createRef();
-        this.endDateRef = React.createRef();
-        this.endTimeRef = React.createRef();
+        this.dateTimeRef = React.createRef();
     }
+
 
     render() {
         const names = this.props.aggregator.zones.map((zone, index) => {
@@ -41,72 +46,17 @@ export class AggregateStatsInTimeWindow extends React.Component {
                         Aggregate stats in time window
                     </div>
                     <div>
-                        <table>
-                            <tbody>
-                                <tr>
-                                    <td>Start</td>
-                                    <td>
-                                        <input
-                                            ref={this.startDateRef}
-                                            type="date"
-                                            min={this.formatDate(new Date())}
-                                            max={this.formatDate(new Date())}
-                                            defaultValue={this.formatDate(new Date())}
-                                            onChange={(e) => {
-                                                console.log(e.target.value);
-                                            }}
-                                        />
-                                        <input
-                                            ref={this.startTimeRef}
-                                            type="time"
-                                            min={this.formatTime(new Date())}
-                                            max={this.formatTime(new Date())}
-                                            defaultValue={this.formatTime(this.calculateNow())}
-                                            onChange={(e) => {
-                                                console.log(e.target.value);
-                                            }}
-                                        />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>End</td>
-                                    <td>
-                                        <input
-                                            ref={this.endDateRef}
-                                            type="date"
-                                            min={this.formatDate(new Date())}
-                                            max={this.formatDate(new Date())}
-                                            defaultValue={this.formatDate(new Date())}
-                                            onChange={(e) => {
-
-                                                console.log(e.target.value);
-                                            }}
-                                        />
-                                        <input
-                                            ref={this.endTimeRef}
-                                            type="time"
-                                            min={this.formatTime(new Date())}
-                                            max={this.formatTime(new Date())}
-                                            defaultValue={this.formatTime(this.calculate15MinutesAgo())}
-                                            onChange={(e) => {
-                                                console.log(e.target.value);
-                                            }}
-                                        />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colSpan={2}>
-                                        <input
-                                            type="button"
-                                            value="Calculate"
-                                            onClick={(e) => {
-                                                this.calculate();
-                                            }}
-                                        />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        Start: 
+                        <input
+                            ref={this.dateTimeRef}
+                            type="datetime-local"
+                            style={{
+                                margin: 5
+                            }}
+                            onChange={(e) => {
+                                this.calculate();
+                            }}
+                        />
                     </div>
                     <div>
                         Max people detections in frame per second
@@ -138,46 +88,60 @@ export class AggregateStatsInTimeWindow extends React.Component {
     }
 
     async calculate() {
-        // format the date range to get a list of all the blobs
-        const startDate = this.startDateRef.current.value;
-        const startTime = this.startTimeRef.current.value;
-        const endDate = this.endDateRef.current.value;
-        const endTime = this.endTimeRef.current.value;
+        // parse the start datetime to get a list of all the blobs
+        const startDateTime = new Date(this.dateTimeRef.current.value);
+        const endDateTime = new Date(startDateTime); 
+        endDateTime.setMinutes(endDateTime.getMinutes() + 60);
+
+        const containerNames = [];
         
-        // first clamp the year range
-
-        // then clamp the month range
-
-        // then clamp the day range
-
+        while(startDateTime < endDateTime) {
+            containerNames.push({
+                hour: `${startDateTime.toLocaleDateString('fr-CA', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit' 
+                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString([], { hour: '2-digit' }).replace(/:/g, '/').split(' ')[0]}`,
+                minute: `${startDateTime.toLocaleDateString('fr-CA', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit' 
+                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString({ hour: '2-digit', minute: '2-digit' }).replace(/:/g, '/').split(' ')[0]}`
+            });
+            startDateTime.setMinutes(startDateTime.getMinutes() + 1);
+        }
         
+        console.log(containerNames);
+
+        return;
 
         // calculate the frames for all of the blobs
-
         let frames = [];
+        const cl = containerNames.length;
+        for (let i = 0; i < cl; i++) {
+            const containerNameHour = `iot-unifiededge-001/00/${containerNames[i].hour}`;
+            const containerNameMinute = `iot-unifiededge-001/00/${containerNames[i].minute}`;
+            const exists = await this.blobExists("detectoroutput", containerNameHour);
+            if (exists) {
+                const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
+                let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerNameMinute });
+                console.log(containerNameMinute);
+                const blobs = [];
+                for await (const item of iter) {
+                    const blob = await this.downloadBlob("detectoroutput", item.name);
+                    blobs.push(blob);
+                }
 
-        const exists = await this.blobExists("detectoroutput", "iot-unifiededge-001/00/2020/06/28/23");
-        if (exists) {
-            const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
-            console.log("Listing blobs by hierarchy");
-            let itr = containerClient.listBlobsFlat()
-            let iter = containerClient.listBlobsByHierarchy("/", { prefix: "iot-unifiededge-001/00/2020/06/28/23/30" });
-            const blobs = [];
-            for await (const item of iter) {
-                console.log(`\tBlobItem: name - ${item.name}, last modified - ${item.properties.lastModified}`);
-                const blob = await this.downloadBlob("detectoroutput", item.name);
-                blobs.push(blob);
+                frames = [...frames, ...this.calculateFrames(blobs)];
             }
-
-            frames = [...frames, ...this.calculateFrames(blobs)];
         }
 
         // calculate the max per second and total max per second metrics
         let totalDetections = 0;
         let maxDetections = 0;
 
-        const l = frames.length;
-        for (let i = 0; i < l; i++) {
+        const fl = frames.length;
+        for (let i = 0; i < fl; i++) {
             const frame = frames[i];
             totalDetections = totalDetections + frame.maxDetections;
             if (maxDetections < frame.maxDetections) {
@@ -200,14 +164,14 @@ export class AggregateStatsInTimeWindow extends React.Component {
         }
         for (const blob of blobs) {
             const l = blob.length;
-            for (let i=0; i<l; i++) {
+            for (let i = 0; i < l; i++) {
                 const item = blob[i];
                 const t = new Date(item.image_name).getTime();
                 if (time === null) {
                     time = t;
                     frame.detections = item.detections;
                     frame.maxDetections = item.detections.length;
-                    if(i+1 == l) {
+                    if (i + 1 == l) {
                         frames.push(frame);
                     }
                 } else if (Math.abs(t - time) >= 1000) {
@@ -215,15 +179,15 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     time = t;
                     frame = {
                         detections: item.detections,
-                        maxDetections: item.detections.length 
+                        maxDetections: item.detections.length
                     }
-                    if(i+1 == l) {
+                    if (i + 1 == l) {
                         frames.push(frame);
                     }
                 } else {
                     frame.detections = [...frame.detections, ...item.detections];
                     frame.maxDetections = item.detections.length > frame.maxDetections ? item.detections.length : frame.maxDetections;
-                    if(i+1 == l) {
+                    if (i + 1 == l) {
                         frames.push(frame);
                     }
                 }
@@ -243,12 +207,12 @@ export class AggregateStatsInTimeWindow extends React.Component {
 
     calculateNow = () => {
         const dt = new Date();
-        return dt;
+        return dt.toUTCString();
     }
 
-    calculate15MinutesAgo = () => {
+    calculate15MinutesAhead = () => {
         const dt = new Date();
-        dt.setMinutes(-15);
+        dt.setMinutes(dt.minutes + 15);
         return dt;
     }
 

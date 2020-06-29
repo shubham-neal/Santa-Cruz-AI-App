@@ -162,6 +162,7 @@ class App extends React.Component {
                                 detections={this.state.detections}
                             />
                             <AggregateStatsInTimeWindow
+                                aggregator={this.state.aggregator}
                                 blobServiceClient={this.state.blobServiceClient}
                             />
                         </div>
