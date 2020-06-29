@@ -18,7 +18,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
             totalCollisions: 0,
             totalDetections: 0,
             maxCollisionsPerSecond: 0,
-            maxDetectionsPerSecond: 0
+            maxDetectionsPerSecond: 0,
+            calculating: false
         }
         this.dateTimeRef = React.createRef();
     }
@@ -46,42 +47,66 @@ export class AggregateStatsInTimeWindow extends React.Component {
                         Aggregate stats in time window
                     </div>
                     <div>
-                        Start: 
+                        <span
+                            style={{
+                                margin: 5
+                            }}
+                        >
+                            End:
+                        </span>
                         <input
                             ref={this.dateTimeRef}
                             type="datetime-local"
                             style={{
                                 margin: 5
                             }}
-                            onChange={(e) => {
-                                this.calculate();
+                        />
+                        <input
+                            type="button"
+                            value="Calculate"
+                            disabled={this.dateTimeRef.current == null || this.dateTimeRef.current.value == "" || new Date(this.dateTimeRef.current.value) >= new Date() || new Date(this.dateTimeRef.current.value) < new Date(2020, 5, 27)}
+                            style={{
+                                margin: 5
+                            }}
+                            onClick={(e) => {
+                                this.setState({
+                                    calculating: true
+                                }, () => {
+                                    this.calculate();
+                                });
                             }}
                         />
                     </div>
-                    <div>
-                        Max people detections in frame per second
-                    </div>
-                    <div>
-                        <b>{this.state.maxDetectionsPerSecond}</b>
-                    </div>
-                    <div>
-                        Max people detections in zones ({names}) per second
-                    </div>
-                    <div>
-                        <b>{this.state.maxCollisionsPerSecond}</b>
-                    </div>
-                    <div>
-                        Total max people detections in frame per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalDetections}</b>
-                    </div>
-                    <div>
-                        Total max people detections in zones ({names}) per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalCollisions}</b>
-                    </div>
+                    {
+                        this.state.calculating ? <div>Calculating... </div> : (
+                            <React.Fragment>
+                                <div>
+                                    Max people detections in frame per second
+                                </div>
+                                <div>
+                                    <b>{this.state.maxDetectionsPerSecond}</b>
+                                </div>
+                                <div>
+                                    Max people detections in zones ({names}) per second
+                                </div>
+                                <div>
+                                    <b>{this.state.maxCollisionsPerSecond}</b>
+                                </div>
+                                <div>
+                                    Total max people detections in frame per second
+                                </div>
+                                <div>
+                                    <b>{this.state.totalDetections}</b>
+                                </div>
+                                <div>
+                                    Total max people detections in zones ({names}) per second
+                                </div>
+                                <div>
+                                    <b>{this.state.totalCollisions}</b>
+                                </div>
+                            </React.Fragment>
+                        )
+                    }
                 </div>
             </React.Fragment>
         );
@@ -90,30 +115,27 @@ export class AggregateStatsInTimeWindow extends React.Component {
     async calculate() {
         // parse the start datetime to get a list of all the blobs
         const startDateTime = new Date(this.dateTimeRef.current.value);
-        const endDateTime = new Date(startDateTime); 
-        endDateTime.setMinutes(endDateTime.getMinutes() + 60);
+        const endDateTime = new Date(startDateTime);
+        startDateTime.setMinutes(startDateTime.getMinutes() - 15);
 
         const containerNames = [];
-        
-        while(startDateTime < endDateTime) {
+        // `iot-unifiededge-001/00/2020/06/28/00`
+        while (startDateTime < endDateTime) {
             containerNames.push({
                 hour: `${startDateTime.toLocaleDateString('fr-CA', {
                     year: 'numeric',
                     month: '2-digit',
-                    day: '2-digit' 
-                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString([], { hour: '2-digit' }).replace(/:/g, '/').split(' ')[0]}`,
+                    day: '2-digit'
+                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString([], { hour: '2-digit' }).split(' ')[0]}`,
                 minute: `${startDateTime.toLocaleDateString('fr-CA', {
                     year: 'numeric',
                     month: '2-digit',
-                    day: '2-digit' 
-                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString({ hour: '2-digit', minute: '2-digit' }).replace(/:/g, '/').split(' ')[0]}`
+                    day: '2-digit'
+                }).replace(/-/g, '/')}/${startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/:/g, '/').split(' ')[0]}`
             });
+
             startDateTime.setMinutes(startDateTime.getMinutes() + 1);
         }
-        
-        console.log(containerNames);
-
-        return;
 
         // calculate the frames for all of the blobs
         let frames = [];
@@ -151,7 +173,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
 
         this.setState({
             totalDetections: totalDetections,
-            maxDetectionsPerSecond: maxDetections
+            maxDetectionsPerSecond: maxDetections,
+            calculating: false
         });
     }
 
