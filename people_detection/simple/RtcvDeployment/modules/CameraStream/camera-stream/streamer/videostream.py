@@ -1,6 +1,6 @@
 import os, logging, time
 import cv2
-from queue import Queue, Full
+from queue import Queue, Full, Empty
 import threading
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
@@ -39,8 +39,13 @@ class VideoStream:
     if self.frame_grabber is None:
       return
 
-    self.frame_grabber.join()
-    self.frame_grabber = None
+    try:
+      if self.frame_grabber.is_alive():
+        self.frame_grabber.join(1)
+      self.frame_grabber = None
+      logging.info("Stopped grabbing frames")
+    except:
+      logging.critical("Error while stopping thread")
 
   def reset(self, stream_source, interval):
     '''
@@ -73,7 +78,12 @@ class VideoStream:
     '''
     Retrieves the frame together with its frame id
     '''
-    return self.frame_queue.get()
+    try:
+      frame_and_id = self.frame_queue.get_nowait()
+    except Empty:
+      frame_and_id = (-1, None)
+    
+    return frame_and_id
 
   def setup_stream(self):
 
@@ -93,7 +103,7 @@ class VideoStream:
   def stream_video(self):
 
     repeat = 3
-    wait = 0.5
+    wait = 0.1
     frame = None
 
     cur_frame = 0
@@ -139,7 +149,7 @@ class VideoStream:
       if self.delay_frames is not None and (continuous_frame - 1) % self.delay_frames != 0:
         continue
 
-      self.frame_queue.put((continuous_frame, frame))
+      self.frame_queue.put((cur_frame, frame))
 
     self.video_capture.release()
     self.video_capture = None

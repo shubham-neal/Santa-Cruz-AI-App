@@ -64,8 +64,6 @@
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
                   ],
-                  "Runtime": "nvidia",
-                  "ShmSize": 536870912,
                   "PortBindings": {
                     "5010/tcp": [
                       {
@@ -151,10 +149,11 @@
           "cam001": {
             "space": "Office",
             "rtsp": "$CROSSING_VIDEO_URL",
-            "detector": "http://detector:5010",
+            "detector": "$PEOPLE_DETECTOR",
             "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
-            "enabled": true
+            "enabled": true,
+            "gpu": false
           }
         }
       }

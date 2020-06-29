@@ -1,15 +1,19 @@
 import React from 'react';
 
-export class Edit extends React.Component {
+export class Camera extends React.Component {
     static defaultProps = {
-        border: '2px solid #ee82ee',
+        border: '2px solid black',
         width: 300,
         height: 300,
         fps: 30,
         aggregator: {
             lines: [],
             zones: []
-        }
+        },
+        frame: {
+            detections: []
+        },
+        image: new Image()
     }
     constructor(props) {
         super(props);
@@ -29,7 +33,7 @@ export class Edit extends React.Component {
     componentDidMount() {
         setInterval(() => {
             this.draw();
-        }, 1000/this.props.fps);
+        }, 1000 / this.props.fps);
     }
 
     componentDidUpdate() {
@@ -39,50 +43,53 @@ export class Edit extends React.Component {
     render() {
         return (
             <React.Fragment>
-                <div style={{
-                    margin: 10,
-                    textAlign: 'center',
-                    border: this.props.border,
-                    width: this.props.width,
-                    height: this.props.height
-                }}>
+                <div
+                    style={{
+                        margin: 10,
+                        textAlign: 'center',
+                        width: this.props.width
+                    }}
+                    onMouseOver={this.handleMouseOver}
+                    onMouseOut={this.handleMouseOut}
+                >
                     <canvas
                         ref={this.canvasRef}
                         width={this.props.width}
                         height={this.props.height}
+                        style={{
+                            border: this.props.border
+                        }}
                         tabIndex={1}
                         onKeyUp={this.handleKeyUp}
                         onClick={this.addPoint}
                         onMouseDown={(e) => this.dragging = true}
                         onMouseUp={(e) => this.dragging = false}
                         onMouseMove={(e) => { this.updateMousePos(e); this.movePoint(e); }}
-                        onMouseOver={this.handleMouseOver}
-                        onMouseOut={this.handleMouseOut}
                     />
-                    {
-                        this.state.aggregator.zones.map((zone, index) => {
-                            return (
-                                <div
-                                    key={index}
-                                    style={index === this.state.selectedZoneIndex ? {
-                                        cursor: 'pointer',
-                                        backgroundColor: '#ee82ee',
-                                        color: 'white'
-                                    } : {
-                                            cursor: 'pointer',
-                                            color: '#ee82ee'
-                                        }}
-                                    onClick={(e) => {
-                                        this.setState({
-                                            selectedZoneIndex: index,
-                                            selectedPointIndex: -1
-                                        })
-                                    }}>
-                                        {JSON.stringify({name: zone.name, threshold: zone.threshold})}
-                                </div>
-                            )
-                        })
-                    }
+                    {/* <div
+                        style={{
+                            visibility: this.mouseInside ? 'visible' : 'hidden'
+                        }}
+                    >
+                        <span
+                            style={{
+                                margin: 5
+                            }}
+                        >
+                            Zone Name:
+                        </span> */}
+                        <input
+                            type="text"
+                            style={{
+                                textAlign: 'center',
+                                border: this.mouseInside ? '1px solid black' : '0px'
+                            }}
+                            defaultValue={this.state.aggregator.zones[this.state.selectedZoneIndex].name}
+                            onChange={(e) => {
+                                this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
+                            }}
+                        />
+                    {/* </div> */}
                 </div>
             </React.Fragment>
         );
@@ -211,13 +218,44 @@ export class Edit extends React.Component {
             const canvasContext = this.canvasRef.current?.getContext("2d");
             if (canvasContext) {
                 canvasContext.clearRect(0, 0, this.props.width, this.props.height);
-                this.drawZones(canvasContext);
-                if(this.mouseInside) {
+                canvasContext.drawImage(this.props.image, 0, 0, this.props.width, this.props.height);
+                this.drawZones(canvasContext, this.props.aggregator.zones);
+                this.drawLines(canvasContext, this.props.aggregator.lines);
+                this.drawDetections(canvasContext, this.props.frame.detections);
+                if (this.mouseInside) {
                     this.selectPoint();
                     this.drawSelectedPoint(canvasContext);
                 }
             }
         }, 1000 / this.state.fps);
+    }
+
+    drawLines(canvasContext, lines) {
+        let l = lines.length;
+        for (let i = 0; i < l; i++) {
+            const line = lines[i];
+            this.drawLine(canvasContext, line);
+        }
+    }
+
+    drawLine(canvasContext, line) {
+        canvasContext.strokeStyle = 'violet';
+        canvasContext.lineWidth = 3;
+
+        let l = line.length;
+        for (let i = 0; i < l; i++) {
+            const point = {
+                x: this.props.width * line[i][0],
+                y: this.props.height * line[i][1]
+            };
+            if (i === 0) {
+                canvasContext.moveTo(point.x, point.y);
+            } else {
+                canvasContext.lineTo(point.x, point.y);
+            }
+        }
+        canvasContext.closePath();
+        canvasContext.stroke();
     }
 
     drawZones = (canvasContext) => {
@@ -279,6 +317,39 @@ export class Edit extends React.Component {
                     canvasContext.stroke();
                 }
             }
+        }
+    }
+
+    drawDetections(canvasContext, detections) {
+        const l = detections.length;
+        for (let i = 0; i < l; i++) {
+            const detection = detections[i];
+            this.drawDetection(canvasContext, detection);
+        }
+    }
+
+    drawDetection(canvasContext, detection) {
+        if (detection.bbox) {
+            if (detection.collides) {
+                canvasContext.strokeStyle = 'yellow';
+                canvasContext.lineWidth = 4;
+            } else {
+                canvasContext.strokeStyle = 'lightblue';
+                canvasContext.lineWidth = 2;
+            }
+            const x = this.props.width * detection.bbox[0];
+            const y = this.props.height * detection.bbox[1];
+            const w = this.props.width * Math.abs(detection.bbox[2] - detection.bbox[0]);
+            const h = this.props.height * Math.abs(detection.bbox[3] - detection.bbox[1]);
+            canvasContext.strokeRect(x, y, w, h);
+        } else if (detection.rectangle) {
+            canvasContext.strokeStyle = 'yellow';
+            canvasContext.lineWidth = 2;
+            const x = this.props.width * detection.rectangle.left;
+            const y = this.props.height * detection.rectangle.top;
+            const w = this.props.width * detection.rectangle.width;
+            const h = this.props.height * detection.rectangle.height;
+            canvasContext.strokeRect(x, y, w, h);
         }
     }
 
