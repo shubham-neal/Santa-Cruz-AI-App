@@ -36,7 +36,7 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: true,
+            accessGranted: false,
             blobServiceClient: blobServiceClient
         }
     }
@@ -45,9 +45,6 @@ class App extends React.Component {
         const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
         socket.on('connect', function () {
             console.log('connected!');
-        });
-        socket.on('disconnect', (message) => {
-            console.log(message);
         });
         socket.on('message', (message) => {
             const data = JSON.parse(message);

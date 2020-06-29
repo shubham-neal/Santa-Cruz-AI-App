@@ -46,7 +46,7 @@ export class Password extends React.Component {
                                 flexDirection: 'column'
                             }}
                         >
-                            <input type="text" placeholder="Enter password" onChange={this.props.updatePassword} />
+                            <input type="password" placeholder="Enter password" onChange={this.props.updatePassword} />
                         </div>
                     </div>
                 </div>
