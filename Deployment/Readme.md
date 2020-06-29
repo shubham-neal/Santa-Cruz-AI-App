@@ -17,7 +17,7 @@ This script automates deployment and setup of required resources for Person Trac
 3. azure-cli-iot-ext extension should be installed for azure cli
 4. The user or service principal should have access to create resources in the given subscription in Azure
 5. The user/service principal should have access to register applications in active directory
-	* In case of service principal, it needs to have the following Application permissions in Azure Active directory
+	* In case of service principal, it needs to have the following Azure Active Directory Graph Application permissions
 	    * Application.ReadWrite.All
 	    * Application.ReadWrite.OwnedBy
 	    * Directory.ReadWrite.All
