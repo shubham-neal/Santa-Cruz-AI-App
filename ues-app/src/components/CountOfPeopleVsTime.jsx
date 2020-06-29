@@ -30,7 +30,8 @@ export class CountOfPeopleVsTime extends React.Component {
             chartData: {
                 labels: [],
                 datasets: []
-            }
+            },
+            suggestedMax: 5
         }
         defaults.global.animation = false;
     }
@@ -71,7 +72,8 @@ export class CountOfPeopleVsTime extends React.Component {
             const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
             this.setState({
                 maxCollisionsPerSecond: this.props.collisions > maxCollisionsPerSecond ? this.props.collisions : maxCollisionsPerSecond,
-                maxDetectionsPerSecond: this.props.detections > maxDetectionsPerSecond ? this.props.detections : maxDetectionsPerSecond
+                maxDetectionsPerSecond: this.props.detections > maxDetectionsPerSecond ? this.props.detections : maxDetectionsPerSecond,
+                suggestedMax: this.state.suggestedMax < maxDetectionsPerSecond ? maxDetectionsPerSecond : this.state.suggestedMax
             });
         }
     }
@@ -105,6 +107,16 @@ export class CountOfPeopleVsTime extends React.Component {
                             title: {
                                 display: true,
                                 text: 'Count of people vs Time'
+                            },
+                            scales: {
+                                yAxes: [{
+                                    display: true,
+                                    ticks: {
+                                        suggestedMin: 0,
+                                        beginAtZero: 0,
+                                        suggestedMax: this.state.suggestedMax
+                                    }
+                                }]
                             }
                         }}
                     />

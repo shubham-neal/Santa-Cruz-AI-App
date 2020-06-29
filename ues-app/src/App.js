@@ -46,6 +46,9 @@ class App extends React.Component {
         socket.on('connect', function () {
             console.log('connected!');
         });
+        socket.on('disconnect', (message) => {
+            console.log(message);
+        });
         socket.on('message', (message) => {
             const data = JSON.parse(message);
             if (data && data.hasOwnProperty('body')) {

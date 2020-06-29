@@ -66,7 +66,7 @@ export class Camera extends React.Component {
                         onMouseUp={(e) => this.dragging = false}
                         onMouseMove={(e) => { this.updateMousePos(e); this.movePoint(e); }}
                     />
-                    <div
+                    {/* <div
                         style={{
                             visibility: this.mouseInside ? 'visible' : 'hidden'
                         }}
@@ -77,15 +77,19 @@ export class Camera extends React.Component {
                             }}
                         >
                             Zone Name:
-                        </span>
+                        </span> */}
                         <input
                             type="text"
+                            style={{
+                                textAlign: 'center',
+                                border: this.mouseInside ? '1px solid black' : '0px'
+                            }}
                             defaultValue={this.state.aggregator.zones[this.state.selectedZoneIndex].name}
                             onChange={(e) => {
                                 this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
                             }}
                         />
-                    </div>
+                    {/* </div> */}
                 </div>
             </React.Fragment>
         );
