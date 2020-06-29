@@ -97,7 +97,7 @@ export class RealTimeMetrics extends React.Component {
                     <div>
                         <b>{this.state.maxCollisionsPerSecond}</b>
                     </div>
-                    <div>
+                    {/* <div>
                         Total max people detections in frame per second
                     </div>
                     <div>
@@ -108,7 +108,7 @@ export class RealTimeMetrics extends React.Component {
                     </div>
                     <div>
                         <b>{this.state.totalCollisions}</b>
-                    </div>
+                    </div> */}
                 </div>
             </React.Fragment>
         );
