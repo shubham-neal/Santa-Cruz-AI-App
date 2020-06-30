@@ -69,6 +69,7 @@
             },
             "type": "docker",
             "env": {
+              "EULA": "accept",
               "AZURE_TENANT_ID": {
                 "value": "$TELEGRAF_AZURE_TENANT_ID"
               },
@@ -321,9 +322,10 @@
               "VIDEO_URL": "$CROSSING_VIDEO_URL",
               "VIDEO_SOURCE_ID": "test_rtsp",
               "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
+              "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",
               "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
               "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
-              "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
+              "SPACEANALYTICS_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
             }
           }
         }
