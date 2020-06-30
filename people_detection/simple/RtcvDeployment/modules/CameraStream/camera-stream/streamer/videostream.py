@@ -124,6 +124,7 @@ class VideoStream:
               self.video_capture = cv2.VideoCapture(self.cam)
               res, frame = self.video_capture.read()
               cur_frame = 0
+              continuous_frame = 0
             break
         except:
             # try to re-capture the stream
