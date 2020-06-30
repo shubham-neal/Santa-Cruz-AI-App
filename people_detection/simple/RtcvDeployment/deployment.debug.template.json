@@ -328,6 +328,20 @@
               "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
               "SPACEANALYTICS_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
             }
+          },
+          "PeopleCount": {
+            "skillId": "Microsoft.ComputerVision.PersonCount",
+            "version": 1,
+            "enabled": true,
+            "parameters": {
+              "VIDEO_URL": "$CROSSING_VIDEO_URL",
+              "VIDEO_SOURCE_ID": "test_rtsp",
+              "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
+              "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",
+              "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
+              "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
+              "SPACEANALYTICS_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\": $VIDEO_ZONE, \"events\": [{\"type\":\"count\", \"config\": {\"trigger\": \"event\"}}], \"threshold\":10.0}]}"
+            }
           }
         }
       }
