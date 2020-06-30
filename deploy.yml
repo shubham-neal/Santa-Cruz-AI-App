@@ -187,7 +187,7 @@ steps:
       		fi
       		
       	else
-      		echo "IP Address is type is not enabled in the NSG rule, we are not adding IP address explictily"
+      		echo "IP Address is type is not enabled in the NSG rule, we are not adding IP address explicitly"
       	fi
       fi
       
@@ -220,7 +220,7 @@ steps:
       		fi
       		
       	else
-      		echo "IP Address is type is not enabled in the NSG rule, we can not update the IP address explictily"
+      		echo "IP Address is type is not enabled in the NSG rule, we can not update the IP address explicitly"
       	fi
       fi
       
