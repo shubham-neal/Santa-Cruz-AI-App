@@ -10,7 +10,7 @@ This script automates deployment and setup of required resources for Person Trac
 1. The script should be run on a linux machine
 2. The following packages should be installed on the machine
 	* azure-cli
-	* azure-iot-edge-dev-tool
+	* iotedgedev
 	* sshpass
     * jq
     * curl
@@ -61,8 +61,10 @@ This script automates deployment and setup of required resources for Person Trac
 |BLOBCONTAINER_NAME|Container name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
 |ADLS_ENDPOINT_NAME|Custom Data Lake Endpoint for Edge device in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
 |IOTHUB_ADLS_ROUTENAME|Route name for the data to be pushed to ADLS in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
+|ADLS_ROUTING_CONDITION|Condition for filtering the routing data for adls route |
 |PUSH_RESULTS_TO_EVENT_HUB|If the value is set to "true", the script will set up required resources to enable data push to event hub|
 |EVENTHUB_NAMESPACE|Name of the event hub namespace. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
 |EVENTHUB_NAME|Name of the event hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
 |EVENTHUB_ROUTENAME|Name of the route that will push data to event hub through event hub custom endpoint. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
 |EVENTHUB_ENDPOINT_NAME| Name of the custom endpoint that will be created to push data to Event Hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
+|EVENTHUB_ROUTING_CONDITION| Condition for filtering the routing data for event hub route|
