@@ -128,14 +128,6 @@ def spin_camera_loop():
           continue
 
       current_source['timer'] = curtime
-      # here we account for the new configuration properties
-      if current_source['rtsp'] != cam['rtsp'] or current_source['interval'] != float(cam['interval']):
-        current_source['rtsp'] = cam['rtsp']
-        current_source['interval'] = float(cam['interval'])
-
-        # stop an existing thread
-        video_streamer.reset(current_source['rtsp'], current_source['interval'])
-        logging.info("Updated twin properties.")
 
       # block until we get something
       frame_id, img = video_streamer.get_frame_with_id()
