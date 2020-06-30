@@ -92,6 +92,10 @@ steps:
       
       [ -v IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE ] && sed -i 's#^\(IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE[ ]*=\).*#\1\"$IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE\"#g' "$VARIABLES_FILE_PATH"
       
+      [ -v EVENTHUB_ROUTING_CONDITION ] && sed -i 's#^\(EVENTHUB_ROUTING_CONDITION[ ]*=\).*#\1\"$EVENTHUB_ROUTING_CONDITION\"#g' "$VARIABLES_FILE_PATH"
+      
+      [ -v ADLS_ROUTING_CONDITION ] && sed -i 's#^\(ADLS_ROUTING_CONDITION[ ]*=\).*#\1\"$ADLS_ROUTING_CONDITION\"#g' "$VARIABLES_FILE_PATH"
+      
       [ -v USE_EXISTING_IOT_HUB ] && sed -i 's#^\(USE_EXISTING_IOT_HUB[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB\"#g' "$VARIABLES_FILE_PATH"
 
 # This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
@@ -142,7 +146,7 @@ steps:
       
       if (! pip list --format=columns | grep -c -w iotedgedev); then
           echo "Installing iotedgedev"
-          #sudo pip install iotedgedev
+          sudo pip install iotedgedev
       fi
       
       WasIPRuleUpdated="0"
