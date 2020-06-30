@@ -27,6 +27,9 @@
             },
             "type": "docker",
             "env": {
+              "EULA": {
+                "value": "accept"
+              },
               "DISPLAY": {
                 "value": "$DISPLAY"
               },
@@ -69,7 +72,6 @@
             },
             "type": "docker",
             "env": {
-              "EULA": "accept",
               "AZURE_TENANT_ID": {
                 "value": "$TELEGRAF_AZURE_TENANT_ID"
               },
@@ -184,7 +186,7 @@
             "settings": {
               "image": "${MODULES.CameraStream}",
               "createOptions": {
-                "ExposedPorts" : {
+                "ExposedPorts": {
                   "56780/tcp": {}
                 },
                 "HostConfig": {
@@ -205,7 +207,7 @@
           "detector": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
+            "env": {
               "DISPLAY": {
                 "value": "$DISPLAY"
               },
@@ -218,7 +220,7 @@
             "settings": {
               "image": "${MODULES.Detector}",
               "createOptions": {
-                "ExposedPorts" : {
+                "ExposedPorts": {
                   "5010/tcp": {}
                 },
                 "HostConfig": {
@@ -240,7 +242,6 @@
               }
             }
           }
-
         },
         "runtime": {
           "settings": {
