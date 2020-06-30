@@ -27,7 +27,8 @@ steps:
       echo $VARIABLES_FILE_PATH
       
       echo "Starting updates"
-      
+      # The following steps check the existence of the variable in the file
+      # and replace the value with in the file with the pipeline variable value using sed
       [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
@@ -110,12 +111,19 @@ steps:
     script: |
       echo "Starting script"
       
+      # We're changing the working directory so we can use the other files by their names instead of full path
       if [ -v WORKING_DIRECTORY ] && [ ! -z WORKING_DIRECTORY ]; then
           echo "changing directory"
           cd "$WORKING_DIRECTORY"
       fi
       
-      
+      # Install required packages if they are not already installed
+      # The following packages will be installed
+      # 1. sshpass 
+      # 2. jq
+      # 3. curl
+      # 4. python-pip
+      # 5. iotedgedev
       if(! apt list --installed | grep -c -w sshpass); then 
           echo "Installing sshpass"
           sudo apt-get install sshpass 
@@ -133,9 +141,6 @@ steps:
           sudo apt-get install curl 
       
       fi
-      #Install IoT Extension if it's not present
-      
-      [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]] &&  az extension add --name azure-cli-iot-ext
       
       
       if(! apt list --installed | grep -c -w python-pip); then 
@@ -149,19 +154,28 @@ steps:
           sudo pip install iotedgedev
       fi
       
+      # Install azure-cli-iot-ext extention in azure cli
+      [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]] &&  az extension add --name azure-cli-iot-ext
+      
+      # We are declaring WasIPRuleUpdated variable to track whether the Network Security Group rule in Edge Device has been updated
       WasIPRuleUpdated="0"
-
+      # Update NSG Incoming IP rule for Edge Device if IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED is set to true
+      # This will be required if the Edge device is in a NSG and the SSH port is blocked
       if [ "$IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED" == "true" ]; then
-      
+      # Login to Azure with service principal
       az login --service-principal --username $SP_APP_ID --password $SP_APP_PWD --tenant $TENANT_ID
-      
+        # Get value of the sourceAddressPrefix of the NSG rule
+        # This will be empty if the NSG rule is configured to use IP addresses
       	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
       
-      
+      # We are checking if the NSG rule is configured to use IP addresses 
       	if [ -z $sourceAddressPrefix ]; then
+        # Get current IP address list from NSG Rule and also get the current container IP
       		CurrentIPArray=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefixes" --output "tsv")
       		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
       		
+          # Check if the container IP is already present in current list
+          # If it is not present, add it in the NSG rule
       		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
       			echo "IP is already added in network security rule"
       		else
@@ -178,17 +192,17 @@ steps:
       fi
       
       echo "Adding executable bit to setup.sh"
-      
+      # Making setup.sh file executable
       chmod +x setup.sh
       
       echo "Running the script"
       
       source "./setup.sh"
       
-      echo "WasIPRuleUpdate= $WasIPRuleUpdated"
-      
+      # Remove the current container IP from NSG rule if it was added during current
       if [ "$WasIPRuleUpdated" == "1" ]; then
-      	
+      	# Get value of the sourceAddressPrefix of the NSG rule
+        # This will be empty if the NSG rule is configured to use IP addresses
       	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
       
       
@@ -198,8 +212,10 @@ steps:
       		
       		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
             echo "CurrentIPArray=$CurrentIPArray"
+            # Remove the current IP address from existing list to create a new list
       			UpdatedIPArray=${CurrentIPArray/$ContainerIPAddress/""}
             echo "UpdatedIPArray=$UpdatedIPArray"
+            # Update the NSG rule with the new list
       			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
       		fi
       		
