@@ -211,10 +211,8 @@ steps:
       		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
       		
       		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
-            echo "CurrentIPArray=$CurrentIPArray"
             # Remove the current IP address from existing list to create a new list
       			UpdatedIPArray=${CurrentIPArray/$ContainerIPAddress/""}
-            echo "UpdatedIPArray=$UpdatedIPArray"
             # Update the NSG rule with the new list
       			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
       		fi
