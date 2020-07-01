@@ -1,3 +1,15 @@
+## WebAssembly
+Start emcc by running emcmdprompt.bat inside of the emsdk folder.  Inside of the cmd prompt:
+cd ../
+cd emsdk
+emcmdprompt.bat
+cd ../
+cd detect
+
+emcc src/cpp/main.cpp -s WASM=1 -o public/main.js
+
+## auto generated scripts by create-react-app
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

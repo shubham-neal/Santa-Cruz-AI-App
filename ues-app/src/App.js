@@ -7,6 +7,8 @@ import { RealTimeMetrics } from './components/RealTimeMetrics';
 import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 
+const net = require('net');
+
 const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
 const account = 'adlsunifiededgedev001';
 const containerName = 'still-images';
@@ -43,47 +45,26 @@ class App extends React.Component {
 
     componentDidMount() {
         const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+        
         socket.on('connect', function () {
             console.log('connected!');
         });
         socket.on('message', (message) => {
             const data = JSON.parse(message);
-            if (data && data.hasOwnProperty('body')) {
-                const frame = data.body;
-                if (frame.hasOwnProperty('detections')) {
-                    let collisions = 0;
-                    let detections = 0;
-                    const l = frame.detections.length;
-                    for (let i = 0; i < l; i++) {
-                        const detection = frame.detections[i];
-                        if (detection.bbox) {
-                            const polygon = [
-                                [detection.bbox[0], detection.bbox[1]],
-                                [detection.bbox[2], detection.bbox[1]],
-                                [detection.bbox[2], detection.bbox[3]],
-                                [detection.bbox[0], detection.bbox[3]],
-                                [detection.bbox[0], detection.bbox[1]],
-                            ];
-                            if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
-                                detection.collides = true;
-                                collisions = collisions + 1;
-                            } else {
-                                detection.collides = false;
-                            }
-                        }
-                        detections = detections + 1;
-                    }
-                    this.setState({
-                        frame: frame,
-                        collisions: collisions,
-                        detections: detections
-                    });
-                }
-                if (frame.hasOwnProperty("image_name")) {
-                    this.updateImage(frame.image_name);
-                }
-            }
+            this.updateData(data);
         });
+        // const url = 'wss://ues-messages-app.azurewebsites.net:80';
+        // const connection = new WebSocket(url);
+        // connection.onopen = () => {
+        //     connection.send('Message From Client');
+        // }
+        // connection.onmessage = (e) => {
+        //     const data = JSON.parse(e.data);
+        //     this.updateData(data);
+        // }
+        // connection.onerror = (error) => {
+        //     console.log(`WebSocket error: ${error}`);
+        // }
     }
 
     render() {
@@ -229,6 +210,45 @@ class App extends React.Component {
             this.setState({
                 accessGranted: true
             });
+        }
+    }
+
+    // detections
+    updateData = (data) => {
+        if (data && data.hasOwnProperty('body')) {
+            const frame = data.body;
+            if (frame.hasOwnProperty('detections')) {
+                let collisions = 0;
+                let detections = 0;
+                const l = frame.detections.length;
+                for (let i = 0; i < l; i++) {
+                    const detection = frame.detections[i];
+                    if (detection.bbox) {
+                        const polygon = [
+                            [detection.bbox[0], detection.bbox[1]],
+                            [detection.bbox[2], detection.bbox[1]],
+                            [detection.bbox[2], detection.bbox[3]],
+                            [detection.bbox[0], detection.bbox[3]],
+                            [detection.bbox[0], detection.bbox[1]],
+                        ];
+                        if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                            detection.collides = true;
+                            collisions = collisions + 1;
+                        } else {
+                            detection.collides = false;
+                        }
+                    }
+                    detections = detections + 1;
+                }
+                this.setState({
+                    frame: frame,
+                    collisions: collisions,
+                    detections: detections
+                });
+            }
+            if (frame.hasOwnProperty("image_name")) {
+                this.updateImage(frame.image_name);
+            }
         }
     }
 
