@@ -24,9 +24,6 @@ steps:
       
       echo "Updating values in variables script"
       
-      echo $VARIABLES_FILE_PATH
-      
-      echo "Starting updates"
       # The following steps check the existence of the variable in the file
       # and replace the value with in the file with the pipeline variable value using sed
       [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
@@ -98,6 +95,9 @@ steps:
       [ -v ADLS_ROUTING_CONDITION ] && sed -i 's#^\(ADLS_ROUTING_CONDITION[ ]*=\).*#\1\"$ADLS_ROUTING_CONDITION\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v USE_EXISTING_IOT_HUB ] && sed -i 's#^\(USE_EXISTING_IOT_HUB[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB\"#g' "$VARIABLES_FILE_PATH"
+      
+      echo "Updates are complete"
+
 
 # This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
 - task: Bash@3
