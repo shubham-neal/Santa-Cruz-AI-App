@@ -1,0 +1,30 @@
+﻿{
+  "Sample": "{\"cameraId\": \"Office/cam001\", \"image_name\": \"2020-06-29T21:15:58.202722Z\", \"frameId\": 5964436, \"detections\": [{\"bbox\": [0.7835016250610352, 0.5618418455123901, 0.9538449048995972, 0.8522273302078247], \"label\": \"person\", \"confidence\": 0.8874762058258057, \"class\": 15}]}",
+  "EventHubProperties": null,
+  "BlobStorageProperties": null,
+  "IoTHubProperties": {
+    "ConsumerGroupName": "$Default",
+    "IotHubNamespace": "iot-unifiededge-001",
+    "SharedAccessPolicyKey": null,
+    "SharedAccessPolicyName": "iothubowner",
+    "EndPoint": "messages/events"
+  },
+  "BlobReferenceProperties": null,
+  "SqlReferenceInputInfo": null,
+  "InputPartionKey": null,
+  "DataSourceCredentialDomain": "ef2241c8-f4de-423e-934c-2c0af5536328.StreamAnalyticsCredential",
+  "Name": "iothub",
+  "Type": "Data Stream",
+  "DataSourceType": "IoT Hub",
+  "Serialization": {
+    "Encoding": "UTF8",
+    "Type": "Json",
+    "FieldDelimiter": null,
+    "Format": null,
+    "SerializationDllPath": null,
+    "SerializationClassName": null,
+    "SerializationDllPathInLocal": null
+  },
+  "CompresssionType": "None",
+  "ScriptType": "Input"
+}
