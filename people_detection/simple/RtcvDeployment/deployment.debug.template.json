@@ -27,6 +27,9 @@
             },
             "type": "docker",
             "env": {
+              "EULA": {
+                "value": "accept"
+              },
               "DISPLAY": {
                 "value": "$DISPLAY"
               },
@@ -183,7 +186,7 @@
             "settings": {
               "image": "${MODULES.CameraStream}",
               "createOptions": {
-                "ExposedPorts" : {
+                "ExposedPorts": {
                   "56780/tcp": {}
                 },
                 "HostConfig": {
@@ -204,7 +207,7 @@
           "detector": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
+            "env": {
               "DISPLAY": {
                 "value": "$DISPLAY"
               },
@@ -217,7 +220,7 @@
             "settings": {
               "image": "${MODULES.Detector}",
               "createOptions": {
-                "ExposedPorts" : {
+                "ExposedPorts": {
                   "5010/tcp": {}
                 },
                 "HostConfig": {
@@ -239,7 +242,6 @@
               }
             }
           }
-
         },
         "runtime": {
           "settings": {
@@ -321,9 +323,24 @@
               "VIDEO_URL": "$CROSSING_VIDEO_URL",
               "VIDEO_SOURCE_ID": "test_rtsp",
               "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
+              "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",
               "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
               "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
-              "AGGREGATOR_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
+              "SPACEANALYTICS_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\":$VIDEO_ZONE,\"threshold\":10.0}]}"
+            }
+          },
+          "PeopleCount": {
+            "skillId": "Microsoft.ComputerVision.PersonCount",
+            "version": 1,
+            "enabled": true,
+            "parameters": {
+              "VIDEO_URL": "$CROSSING_VIDEO_URL",
+              "VIDEO_SOURCE_ID": "test_rtsp",
+              "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
+              "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",
+              "TRACKER_NODE_CONFIG": "{ \"gpu_index\": 0 }",
+              "VISUALIZER_NODE_CONFIG": "{ \"show_debug_video\": false }",
+              "SPACEANALYTICS_CONFIG": "{\"zones\":[{\"name\":\"queue\",\"polygon\": $VIDEO_ZONE, \"events\": [{\"type\":\"count\", \"config\": {\"trigger\": \"event\"}}], \"threshold\":10.0}]}"
             }
           }
         }
@@ -350,10 +367,11 @@
           "cam001": {
             "space": "Office",
             "rtsp": "$CROSSING_VIDEO_URL",
-            "detector": "http://detector:5010",
+            "detector": "$PEOPLE_DETECTOR",
             "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
-            "enabled": true
+            "enabled": true,
+            "gpu": true
           }
         }
       }

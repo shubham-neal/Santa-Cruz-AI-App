@@ -1,0 +1,21 @@
+﻿{
+  "DataLocale": "en-US",
+  "OutputErrorPolicy": "Drop",
+  "EventsLateArrivalMaxDelayInSeconds": 5,
+  "EventsOutOfOrderMaxDelayInSeconds": 0,
+  "EventsOutOfOrderPolicy": "Adjust",
+  "StreamingUnits": 3,
+  "CompatibilityLevel": "1.2",
+  "UseSystemAssignedIdentity": false,
+  "GlobalStorageAccountName": "adlsunifiededgedev001",
+  "GlobalStorageAccountKey": null,
+  "AccountName": null,
+  "AccountKey": null,
+  "ContainerName": null,
+  "Path": "UserCustomCode.zip",
+  "ContentStoragePolicy": "SystemAccount",
+  "UploadFromLocal": true,
+  "DataSourceCredentialDomain": "8fec70c8-c817-404f-ae25-d7aa3fce5a31.StreamAnalyticsCredential",
+  "Tags": {},
+  "ScriptType": "JobConfig"
+}

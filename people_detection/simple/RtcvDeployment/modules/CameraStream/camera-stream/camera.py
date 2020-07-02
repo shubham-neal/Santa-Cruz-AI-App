@@ -9,8 +9,9 @@ from azure.storage.blob import BlobServiceClient
 import requests
 import threading
 from streamer.videostream import VideoStream
-from detector.ssd_object_detection import Detector
 from azure.iot.device.exceptions import ConnectionFailedError
+import imutils
+from net.ssd_object_detection import Detector
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -18,140 +19,148 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
                     level=logging.INFO)
 
 camera_config = None
-intervals_per_cam = dict()
+received_twin_patch = False
+twin_patch = None
 
 def parse_twin(data):
-    global camera_config
+  global camera_config, received_twin_patch
 
-    logging.info(f"Retrieved updated properties: {data}")
+  logging.info(f"Retrieved updated properties: {data}")
+  logging.info(data)
 
-    if "desired" in data:
-      data = data["desired"]
+  if 'desired' in data:
+    data = data['desired']
 
-    if "cameras" in data:
-      cams = data["cameras"]
-    blob = None
+  if "cameras" in data:
+    cams = data["cameras"].copy()
+  blob = None
 
-    # if blob is not specified we will message
-    # the images to the IoT hub
-    if "blob" in data:
-      blob = data["blob"]
+  # if blob is not specified we will message
+  # the images to the IoT hub
+  if "blob" in data:
+    blob = data["blob"]
 
-    camera_config = dict()
-    camera_config["cameras"] = cams
-    camera_config["blob"] = blob
+  camera_config = dict()
+    
+  camera_config["cameras"] = cams.copy()
+  camera_config["blob"] = blob
 
-    logging.info(f"config set: {camera_config}")
+  logging.info(f"config set: {camera_config}")
+  received_twin_patch = False
 
 def module_twin_callback(client):
+
+  global twin_patch, received_twin_patch
 
   while True:
     # for debugging try and establish a connection
     # otherwise we don't care. If it can't connect let iotedge restart it
-    if debug:
-      for _ in range(30):
-        try:
-          payload = client.receive_twin_desired_properties_patch()
-          break
-        except ConnectionFailedError:
-          logging.warn("Connection failed, retrying")
-          time.sleep(1)
-    else:
-      payload = client.receive_twin_desired_properties_patch()
-
-    parse_twin(payload)
+    twin_patch = client.receive_twin_desired_properties_patch()
+    received_twin_patch = True
 
 def main():
-    global camera_config
+  global camera_config
 
-    detector = Detector()
+  messenger = IoTInferenceMessenger()
+  client = messenger.client
 
-    messenger = IoTInferenceMessenger()
-    client = messenger.client
+  twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
+  twin_update_listener.daemon = True
+  twin_update_listener.start()
 
-    twin_update_listener = threading.Thread(target=module_twin_callback, args=(client,))
-    twin_update_listener.daemon = True
-    twin_update_listener.start()
+  blob_service_client = None
 
-    blob_service_client = None
-
-    # Should be properly asynchronous, but since we don't change things often
-    # Wait for it to come back from twin update the very first time
-    for i in range(20):
-      if camera_config is None:
-        time.sleep(0.5)
-      break
-    
+  # Should be properly asynchronous, but since we don't change things often
+  # Wait for it to come back from twin update the very first time
+  for i in range(20):
     if camera_config is None:
-      payload = client.get_twin()
-      parse_twin(payload)
+      time.sleep(0.5)
+    break
+  
+  if camera_config is None:
+    payload = client.get_twin()
+    parse_twin(payload)
 
-    logging.info("Created camera configuration from twin")
+  logging.info("Created camera configuration from twin")
 
-    if camera_config["blob"] is not None:
-      blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
-      logging.info(f"Created blob service client: {blob_service_client.account_name}")
+  while True:
+    spin_camera_loop(messenger)
+    parse_twin(twin_patch)
 
-    while True:
-       
-      for key, cam in camera_config["cameras"].items():
+def spin_camera_loop(messenger):
+  
+  intervals_per_cam = dict()
 
-        if not cam["enabled"]:
-            continue
+  if camera_config["blob"] is not None:
+    blob_service_client = BlobServiceClient.from_connection_string(camera_config["blob"])
+    logging.info(f"Created blob service client: {blob_service_client.account_name}")
 
-        curtime = time.time()
+  while not received_twin_patch:
+
+    for key, cam in camera_config["cameras"].items():
+
+      if not cam["enabled"]:
+          continue
+
+      curtime = time.time()
+      
+      if key not in intervals_per_cam:
+        intervals_per_cam[key] = dict()
+        current_source = intervals_per_cam[key]
+        current_source['timer'] = 0
+        current_source['rtsp'] = cam['rtsp']
+        current_source['interval'] = float(cam['interval'])
+        current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
+        current_source['video'].start()
+
+        #TODO: This should not be here.
+        current_source['detector'] = Detector(cam['gpu'])
+
+      # this will keep track of how long we need to wait between
+      # bursts of activity
+      video_streamer = current_source['video']
+
+      # not enough time has passed since the last collection
+      if curtime - current_source['timer'] < float(cam['interval']):
+          continue
+
+      current_source['timer'] = curtime
+
+      # block until we get something
+      frame_id, img = video_streamer.get_frame_with_id()
+      if img is None:
+        logging.warn("No frame retrieved. Is video running?")
+        continue
+
+      logging.info(f"Grabbed frame {frame_id} from {cam['rtsp']}")
+
+      camId = f"{cam['space']}/{key}"
+
+      # send to blob storage and retrieve the timestamp by which we will identify the video
+      curtimename = None
+      if camera_config["blob"] is not None:
+          curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
+
+      # TODO: queue up detections
+      detections = []
+      if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
+        #detections = infer(cam['detector'], img, frame_id, curtimename)
+        detections = current_source['detector'].detect(img)
         
-        if key not in intervals_per_cam:
-          intervals_per_cam[key] = dict()
-          current_source = intervals_per_cam[key]
-          current_source['timer'] = 0
-          current_source['rtsp'] = cam['rtsp']
-          current_source['interval'] = float(cam['interval'])
-          current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
-          current_source['video'].start()
+      # message the image capture upstream
+      if curtimename is not None:
+        messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
+        logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
-        # this will keep track of how long we need to wait between
-        # bursts of activity
-        video_streamer = current_source['video']
-
-        # not enough time has passed since the last collection
-        if curtime - current_source['timer'] < float(cam['interval']):
-            continue
-
-        current_source['timer'] = curtime
-        # here we account for the new configuration properties
-        if current_source['rtsp'] != cam['rtsp'] or current_source['interval'] != float(cam['interval']):
-          current_source['rtsp'] = cam['rtsp']
-          current_source['interval'] = float(cam['interval'])
-
-          # stop an existing thread
-          video_streamer.reset(current_source['rtsp'], current_source['interval'])
-
-        # block until we get something
-        frame_id, img = video_streamer.get_frame_with_id()
-        logging.info(f"Grabbed frame {frame_id} from {cam['rtsp']}")
-
-        camId = f"{cam['space']}/{key}"
-
-        # send to blob storage and retrieve the timestamp by which we will identify the video
-        curtimename = None
-        if camera_config["blob"] is not None:
-            curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
-
-        # TODO: queue up detections
-        if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-          detections = detector.detect(img, frame_id, curtimename)
-
-        # message the image capture upstream
-        if curtimename is not None:
-          messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
-          logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
+  # shutdown current video captures
+  for key, cam in intervals_per_cam.items():
+    cam['video'].stop()
 
 def infer(detector, img, frame_id, img_name):
-  im = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-  im = cv2.resize(im, (300, 300), interpolation=cv2.INTER_LINEAR)
 
-  data = json.dumps({"img": im.tolist()})
+  im = imutils.resize(img, width=400)
+
+  data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
   headers = {'Content-Type': "application/json"}
   start = time.time()
   resp = requests.post(detector, data, headers=headers)
@@ -159,7 +168,7 @@ def infer(detector, img, frame_id, img_name):
   resp.raise_for_status()
   result = resp.json()
 
-  return result["classes"], result["scores"], result["bboxes"], proc_time
+  return result["detections"]
 
 
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):

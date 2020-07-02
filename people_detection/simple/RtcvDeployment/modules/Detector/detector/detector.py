@@ -46,20 +46,20 @@ def start_app():
     # set protocol to 1.1 so we keep the connection open
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
-    app.run(debug=False, host="0.0.0.0", port=5010)
-    #app.run(debug=False, host="detector", port=5010)
+    #app.run(debug=False, host="0.0.0.0", port=5010)
+    app.run(debug=False, host="detector", port=5010)
 
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
   # we are sending a json object
   data = request.get_json()
-  frame = np.array(data['img'])
+  frame = np.array(data['img']).astype('uint8')
 
   results = {'frameId': data['frameId'], 'image_name': data['image_name']}
   detections = detector.detect(frame)
 
-  detections = {**detections, **results}
-  return jsonify(detections)
+  results["detections"] = detections
+  return jsonify(results)
 
 if __name__== "__main__":
 
