@@ -7,6 +7,7 @@ import { RealTimeMetrics } from './components/RealTimeMetrics';
 import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
+import { LinksPage } from './components/LinksPage';
 
 const net = require('net');
 
@@ -39,7 +40,8 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: true,
+            accessGranted: false,
+            showLinksPage: true,
             blobServiceClient: blobServiceClient,
             realTimeChart: true,
             aggregateChartMetrics: {
@@ -63,7 +65,13 @@ class App extends React.Component {
     }
 
     render() {
-        return this.state.accessGranted ? (
+        return this.state.accessGranted ? this.state.showLinksPage ? 
+            (
+                <React.Fragment>
+                    <LinksPage updateShowLinksPage={this.updateShowLinksPage}/>
+                </React.Fragment>
+            )
+        : (
             <React.Fragment>
                 <div style={{
                     display: "flex",
@@ -239,6 +247,13 @@ class App extends React.Component {
                 accessGranted: true
             });
         }
+    }
+
+    updateShowLinksPage = (e) => {
+        const value = e.target.value;
+        this.setState({
+            showLinksPage: false
+        });
     }
 
     // detections
