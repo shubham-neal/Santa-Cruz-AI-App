@@ -93,10 +93,10 @@ media_prepared_cb (GstRTSPMedia * media)
     session = gst_rtsp_stream_get_rtpsession (stream);
     GST_INFO ("watching session %p on stream %u", session, i);
 
-    g_signal_connect (session, "on-ssrc-active",
-        (GCallback) on_ssrc_active, media);
-    g_signal_connect (session, "on-sender-ssrc-active",
-        (GCallback) on_sender_ssrc_active, media);
+    // g_signal_connect (session, "on-ssrc-active",
+    //     (GCallback) on_ssrc_active, media);
+    // g_signal_connect (session, "on-sender-ssrc-active",
+    //     (GCallback) on_sender_ssrc_active, media);
   }
 }
 
@@ -148,7 +148,7 @@ main (int argc, char *argv[])
   str = g_strdup_printf ("( "
       "filesrc location=\"%s\" ! qtdemux name=d "
       "d. ! queue ! rtph264pay pt=96 name=pay0 "
-      "d. ! queue ! rtpmp4apay pt=97 name=pay1 " ")", argv[1]);
+      ")", argv[1]);
 
   /* make a media factory for a test stream. The default media factory can use
    * gst-launch syntax to create pipelines. 

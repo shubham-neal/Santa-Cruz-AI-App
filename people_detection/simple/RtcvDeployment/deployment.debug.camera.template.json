@@ -39,6 +39,44 @@
               }
             }
           },
+          "rtspserver": {
+            "version": "1.0",
+            "type": "docker",
+            "env" : {
+              "DISPLAY": {
+                "value": "$DISPLAY"
+              },
+              "QT_X11_NO_MITSHM": {
+                "value": "1"
+              }
+            },
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.CameraStream}",
+              "createOptions": {
+                "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
+                "ExposedPorts" : {
+                  "8554/tcp": {}
+                },
+                "HostConfig": {
+                  "IpcMode": "host",
+                  "Binds": [
+                    "/tmp/.X11-unix:/tmp/.X11-unix",
+                    "/tmp/video:/tmp/video"
+                  ],
+                  "PortBindings": {
+                    "8554/tcp": [
+                      {
+                        "HostPort": "8554"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+
           "detector": {
             "version": "1.0",
             "type": "docker",
