@@ -6,6 +6,7 @@ import { Password } from './components/Password';
 import { RealTimeMetrics } from './components/RealTimeMetrics';
 import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
+import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 
 const net = require('net');
 
@@ -38,14 +39,20 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: false,
-            blobServiceClient: blobServiceClient
+            accessGranted: true,
+            blobServiceClient: blobServiceClient,
+            realTimeChart: true,
+            aggregateChartMetrics: {
+                times: [],
+                collisions: [],
+                detections: []
+            }
         }
     }
 
     componentDidMount() {
         const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
-        
+
         socket.on('connect', function () {
             console.log('connected!');
         });
@@ -53,18 +60,6 @@ class App extends React.Component {
             const data = JSON.parse(message);
             this.updateData(data);
         });
-        // const url = 'wss://ues-messages-app.azurewebsites.net:80';
-        // const connection = new WebSocket(url);
-        // connection.onopen = () => {
-        //     connection.send('Message From Client');
-        // }
-        // connection.onmessage = (e) => {
-        //     const data = JSON.parse(e.data);
-        //     this.updateData(data);
-        // }
-        // connection.onerror = (error) => {
-        //     console.log(`WebSocket error: ${error}`);
-        // }
     }
 
     render() {
@@ -120,12 +115,38 @@ class App extends React.Component {
                                 image={this.state.image}
                                 updateAggregator={this.updateAggregator}
                             />
-                            <CountOfPeopleVsTime
-                                aggregator={this.state.aggregator}
-                                frame={this.state.frame}
-                                collisions={this.state.collisions}
-                                detections={this.state.detections}
-                            />
+                            <div
+                                style={{
+                                    marginLeft: 20
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    defaultChecked={this.state.realTimeChart}
+                                    onChange={(e) => {
+                                        this.setState({
+                                            realTimeChart: e.target.checked
+                                        });
+                                    }}
+                                /> Realtime
+                            </div>
+                            {
+                                this.state.realTimeChart ?
+                                    <CountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+                                    /> :
+                                    <AggregateCountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+
+                                        aggregateChartMetrics={this.state.aggregateChartMetrics}
+                                    />
+                            }
                         </div>
                         <div
                             style={{
@@ -146,6 +167,7 @@ class App extends React.Component {
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={this.isBBoxInZones}
                                 blobServiceClient={this.state.blobServiceClient}
+                                updateAggregateChartMetrics={this.updateAggregateChartMetrics}
                             />
                         </div>
                     </div>
@@ -154,6 +176,12 @@ class App extends React.Component {
         ) : (
                 <Password updatePassword={this.updatePassword} />
             );
+    }
+
+    updateAggregateChartMetrics = (metrics) => {
+        this.setState({
+            aggregateChartMetrics: metrics
+        });
     }
 
     // date and time
@@ -215,6 +243,7 @@ class App extends React.Component {
 
     // detections
     updateData = (data) => {
+        console.log(data);
         if (data && data.hasOwnProperty('body')) {
             const frame = data.body;
             if (frame.hasOwnProperty('detections')) {
