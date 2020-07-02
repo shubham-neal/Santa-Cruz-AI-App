@@ -4,6 +4,7 @@ import logging
 from ssd_object_detection import Detector
 from videostream import VideoStream
 import numpy as np
+import json
 
 from flask import Flask, jsonify, request
 # for HTTP/1.1 support
@@ -59,6 +60,7 @@ def detect_in_frame():
   detections = detector.detect(frame)
 
   results["detections"] = detections
+  logging.info(f"detected objects: {json.dumps(results, indent=1)}")
   return jsonify(results)
 
 if __name__== "__main__":
