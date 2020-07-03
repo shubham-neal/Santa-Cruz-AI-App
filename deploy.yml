@@ -17,6 +17,7 @@ steps:
             
       if( ! apt list --installed | grep -c -w shellcheck ); then
           sudo apt-get install shellcheck
+          echo "shellcheck installation done"
       fi
             
       # We're changing the working directory so we can use the other files by their names instead of full path
