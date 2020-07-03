@@ -9,6 +9,25 @@ pool:
 
 steps:
 
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      echo "Installing shellcheck"
+            
+      if( ! apt list --installed | grep -c -w shellcheck ); then
+          sudo apt-get install shellcheck
+      fi
+            
+      # We're changing the working directory so we can use the other files by their names instead of full path
+      if [ -v WORKING_DIRECTORY ] && [ ! -z WORKING_DIRECTORY ]; then
+          echo "changing directory"
+          cd "$WORKING_DIRECTORY"
+      fi
+            
+            # Check if there are any outputs, if there are then there are warnings
+      shellcheck ./setup.sh -x
+
 # This step updates the values in variable.template file using the pipeline variables
 # This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
 - task: Bash@3
