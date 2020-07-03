@@ -56,9 +56,6 @@
               "image": "${MODULES.RTSPServer}",
               "createOptions": {
                 "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
-                "ExposedPorts" : {
-                  "8554/tcp": {}
-                },
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
