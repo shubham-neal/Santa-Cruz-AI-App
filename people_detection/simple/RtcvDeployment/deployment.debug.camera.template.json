@@ -53,7 +53,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.CameraStream}",
+              "image": "${MODULES.RTSPServer}",
               "createOptions": {
                 "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
                 "ExposedPorts" : {
