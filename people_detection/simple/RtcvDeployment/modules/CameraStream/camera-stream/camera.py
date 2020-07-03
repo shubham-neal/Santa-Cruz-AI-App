@@ -1,17 +1,14 @@
 import cv2
 import os
 import logging
-import time, math
+import time
 import json
 import datetime
-import numpy as np
 from azure.storage.blob import BlobServiceClient
 import requests
 import threading
 from streamer.videostream import VideoStream
-from azure.iot.device.exceptions import ConnectionFailedError
 import imutils
-from net.ssd_object_detection import Detector
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -68,9 +65,7 @@ def main():
   twin_update_listener.daemon = True
   twin_update_listener.start()
 
-  blob_service_client = None
-
-  # Should be properly asynchronous, but since we don't change things often
+    # Should be properly asynchronous, but since we don't change things often
   # Wait for it to come back from twin update the very first time
   for i in range(20):
     if camera_config is None:
@@ -113,9 +108,6 @@ def spin_camera_loop(messenger):
         current_source['video'] = VideoStream(cam['rtsp'], float(cam['interval']))
         current_source['video'].start()
 
-        #TODO: This should not be here.
-        current_source['detector'] = Detector(cam['gpu'])
-
       # this will keep track of how long we need to wait between
       # bursts of activity
       video_streamer = current_source['video']
@@ -141,11 +133,9 @@ def spin_camera_loop(messenger):
       if camera_config["blob"] is not None:
           curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
 
-      # TODO: queue up detections
       detections = []
       if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-        #detections = infer(cam['detector'], img, frame_id, curtimename)
-        detections = current_source['detector'].detect(img)
+        detections = infer(cam['detector'], img, frame_id, curtimename)
         
       # message the image capture upstream
       if curtimename is not None:

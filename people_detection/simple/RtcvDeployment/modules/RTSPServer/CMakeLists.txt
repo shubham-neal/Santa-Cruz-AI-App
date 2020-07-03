@@ -10,7 +10,7 @@ pkg_check_modules(GSTLIBS REQUIRED
 set(CMAKE_CXX_STANDARD 11)
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
 
-file(GLOB_RECURSE THESE_SOURCES LIST_DIRECTORIES false "src/*.c" "src/*.cpp")
+set(THESE_SOURCES "src/main.cpp")
 include_directories (${GSTLIBS_INCLUDE_DIRS})
 link_directories (${GSTLIBS_LIBRARY_DIRS})
 

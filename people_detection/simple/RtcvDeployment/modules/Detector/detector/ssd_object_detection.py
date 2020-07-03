@@ -105,3 +105,4 @@ class Detector:
         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.COLORS[idx], 2)
 
     return frame
+    
