@@ -26,12 +26,13 @@ steps:
       fi
             
             # Check if there are any outputs, if there are then there are warnings
-      shellcheck ./setup.sh -x
+      RESULT=$(shellcheck ./setup.sh -x)
+      echo "$RESULT"
 
 # This step updates the values in variable.template file using the pipeline variables
 # This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
 - task: Bash@3
-  enabled: true
+  enabled: false
   displayName: 'Update values in variable.template file using pipeline variables'
   env:
     SP_APP_PWD: $(SP_APP_PWD)
@@ -120,7 +121,7 @@ steps:
 
 # This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
 - task: Bash@3
-  enabled: true
+  enabled: false
   displayName: 'Setup current container and run setup.sh script'
   env:
     SP_APP_PWD: $(SP_APP_PWD)
