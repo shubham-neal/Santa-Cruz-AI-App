@@ -26,7 +26,12 @@ steps:
       fi
             
             # Check if there are any outputs, if there are then there are warnings
-      echo "$(shellcheck ./setup.sh -x)"
+      if [ -z "$(shellcheck ./setup.sh -x)" ]; then
+          echo "No Warnings"
+      else
+          echo "The following are the Warnings"
+          echo "$(shellcheck ./setup.sh -x)"
+      fi
       #echo "$RESULT"
       echo "complete"
 
