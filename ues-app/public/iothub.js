@@ -1,5 +1,5 @@
 const WebSocket = require('ws')
-const wss = new WebSocket.Server({ port: 8080 })
+const wss = new WebSocket.Server({ port: 80 })
 const { EventHubClient, EventPosition } = require('@azure/event-hubs');
 const connectionString = 'HostName=iot-unifiededge-001.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=kvujEICkipUjqIOi+fDfjyy9yYByy3Ge8QYoz5BhEWk=';
 // 'Endpoint=sb://unifiededge.servicebus.windows.net/;SharedAccessKeyName=iothubroutes_iot-unifiededge-001;SharedAccessKey=5+KdOjkqQ1LFZkp2VCX2WQBRFZ2F71gyLueTbhPplr0=;EntityPath=uploadhub'

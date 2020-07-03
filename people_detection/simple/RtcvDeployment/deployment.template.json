@@ -347,7 +347,7 @@
             "version": 1,
             "enabled": true,
             "parameters": {
-              "VIDEO_URL": "$STREAM_WITH_RTSP",
+              "VIDEO_URL": "$CROSSING_VIDEO_URL",
               "VIDEO_SOURCE_ID": "test_rtsp",
               "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
               "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",
@@ -361,7 +361,7 @@
             "version": 1,
             "enabled": true,
             "parameters": {
-              "VIDEO_URL": "$STREAM_WITH_RTSP",
+              "VIDEO_URL": "$CROSSING_VIDEO_URL",
               "VIDEO_SOURCE_ID": "test_rtsp",
               "VIDEO_IS_LIVE": "$LIVE_CAMERAS",
               "DETECTOR_NODE_CONFIG": "{ \"gpu_index\": 0 }",

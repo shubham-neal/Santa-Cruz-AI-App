@@ -6,6 +6,10 @@ import { Password } from './components/Password';
 import { RealTimeMetrics } from './components/RealTimeMetrics';
 import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
+import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
+import { LinksPage } from './components/LinksPage';
+
+const net = require('net');
 
 const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
 const account = 'adlsunifiededgedev001';
@@ -37,57 +41,37 @@ class App extends React.Component {
             detections: 0,
             image: new Image(),
             accessGranted: false,
-            blobServiceClient: blobServiceClient
+            showLinksPage: true,
+            blobServiceClient: blobServiceClient,
+            realTimeChart: true,
+            aggregateChartMetrics: {
+                times: [],
+                collisions: [],
+                detections: []
+            }
         }
     }
 
     componentDidMount() {
         const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+
         socket.on('connect', function () {
             console.log('connected!');
         });
         socket.on('message', (message) => {
             const data = JSON.parse(message);
-            if (data && data.hasOwnProperty('body')) {
-                const frame = data.body;
-                if (frame.hasOwnProperty('detections')) {
-                    let collisions = 0;
-                    let detections = 0;
-                    const l = frame.detections.length;
-                    for (let i = 0; i < l; i++) {
-                        const detection = frame.detections[i];
-                        if (detection.bbox) {
-                            const polygon = [
-                                [detection.bbox[0], detection.bbox[1]],
-                                [detection.bbox[2], detection.bbox[1]],
-                                [detection.bbox[2], detection.bbox[3]],
-                                [detection.bbox[0], detection.bbox[3]],
-                                [detection.bbox[0], detection.bbox[1]],
-                            ];
-                            if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
-                                detection.collides = true;
-                                collisions = collisions + 1;
-                            } else {
-                                detection.collides = false;
-                            }
-                        }
-                        detections = detections + 1;
-                    }
-                    this.setState({
-                        frame: frame,
-                        collisions: collisions,
-                        detections: detections
-                    });
-                }
-                if (frame.hasOwnProperty("image_name")) {
-                    this.updateImage(frame.image_name);
-                }
-            }
+            this.updateData(data);
         });
     }
 
     render() {
-        return this.state.accessGranted ? (
+        return this.state.accessGranted ? this.state.showLinksPage ? 
+            (
+                <React.Fragment>
+                    <LinksPage updateShowLinksPage={this.updateShowLinksPage}/>
+                </React.Fragment>
+            )
+        : (
             <React.Fragment>
                 <div style={{
                     display: "flex",
@@ -139,12 +123,38 @@ class App extends React.Component {
                                 image={this.state.image}
                                 updateAggregator={this.updateAggregator}
                             />
-                            <CountOfPeopleVsTime
-                                aggregator={this.state.aggregator}
-                                frame={this.state.frame}
-                                collisions={this.state.collisions}
-                                detections={this.state.detections}
-                            />
+                            <div
+                                style={{
+                                    marginLeft: 20
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    defaultChecked={this.state.realTimeChart}
+                                    onChange={(e) => {
+                                        this.setState({
+                                            realTimeChart: e.target.checked
+                                        });
+                                    }}
+                                /> Realtime
+                            </div>
+                            {
+                                this.state.realTimeChart ?
+                                    <CountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+                                    /> :
+                                    <AggregateCountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+
+                                        aggregateChartMetrics={this.state.aggregateChartMetrics}
+                                    />
+                            }
                         </div>
                         <div
                             style={{
@@ -165,6 +175,7 @@ class App extends React.Component {
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={this.isBBoxInZones}
                                 blobServiceClient={this.state.blobServiceClient}
+                                updateAggregateChartMetrics={this.updateAggregateChartMetrics}
                             />
                         </div>
                     </div>
@@ -173,6 +184,12 @@ class App extends React.Component {
         ) : (
                 <Password updatePassword={this.updatePassword} />
             );
+    }
+
+    updateAggregateChartMetrics = (metrics) => {
+        this.setState({
+            aggregateChartMetrics: metrics
+        });
     }
 
     // date and time
@@ -229,6 +246,53 @@ class App extends React.Component {
             this.setState({
                 accessGranted: true
             });
+        }
+    }
+
+    updateShowLinksPage = (e) => {
+        const value = e.target.value;
+        this.setState({
+            showLinksPage: false
+        });
+    }
+
+    // detections
+    updateData = (data) => {
+        console.log(data);
+        if (data && data.hasOwnProperty('body')) {
+            const frame = data.body;
+            if (frame.hasOwnProperty('detections')) {
+                let collisions = 0;
+                let detections = 0;
+                const l = frame.detections.length;
+                for (let i = 0; i < l; i++) {
+                    const detection = frame.detections[i];
+                    if (detection.bbox) {
+                        const polygon = [
+                            [detection.bbox[0], detection.bbox[1]],
+                            [detection.bbox[2], detection.bbox[1]],
+                            [detection.bbox[2], detection.bbox[3]],
+                            [detection.bbox[0], detection.bbox[3]],
+                            [detection.bbox[0], detection.bbox[1]],
+                        ];
+                        if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                            detection.collides = true;
+                            collisions = collisions + 1;
+                        } else {
+                            detection.collides = false;
+                        }
+                    }
+                    detections = detections + 1;
+                }
+                this.setState({
+                    frame: frame,
+                    collisions: collisions,
+                    detections: detections
+                });
+            }
+            if (frame.hasOwnProperty("image_name")) {
+                this.updateImage(frame.image_name);
+            }
         }
     }
 

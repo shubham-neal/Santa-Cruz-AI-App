@@ -179,6 +179,13 @@ export class AggregateStatsInTimeWindow extends React.Component {
     }
 
     async calculate() {
+        // for chart
+        const metrics = {
+            times: [],
+            collisions: [],
+            detections: []
+        }
+
         // parse the start datetime to get a list of all the blobs
         const startDateTime = new Date(this.endDateTimeRef.current.value);
         const endDateTime = new Date(startDateTime);
@@ -241,6 +248,9 @@ export class AggregateStatsInTimeWindow extends React.Component {
             if (maxDetections < frame.maxDetections) {
                 maxDetections = frame.maxDetections;
             }
+            metrics.times.push(frame.time);
+            metrics.collisions.push(frame.maxCollisions);
+            metrics.detections.push(frame.maxDetections);
         }
 
         this.setState({
@@ -249,6 +259,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
             totalDetections: totalDetections,
             maxDetectionsPerSecond: maxDetections,
             calculating: false
+        }, () => {
+            this.props.updateAggregateChartMetrics(metrics);
         });
     }
 
@@ -258,7 +270,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
         let frame = {
             detections: [],
             maxDetections: 0,
-            maxCollisions: 0
+            maxCollisions: 0,
+            time: ""
         }
         for (const blob of blobs) {
             const l = blob.length;
@@ -271,6 +284,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     frame.detections = item.detections;
                     frame.maxDetections = item.detections.length;
                     frame.maxCollisions = maxCollisions;
+                    frame.time = t;
                     if (i + 1 === l) {
                         frames.push(frame);
                     }
@@ -280,7 +294,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     frame = {
                         detections: item.detections,
                         maxDetections: item.detections.length,
-                        maxCollisions: maxCollisions
+                        maxCollisions: maxCollisions,
+                        time: t
                     }
                     if (i + 1 === l) {
                         frames.push(frame);
@@ -289,6 +304,7 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     frame.detections = [...frame.detections, ...item.detections];
                     frame.maxDetections = item.detections.length > frame.maxDetections ? item.detections.length : frame.maxDetections;
                     frame.maxCollisions = maxCollisions > frame.maxCollisions ? maxCollisions : frame.maxCollisions;
+                    frame.time = t;
                     if (i + 1 === l) {
                         frames.push(frame);
                     }
