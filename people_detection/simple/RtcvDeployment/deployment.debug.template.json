@@ -316,7 +316,7 @@
         },
         "graphs": {
           "CrossingLines": {
-            "skillId": "Microsoft.ComputerVision.PersonCrossingPolygon.Debug",
+            "skillId": "Microsoft.ComputerVision.PersonCrossingPolygon",
             "version": 1,
             "enabled": true,
             "parameters": {
