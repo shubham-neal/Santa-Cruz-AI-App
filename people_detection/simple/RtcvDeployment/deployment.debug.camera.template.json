@@ -61,14 +61,7 @@
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
-                  ],
-                  "PortBindings": {
-                    "8554/tcp": [
-                      {
-                        "HostPort": "8554"
-                      }
-                    ]
-                  }
+                  ]
                 }
               }
             }
@@ -98,14 +91,7 @@
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
-                  ],
-                  "PortBindings": {
-                    "5010/tcp": [
-                      {
-                        "HostPort": "5010"
-                      }
-                    ]
-                  }
+                  ]
                 }
               }
             }
