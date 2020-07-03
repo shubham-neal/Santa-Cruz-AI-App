@@ -13,7 +13,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      if( ! $(apt list --installed | grep -c -w shellcheck) ); then
+      if[ ! $(apt list --installed | grep -c -w shellcheck) ]; then
           echo "Installing shellcheck"
           sudo apt-get install shellcheck
           echo "shellcheck installation done"
