@@ -204,6 +204,33 @@
               }
             }
           },
+          "rtspserver": {
+            "version": "1.0",
+            "type": "docker",
+            "env" : {
+              "DISPLAY": {
+                "value": "$DISPLAY"
+              },
+              "QT_X11_NO_MITSHM": {
+                "value": "1"
+              }
+            },
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.RTSPServer}",
+              "createOptions": {
+                "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
+                "HostConfig": {
+                  "IpcMode": "host",
+                  "Binds": [
+                    "/tmp/.X11-unix:/tmp/.X11-unix",
+                    "/tmp/video:/tmp/video"
+                  ]
+                }
+              }
+            }
+          },
           "detector": {
             "version": "1.0",
             "type": "docker",
