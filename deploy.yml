@@ -26,8 +26,8 @@ steps:
       fi
             
             # Check if there are any outputs, if there are then there are warnings
-      shellcheck ./setup.sh -x
-      #echo "$RESULT"
+      $RESULT=$(shellcheck ./setup.sh -x)
+      echo "$RESULT"
       echo "complete"
 
 # This step updates the values in variable.template file using the pipeline variables
