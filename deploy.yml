@@ -13,7 +13,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      if( ! $(apt list --installed | grep  -w shellcheck) ); then
+      if( ! $(apt list --installed | grep -c -w shellcheck) ); then
           echo "Installing shellcheck"
           sudo apt-get install shellcheck
           echo "shellcheck installation done"
@@ -32,8 +32,6 @@ steps:
           echo "The following are the Warnings"
           echo "$(shellcheck ./setup.sh -x)"
       fi
-      #echo "$RESULT"
-      echo "complete"
 
 # This step updates the values in variable.template file using the pipeline variables
 # This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
