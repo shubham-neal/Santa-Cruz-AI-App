@@ -26,11 +26,12 @@ steps:
       fi
             
             # Check if there are any outputs, if there are then there are warnings
-      if [ -z "$(shellcheck ./setup.sh -x)" ]; then
+      SHELL_CHECK_RESULT=$(shellcheck ./setup.sh -x)
+      if [ -z "$SHELL_CHECK_RESULT" ]; then
           echo "No Warnings"
       else
           echo "The following are the Warnings"
-          echo "$(shellcheck ./setup.sh -x)"
+          echo "$SHELL_CHECK_RESULT"
       fi
 
 # This step updates the values in variable.template file using the pipeline variables
