@@ -28,6 +28,7 @@ steps:
             # Check if there are any outputs, if there are then there are warnings
       shellcheck ./setup.sh -x
       #echo "$RESULT"
+      echo "complete"
 
 # This step updates the values in variable.template file using the pipeline variables
 # This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
