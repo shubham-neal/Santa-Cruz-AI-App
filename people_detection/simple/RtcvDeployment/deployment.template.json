@@ -207,14 +207,6 @@
           "rtspserver": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
-              "DISPLAY": {
-                "value": "$DISPLAY"
-              },
-              "QT_X11_NO_MITSHM": {
-                "value": "1"
-              }
-            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
@@ -224,13 +216,36 @@
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
                   ]
                 }
               }
             }
           },
+          "live555rtsp": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.live555}",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/tmp/video:/live/mediaServer/media"
+                  ],
+                  "PortBindings": {
+                    "554/tcp": [
+                      {
+                        "HostPort": "5001"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          
           "detector": {
             "version": "1.0",
             "type": "docker",
