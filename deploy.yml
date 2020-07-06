@@ -9,14 +9,17 @@ pool:
 
 steps:
 
+# This step runs shellcheck tool.
+# Shellcheck is a code analysis tool for bash scripts.
 - task: Bash@3
+  displayName: 'Run shellcheck'
   inputs:
     targetType: 'inline'
     script: |
       if(! apt list --installed | grep -c -w shellcheck ); then
           echo "Installing shellcheck"
           sudo apt-get install shellcheck
-          echo "shellcheck installation done"
+          echo "Installed shellcheck"
       fi
             
       # We're changing the working directory so we can use the other files by their names instead of full path
@@ -25,13 +28,16 @@ steps:
           cd "$WORKING_DIRECTORY"
       fi
             
-            # Check if there are any outputs, if there are then there are warnings
+      # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
+      # We are checking the the result returned by shellcheck.
       SHELL_CHECK_RESULT=$(shellcheck ./setup.sh -x)
       if [ -z "$SHELL_CHECK_RESULT" ]; then
           echo "No Warnings"
       else
           echo "The following are the Warnings"
           echo "$SHELL_CHECK_RESULT"
+          echo "Task failed"
+          exit 1
       fi
 
 # This step updates the values in variable.template file using the pipeline variables
