@@ -40,8 +40,8 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: false,
-            showLinksPage: true,
+            accessGranted: true,
+            showLinksPage: false,
             blobServiceClient: blobServiceClient,
             realTimeChart: true,
             aggregateChartMetrics: {
