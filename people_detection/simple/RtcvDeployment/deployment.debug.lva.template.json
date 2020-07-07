@@ -39,52 +39,42 @@
               }
             }
           },
-          "rtspserver": {
+          "rtspsim": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
-              "DISPLAY": {
-                "value": "$DISPLAY"
-              },
-              "QT_X11_NO_MITSHM": {
-                "value": "1"
-              }
-            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.RTSPServer}",
+              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
               "createOptions": {
-                "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
                 "HostConfig": {
-                  "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
-                    "/tmp/video:/tmp/video"
+                    "/tmp/video:/live/mediaServer/media"
                   ]
                 }
               }
             }
           },
-          "live555rtsp": {
+          "lvaEdge": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.live555}",
+              "image": "mcr.microsoft.com/media/live-video-analytics:1",
               "createOptions": {
                 "HostConfig": {
+                  "LogConfig": {
+                    "Type": "",
+                    "Config": {
+                      "max-size": "10m",
+                      "max-file": "10"
+                    }
+                  },
                   "Binds": [
-                    "/tmp/video:/live/mediaServer/media"
-                  ],
-                  "PortBindings": {
-                    "554/tcp": [
-                      {
-                        "HostPort": "5001"
-                      }
-                    ]
-                  }
+                    "$OUTPUT_VIDEO_FOLDER_ON_DEVICE:/var/media/",
+                    "$APPDATA_FOLDER_ON_DEVICE:/var/lib/azuremediaservices"
+                  ]
                 }
               }
             }
@@ -185,20 +175,22 @@
         }
       }
     },
-    "camerastream": {
+    "lvaEdge": {
       "properties.desired": {
-        "blob": "$CAMERA_BLOB_SAS",
-        "cameras": {
-          "cam001": {
-            "space": "Office",
-            "rtsp": "$CROSSING_VIDEO_URL",
-            "detector": "$PEOPLE_DETECTOR",
-            "inference": true,
-            "interval": "$UPLOAD_FREQ_SEC",
-            "enabled": true,
-            "gpu": false
-          }
-        }
+        "applicationDataDirectory": "/var/lib/azuremediaservices",
+        "azureMediaServicesArmId": "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/microsoft.media/mediaservices/$AMS_ACCOUNT",
+        "aadTenantId": "$AAD_TENANT_ID",
+        "aadServicePrincipalAppId": "$AAD_SERVICE_PRINCIPAL_ID",
+        "aadServicePrincipalSecret": "$AAD_SERVICE_PRINCIPAL_SECRET",
+        "aadEndpoint": "https://login.microsoftonline.com",
+        "aadResourceId": "https://management.core.windows.net/",
+        "armEndpoint": "https://management.azure.com/",
+        "diagnosticsEventsOutputName": "AmsDiagnostics",
+        "operationalEventsOutputName": "AmsOperational",
+        "logLevel": "Information",
+        "logCategories": "Application,Events",
+        "allowUnsecuredEndpoints": true,
+        "telemetryOptOut": false
       }
     }
   }
