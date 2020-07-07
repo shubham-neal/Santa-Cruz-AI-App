@@ -40,8 +40,8 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
-            accessGranted: true,
-            showLinksPage: false,
+            accessGranted: process.env.REACT_APP_ADMIN,
+            showLinksPage: !process.env.REACT_APP_ADMIN,
             blobServiceClient: blobServiceClient,
             realTimeChart: true,
             aggregateChartMetrics: {
@@ -258,7 +258,7 @@ class App extends React.Component {
 
     // detections
     updateData = (data) => {
-        console.log(data);
+        // console.log(data);
         if (data && data.hasOwnProperty('body')) {
             const frame = data.body;
             if (frame.hasOwnProperty('detections')) {
