@@ -66,6 +66,29 @@
               }
             }
           },
+          "live555rtsp": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.live555}",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/tmp/video:/live/mediaServer/media"
+                  ],
+                  "PortBindings": {
+                    "554/tcp": [
+                      {
+                        "HostPort": "5001"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
           "detector": {
             "version": "1.0",
             "type": "docker",

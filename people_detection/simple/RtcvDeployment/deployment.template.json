@@ -207,14 +207,6 @@
           "rtspserver": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
-              "DISPLAY": {
-                "value": "$DISPLAY"
-              },
-              "QT_X11_NO_MITSHM": {
-                "value": "1"
-              }
-            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
@@ -224,8 +216,47 @@
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
+                  ]
+                }
+              }
+            }
+          },
+          "rtspsim": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/tmp/video:/live/mediaServer/media"
+                  ]
+                }
+              }
+            }
+          },
+          "lvaEdge": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/media/live-video-analytics:1",
+              "createOptions": {
+                "HostConfig": {
+                  "LogConfig": {
+                    "Type": "",
+                    "Config": {
+                      "max-size": "10m",
+                      "max-file": "10"
+                    }
+                  },
+                  "Binds": [
+                    "$OUTPUT_VIDEO_FOLDER_ON_DEVICE:/var/media/",
+                    "$APPDATA_FOLDER_ON_DEVICE:/var/lib/azuremediaservices"
                   ]
                 }
               }
@@ -327,7 +358,7 @@
     "$edgeHub": {
       "properties.desired": {
         "routes": {
-          "route": "FROM /messages/* INTO $upstream"
+          "AllToHub": "FROM /messages/* INTO $upstream"
         },
         "schemaVersion": "1.0",
         "storeAndForwardConfiguration": {
@@ -402,6 +433,25 @@
           }
         }
       }
+    },
+    "lvaEdge": {
+      "properties.desired": {
+        "applicationDataDirectory": "/var/lib/azuremediaservices",
+        "azureMediaServicesArmId": "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/microsoft.media/mediaservices/$AMS_ACCOUNT",
+        "aadTenantId": "$AAD_TENANT_ID",
+        "aadServicePrincipalAppId": "$AAD_SERVICE_PRINCIPAL_ID",
+        "aadServicePrincipalSecret": "$AAD_SERVICE_PRINCIPAL_SECRET",
+        "aadEndpoint": "https://login.microsoftonline.com",
+        "aadResourceId": "https://management.core.windows.net/",
+        "armEndpoint": "https://management.azure.com/",
+        "diagnosticsEventsOutputName": "AmsDiagnostics",
+        "operationalEventsOutputName": "AmsOperational",
+        "logLevel": "Information",
+        "logCategories": "Application,Events",
+        "allowUnsecuredEndpoints": true,
+        "telemetryOptOut": false
+      }
     }
+
   }
 }
