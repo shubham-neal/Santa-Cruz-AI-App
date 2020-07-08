@@ -9,8 +9,6 @@ import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWin
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 import { LinksPage } from './components/LinksPage';
 
-const net = require('net');
-
 const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
 const account = 'adlsunifiededgedev001';
 const containerName = 'still-images';
@@ -30,13 +28,14 @@ class App extends React.Component {
                 lines: [],
                 zones: [{
                     name: "queue",
-                    polygon: [],
+                    polygon: [[0.5,0.25],[0.58,0.25],[0.58,0.5],[0.5,0.5],[0.5,0.25]],
                     threshold: 10.0
                 }]
             },
             frame: {
                 detections: []
             },
+            frames: [],
             collisions: 0,
             detections: 0,
             image: new Image(),
@@ -48,7 +47,11 @@ class App extends React.Component {
                 times: [],
                 collisions: [],
                 detections: []
-            }
+            },
+            rtcv: true,
+            rtcvFrameId: 0,
+            openSourceFrameId: 0,
+            syncMargin: 10
         }
     }
 
@@ -62,126 +65,140 @@ class App extends React.Component {
             const data = JSON.parse(message);
             this.updateData(data);
         });
+
+        if(this.state.rtcv) {
+            setInterval(() => {
+                this.syncData();
+            }, 1000/this.state.fps);
+        }
     }
 
     render() {
-        return this.state.accessGranted ? this.state.showLinksPage ? 
+        return this.state.accessGranted ? this.state.showLinksPage ?
             (
                 <React.Fragment>
-                    <LinksPage updateShowLinksPage={this.updateShowLinksPage}/>
+                    <LinksPage updateShowLinksPage={this.updateShowLinksPage} />
                 </React.Fragment>
             )
-        : (
-            <React.Fragment>
-                <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    margin: 10,
-                    padding: 10
-                }}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'row',
-                            backgroundColor: 'white',
-                            margin: 10,
-                            padding: 10
-                        }}
-                    >
+            : (
+                <React.Fragment>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        margin: 10,
+                        padding: 10
+                    }}>
                         <div
                             style={{
                                 display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                        >
-                            <div>
-                                <span
-                                    style={{
-                                        margin: 5,
-                                        fontWeight: 'bold',
-                                        borderBottom: '1px solid black'
-                                    }}
-                                >
-                                    Demo
-                                </span>
-                                <span
-                                    style={{
-                                        margin: 5
-                                    }}
-                                >
-                                    Live
-                                </span>
-                            </div>
-                            <Camera
-                                fps={this.state.fps}
-                                width={this.state.width}
-                                height={this.state.height}
-                                aggregator={this.state.aggregator}
-                                frame={this.state.frame}
-                                image={this.state.image}
-                                updateAggregator={this.updateAggregator}
-                            />
-                            <div
-                                style={{
-                                    marginLeft: 20
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    defaultChecked={this.state.realTimeChart}
-                                    onChange={(e) => {
-                                        this.setState({
-                                            realTimeChart: e.target.checked
-                                        });
-                                    }}
-                                /> Realtime
-                            </div>
-                            {
-                                this.state.realTimeChart ?
-                                    <CountOfPeopleVsTime
-                                        aggregator={this.state.aggregator}
-                                        frame={this.state.frame}
-                                        collisions={this.state.collisions}
-                                        detections={this.state.detections}
-                                    /> :
-                                    <AggregateCountOfPeopleVsTime
-                                        aggregator={this.state.aggregator}
-                                        frame={this.state.frame}
-                                        collisions={this.state.collisions}
-                                        detections={this.state.detections}
-
-                                        aggregateChartMetrics={this.state.aggregateChartMetrics}
-                                    />
-                            }
-                        </div>
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
+                                flexDirection: 'row',
                                 backgroundColor: 'white',
                                 margin: 10,
                                 padding: 10
                             }}
                         >
-                            <RealTimeMetrics
-                                aggregator={this.state.aggregator}
-                                frame={this.state.frame}
-                                collisions={this.state.collisions}
-                                detections={this.state.detections}
-                            />
-                            <AggregateStatsInTimeWindow
-                                aggregator={this.state.aggregator}
-                                isBBoxInZones={this.isBBoxInZones}
-                                blobServiceClient={this.state.blobServiceClient}
-                                updateAggregateChartMetrics={this.updateAggregateChartMetrics}
-                            />
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}
+                            >
+                                <div>
+                                    <span
+                                        style={{
+                                            margin: 5,
+                                            fontWeight: 'bold',
+                                            borderBottom: '1px solid black'
+                                        }}
+                                    >
+                                        Demo
+                                </span>
+                                    <span
+                                        style={{
+                                            margin: 5
+                                        }}
+                                    >
+                                        Live
+                                </span>
+                                    <span
+                                        style={{
+                                            float: 'right',
+                                            marginRight: 20
+                                        }}
+                                    >
+                                        os ({this.state.openSourceFrameId}) - rtcv ({this.state.rtcvFrameId}) = {this.state.openSourceFrameId - this.state.rtcvFrameId}
+                                    </span>
+                                </div>
+                                <Camera
+                                    fps={this.state.fps}
+                                    width={this.state.width}
+                                    height={this.state.height}
+                                    aggregator={this.state.aggregator}
+                                    frame={this.state.frame}
+                                    image={this.state.image}
+                                    updateAggregator={this.updateAggregator}
+                                />
+                                <div
+                                    style={{
+                                        marginLeft: 20
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        defaultChecked={this.state.realTimeChart}
+                                        onChange={(e) => {
+                                            this.setState({
+                                                realTimeChart: e.target.checked
+                                            });
+                                        }}
+                                    /> Realtime
+                            </div>
+                                {
+                                    this.state.realTimeChart ?
+                                        <CountOfPeopleVsTime
+                                            aggregator={this.state.aggregator}
+                                            frame={this.state.frame}
+                                            collisions={this.state.collisions}
+                                            detections={this.state.detections}
+                                        /> :
+                                        <AggregateCountOfPeopleVsTime
+                                            aggregator={this.state.aggregator}
+                                            frame={this.state.frame}
+                                            collisions={this.state.collisions}
+                                            detections={this.state.detections}
+
+                                            aggregateChartMetrics={this.state.aggregateChartMetrics}
+                                        />
+                                }
+                            </div>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    backgroundColor: 'white',
+                                    margin: 10,
+                                    padding: 10
+                                }}
+                            >
+                                <RealTimeMetrics
+                                    aggregator={this.state.aggregator}
+                                    frame={this.state.frame}
+                                    collisions={this.state.collisions}
+                                    detections={this.state.detections}
+                                />
+                                <AggregateStatsInTimeWindow
+                                    aggregator={this.state.aggregator}
+                                    isBBoxInZones={this.isBBoxInZones}
+                                    blobServiceClient={this.state.blobServiceClient}
+                                    updateAggregateChartMetrics={this.updateAggregateChartMetrics}
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-            </React.Fragment>
-        ) : (
+                </React.Fragment>
+            ) : (
                 <Password updatePassword={this.updatePassword} />
             );
     }
@@ -258,41 +275,102 @@ class App extends React.Component {
 
     // detections
     updateData = (data) => {
+        let rtcvFrameId = this.state.rtcvFrameId;
+        let openSourceFrameId = this.state.openSourceFrameId;
         // console.log(data);
         if (data && data.hasOwnProperty('body')) {
             const frame = data.body;
-            if (frame.hasOwnProperty('detections')) {
-                let collisions = 0;
-                let detections = 0;
-                const l = frame.detections.length;
-                for (let i = 0; i < l; i++) {
-                    const detection = frame.detections[i];
-                    if (detection.bbox) {
-                        const polygon = [
-                            [detection.bbox[0], detection.bbox[1]],
-                            [detection.bbox[2], detection.bbox[1]],
-                            [detection.bbox[2], detection.bbox[3]],
-                            [detection.bbox[0], detection.bbox[3]],
-                            [detection.bbox[0], detection.bbox[1]],
-                        ];
-                        if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
-                            detection.collides = true;
-                            collisions = collisions + 1;
-                        } else {
-                            detection.collides = false;
+            // open source
+            if (frame.hasOwnProperty("cameraId")) {
+                if (frame.hasOwnProperty('detections') && !this.state.rtcv) {
+                    let collisions = 0;
+                    let detections = 0;
+                    const l = frame.detections.length;
+                    for (let i = 0; i < l; i++) {
+                        const detection = frame.detections[i];
+                        if (detection.bbox) {
+                            const polygon = [
+                                [detection.bbox[0], detection.bbox[1]],
+                                [detection.bbox[2], detection.bbox[1]],
+                                [detection.bbox[2], detection.bbox[3]],
+                                [detection.bbox[0], detection.bbox[3]],
+                                [detection.bbox[0], detection.bbox[1]],
+                            ];
+                            if (this.isBBoxInZones(polygon, this.state.aggregator.zones)) {
+                                detection.collides = true;
+                                collisions = collisions + 1;
+                            } else {
+                                detection.collides = false;
+                            }
                         }
+                        detections = detections + 1;
                     }
-                    detections = detections + 1;
+                    this.setState({
+                        frame: frame,
+                        collisions: collisions,
+                        detections: detections
+                    });
                 }
-                this.setState({
-                    frame: frame,
-                    collisions: collisions,
-                    detections: detections
-                });
+                if (frame.hasOwnProperty("image_name")) {
+                    this.updateImage(frame.image_name);
+                    openSourceFrameId = frame.frameId;
+                }
             }
-            if (frame.hasOwnProperty("image_name")) {
-                this.updateImage(frame.image_name);
+            // rtcv
+            if (frame.hasOwnProperty("sourceInfo") && this.state.rtcv) {
+                // sourceInfo.frameId
+
+                // events (Person Count)
+                if (frame.hasOwnProperty("events")) {
+                    // console.log(frame.events);
+                }
+                // detections (Enter/Exit)
+                if (frame.hasOwnProperty("detections")) {
+                    rtcvFrameId = frame.sourceInfo.frameId;
+                    // console.log(frame.detections);
+                    this.state.frames.push(frame);
+                }
             }
+
+            this.setState({
+                openSourceFrameId: openSourceFrameId,
+                rtcvFrameId: rtcvFrameId
+            });
+        }
+    }
+
+    syncData = () => {
+        let frame = null;
+        const frames = [];
+        const l = this.state.frames.length;
+        for(let i = 0; i < l; i++) {
+            const frameId = this.state.frames[i].sourceInfo.frameId;
+            const diff = this.state.openSourceFrameId - frameId;
+            if(diff >= -this.state.syncMargin && diff <= this.state.syncMargin) {
+                frame = this.state.frames[i];
+            }
+        }
+        // if there is a frame
+        if(frame) {
+            const l = frame.detections.length;
+            for (let i = 0; i < l; i++) {
+                const detection = frame.detections[i];
+                if (detection.rectangle) {
+                    const polygon = [
+                        [detection.rectangle.left, detection.rectangle.top],
+                        [detection.rectangle.width, detection.rectangle.top],
+                        [detection.rectangle.width, detection.rectangle.height],
+                        [detection.rectangle.left, detection.rectangle.height],
+                        [detection.rectangle.left, detection.rectangle.top],
+                    ];
+                    detection.collides = true;
+                }
+            }
+            this.setState({
+                frame: frame,
+                collisions: l,
+                detections: l
+            });
         }
     }
 
