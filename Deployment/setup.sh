@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# stop execution on error from azure cli
+# Stop execution on any error from azure cli
 set -e
 
 # Define helper function for logging
@@ -13,15 +13,15 @@ error() {
     echo "$(tput setaf 1)$(date +"%Y-%m-%d %T") [ERROR]"
 }
 
-#Defining helper function for checking existence and values of variables
+# Define helper function for checking existence and values of variables
 # Input Parameters
-# 1. Name of the variable - Required
-# 2. Value of the variable - Required
-# 3. Whether to print the result of the function - Optional
+#   1. Name of the variable - Required
+#   2. Value of the variable - Required
+#   3. Whether to print the result of the function - Optional
 # Description:	The function will only return value if the 3rd parameter is passed to it.
 #		The function will return 1 if the variable is defined and it's value is not empty else it will return 0.
 #		If a variable is not defined, it will add it to ARRAY_NOT_DEFINED_VARIABLES array and if a variable is defined
-#		but has empty value, it will add it to ARRAY_VARIABLES_WITHOUT_VALUES
+#		but has empty value, it will add it to ARRAY_VARIABLES_WITHOUT_VALUES array
 checkValue() {
     # The first value passed to the function is the name of the variable
     # Check it's existence in file using -v
@@ -61,7 +61,7 @@ echo "Checking if the required variables are configured"
 printf "%60s\n" " " | tr ' ' '-'
 
 if [ ! -f "variables.template" ]; then
-    echo "$(error) variables.template template is not present in current directory: $PWD"
+    echo "$(error) variables.template file is not present in current directory: $PWD"
     exit 1
 fi
 
@@ -86,8 +86,6 @@ checkValue "DEPLOYMENT_NAME" "$DEPLOYMENT_NAME"
 checkValue "USE_EXISTING_RG" "$USE_EXISTING_RG"
 checkValue "USE_EXISTING_IOT_HUB" "$USE_EXISTING_IOT_HUB"
 checkValue "USE_EXISTING_IOT_HUB_DEVICE" "$USE_EXISTING_IOT_HUB_DEVICE"
-
-checkValue "PRE_GENERATED_MANIFEST_FILENAME" "$PRE_GENERATED_MANIFEST_FILENAME"
 checkValue "PUSH_RESULTS_TO_ADLS" "$PUSH_RESULTS_TO_ADLS"
 checkValue "PUSH_RESULTS_TO_EVENT_HUB" "$PUSH_RESULTS_TO_EVENT_HUB"
 checkValue "CREATE_AZURE_MONITOR" "$CREATE_AZURE_MONITOR"
@@ -100,6 +98,10 @@ IS_NOT_EMPTY=$(checkValue "PRE_GENERATED_MANIFEST_FILENAME" "$PRE_GENERATED_MANI
 if [ "$IS_NOT_EMPTY" == "0" ]; then
     checkValue "MANIFEST_TEMPLATE_NAME" "$MANIFEST_TEMPLATE_NAME"
     checkValue "MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+else    
+#   PRE_GENERATED_MANIFEST_FILENAME is a optional parameter so it's not being checked with the mandatory ones
+#   Here it is being checked without assigning to a variables as during assignment the array variables are not updated
+    checkValue "PRE_GENERATED_MANIFEST_FILENAME" "$PRE_GENERATED_MANIFEST_FILENAME"
 fi
 
 IS_NOT_EMPTY=$(checkValue "PUSH_RESULTS_TO_ADLS" "$PUSH_RESULTS_TO_ADLS" "RETURN_VARIABLE_STATUS")
@@ -165,13 +167,12 @@ printf "%60s\n" " " | tr ' ' '-'
 if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
     az login --tenant "$TENANT_ID"
-    echo "$(info) Login Successful"
+    echo "$(info) Login successful"
 else
-    echo "$(info) Attempting Login with Service Principal Account"
+    echo "$(info) Attempting login with Service Principal account"
     # Using service principal as it will not require user interaction
     az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID"
-
-    echo "$(info) Login Successful"
+    echo "$(info) Login successful"
 fi
 
 # Set Azure Subscription
@@ -183,13 +184,14 @@ echo "$(info) Setting current subscription to: $SUBSCRIPTION_ID"
 az account set --subscription "$SUBSCRIPTION_ID"
 echo "$(info) Successfully Set subscription to $SUBSCRIPTION_ID"
 
-# Create a new resource group if it does not exist already.
-# If it already exists then check value for USE_EXISTING_RG
-# and based on that either throw error or use the existing RG
+
 printf "\n%60s\n" " " | tr ' ' '-'
 echo Configuring Resource Group
 printf "%60s\n" " " | tr ' ' '-'
 
+# Create a new resource group if it does not exist already.
+# If it already exists then check value for USE_EXISTING_RG
+# and based on that either throw error or use the existing RG
 if [ "$(az group exists --name "$RESOURCE_GROUP")" == false ]; then
     echo "$(info) Creating a new Resource Group: $RESOURCE_GROUP"
     az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
@@ -204,14 +206,14 @@ else
     fi
 fi
 
-# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current context.
-# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
-# if it already exists then check value for USE_EXISTING_IOT_HUB and based on that either throw error
-# or use the existing IoT Hub
 printf "\n%60s\n" " " | tr ' ' '-'
 echo Configuring IoT Hub
 printf "%60s\n" " " | tr ' ' '-'
 
+# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current context.
+# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
+# if it already exists then check value for USE_EXISTING_IOT_HUB and based on that either throw error
+# or use the existing IoT Hub
 EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
 
 if [ -z "$EXISTING_IOTHUB" ]; then
@@ -227,7 +229,7 @@ else
     fi
 fi
 
-# Adding default route in IoT hub. This is used to retrieve messages from Iot Hub
+# Adding default route in IoT hub. This is used to retrieve messages from IoT Hub
 # as they are generated.
 EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP" --query "[?name=='defaultroute'].name" --output tsv)
 if [ -z "$EXISTING_DEFAULT_ROUTE" ]; then
@@ -240,24 +242,20 @@ fi
 # every one minute.
 if [ "$PUSH_RESULTS_TO_ADLS" == "true" ]; then
     echo "$(info) Creating a storage account"
-    #create storage account with hierarchical namespace enabled:
+    # Create storage account with hierarchical namespace
     az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true
-    # create a container:
+    # Create a container in the storage account
     echo "$(info) Creating a storage container"
     STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_GROUP" --account-name "$STORAGE_ACCOUNT_NAME" --query "[0].value" | tr -d '"')
     az storage container create --name "$BLOBCONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --public-access off
-
-    #get connection string for storage account:
+    # Retrieve connection string for storage account:
     STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
-
     echo "$(info) Creating a custom endpoint in IoT Hub for ADLS"
-    #create a custom-endpoint  to data lake:
+    # Create a custom-endpoint for storage account on IoT Hub
     az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$BLOBCONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}"
-
     echo "$(info) Creating a route in IoT Hub for ADLS custom endpoint"
-    # Create a route for storage endpoint.
+    # Create a route for storage endpoint on IoT Hub
     az iot hub route create --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION"
-
 fi
 
 # Adding route to send messages to an Event Hub namespace. This step creates an Event Hub and namespace,
@@ -266,24 +264,24 @@ fi
 if [ "$PUSH_RESULTS_TO_EVENT_HUB" == "true" ]; then
 
     echo "$(info) Creating Event Hub namespace"
-    #create event hub namespace
+    # Create a event hub namespace
     az eventhubs namespace create --name "$EVENTHUB_NAMESPACE" --resource-group "$RESOURCE_GROUP" -l "$LOCATION"
 
     echo "$(info) Creating Event Hub"
-    #create a event hub in namespace
+    # Create a event hub in namespace
     az eventhubs eventhub create --name "$EVENTHUB_NAME" --resource-group "$RESOURCE_GROUP" --namespace-name "$EVENTHUB_NAMESPACE"
 
     echo "$(info) Creating a Shared Access Policy for Event Hub"
-    #create shared access auth rule and get the connection string
+    # Create shared access policy and get the connection string
     az eventhubs eventhub authorization-rule create --resource-group "$RESOURCE_GROUP" --namespace-name "$EVENTHUB_NAMESPACE" --eventhub-name "$EVENTHUB_NAME" --name RootManageSharedAccessKey --rights Manage Send Listen
     EVENTHUB_CONNECTION_STRING=$(az eventhubs eventhub authorization-rule keys list --resource-group "$RESOURCE_GROUP" --namespace-name "$EVENTHUB_NAMESPACE" --eventhub-name "$EVENTHUB_NAME" --name RootManageSharedAccessKey --query "primaryConnectionString" -o tsv)
 
     echo "$(info) Creating a custom endpoint in IoT Hub for Event Hub"
-    #create an endpoint for event hub:
+    # Create an endpoint for event hub on IoT Hub
     az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-name "$EVENTHUB_ENDPOINT_NAME" --endpoint-type eventhub --endpoint-resource-group "$RESOURCE_GROUP" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$EVENTHUB_CONNECTION_STRING"
 
     echo "$(info) Creating a route in IoT Hub for Event Hub custom endpoint"
-    #create route for event hub in Iot hub:(Actual condition :"\$twin.moduleid = 'camerastream' and type = 'image'" )
+    # Create route for event hub in IoT hub
     az iot hub route create --name "$EVENTHUB_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "$EVENTHUB_ENDPOINT_NAME" --enabled --condition "$EVENTHUB_ROUTING_CONDITION"
 
 fi
@@ -323,21 +321,16 @@ if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
     echo "$(info) Azure Monitor creation is complete"
 fi
 
-# This step retrieves the connection string for the edge device an uses it to onboard
+# The following steps retrieves the connection string for the edge device an uses it to onboard
 # the device using sshpass. This step may fail if the edge device's network firewall
 # does not allow ssh access. Please make sure the edge device is on the local area
 # network and is accepting ssh requests.
 echo "$(info) Retrieving connection string for device $DEVICE_NAME from Iot Hub $IOTHUB_NAME and updating the IoT Edge service in edge device with this connection string"
-
 EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity show-connection-string --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
-
 echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
-
 CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
-
 # Replace placeholder connection string with actual value for Edge device
 # Using sshpass and ssh to update the value on Edge device
-
 if [ "$IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE" == "true" ]; then
     sudo sed -i -e '/device_connection_string:/ s#\"[^\"][^\"]*\"#\"$EDGE_DEVICE_CONNECTION_STRING\"#' $CONFIG_FILE_PATH
 
