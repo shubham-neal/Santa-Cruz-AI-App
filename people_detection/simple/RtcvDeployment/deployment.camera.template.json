@@ -3,6 +3,22 @@
     "$edgeAgent": {
       "properties.desired": {
         "modules": {
+          "rtspsim": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/tmp/video:/live/mediaServer/media"
+                  ]
+                }
+              }
+            }
+          },
           "camerastream": {
             "version": "1.0",
             "type": "docker",
