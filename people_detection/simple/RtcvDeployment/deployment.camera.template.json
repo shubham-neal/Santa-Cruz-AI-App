@@ -162,7 +162,7 @@
             "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
             "enabled": true,
-            "gpu": false
+            "gpu": true
           }
         }
       }
