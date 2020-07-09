@@ -2,7 +2,7 @@
     "$schema-version": "0.0.1",
     "description": "",
     "image": {
-        "repository": "${ACR_NAME_RTPT}/base",
+        "repository": "${ACR_NAME}/base",
         "tag": {
             "version": "latest",
             "platforms": {
