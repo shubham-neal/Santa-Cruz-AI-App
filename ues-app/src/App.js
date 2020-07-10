@@ -17,7 +17,7 @@ const blobPath = 'Office/cam001';
 const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
 const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
 
-const isAdmin = true;// process.env.REACT_APP_ADMIN === "true" ? true : false;
+const isAdmin = process.env.REACT_APP_ADMIN === "true" ? true : false;
 
 // demo =           "rtsp": "/tmp/video/caffeteria.mp4",
 // live =           "rtsp": "rtsp://rtspsim:554/media/caffeteria.mkv",
