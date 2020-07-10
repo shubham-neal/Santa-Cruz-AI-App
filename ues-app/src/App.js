@@ -10,15 +10,17 @@ import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWin
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 import { Azure } from './components/Azure';
 
-const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
+const { BlobServiceClient } = require("@azure/storage-blob");
 const account = 'adlsunifiededgedev001';
 const containerName = 'still-images';
 const blobPath = 'Office/cam001';
 const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
-const defaultAzureCredential = null; //new DefaultAzureCredential();
-const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`, defaultAzureCredential);
+const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
 
-const isAdmin = process.env.REACT_APP_ADMIN || false;
+const isAdmin = true;// process.env.REACT_APP_ADMIN === "true" ? true : false;
+
+// demo =           "rtsp": "/tmp/video/caffeteria.mp4",
+// live =           "rtsp": "rtsp://rtspsim:554/media/caffeteria.mkv",
 
 class App extends React.Component {
     constructor(props) {
@@ -63,6 +65,16 @@ class App extends React.Component {
             const data = JSON.parse(message);
             this.updateData(data);
         });
+
+        let aggregator = this.state.aggregator;
+        const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
+        if(aggregatorEncoded !== "") {
+            const aggregatorDecoded = atob(aggregatorEncoded);
+            aggregator = JSON.parse(aggregatorDecoded);
+            this.setState({
+                aggregator: aggregator
+            });
+        }
     }
 
     render() {
@@ -226,6 +238,7 @@ class App extends React.Component {
     }
 
     updateAggregator = (aggregator) => {
+        localStorage.setItem("UES-APP-AGGREGATOR", btoa(JSON.stringify(aggregator)));
         this.setState({
             aggregator: aggregator
         });

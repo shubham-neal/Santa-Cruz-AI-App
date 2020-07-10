@@ -40,11 +40,14 @@ export class Password extends React.Component {
                             flexDirection: 'row'
                         }}
                     >
-                        <TextField
-                            type="password"
-                            label="Enter password"
-                            onChange={this.props.updatePassword}
-                        />
+                        <form>
+                            <TextField
+                                type="password"
+                                autoComplete="password"
+                                label="Enter password"
+                                onChange={this.props.updatePassword}
+                            />
+                        </form>
                     </div>
                 </div>
             </React.Fragment>

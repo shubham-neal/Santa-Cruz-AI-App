@@ -36,8 +36,12 @@ export class Camera extends React.Component {
         }, 1000 / this.props.fps);
     }
 
-    componentDidUpdate() {
-        // TODO: update when you get the zones/lines from manifest file
+    componentDidUpdate(prevProps) {
+        if(prevProps.aggregator !== this.props.aggregator) {
+            this.setState({
+                aggregator: this.props.aggregator
+            })
+        }
     }
 
     render() {
@@ -66,30 +70,17 @@ export class Camera extends React.Component {
                         onMouseUp={(e) => this.dragging = false}
                         onMouseMove={(e) => { this.updateMousePos(e); this.movePoint(e); }}
                     />
-                    {/* <div
+                    <input
+                        type="text"
                         style={{
-                            visibility: this.mouseInside ? 'visible' : 'hidden'
+                            textAlign: 'center',
+                            border: this.mouseInside ? '1px solid black' : '0px'
                         }}
-                    >
-                        <span
-                            style={{
-                                margin: 5
-                            }}
-                        >
-                            Zone Name:
-                        </span> */}
-                        <input
-                            type="text"
-                            style={{
-                                textAlign: 'center',
-                                border: this.mouseInside ? '1px solid black' : '0px'
-                            }}
-                            defaultValue={this.state.aggregator.zones[this.state.selectedZoneIndex].name}
-                            onChange={(e) => {
-                                this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
-                            }}
-                        />
-                    {/* </div> */}
+                        defaultValue={this.state.aggregator.zones[this.state.selectedZoneIndex].name}
+                        onChange={(e) => {
+                            this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
+                        }}
+                    />
                 </div>
             </React.Fragment>
         );
