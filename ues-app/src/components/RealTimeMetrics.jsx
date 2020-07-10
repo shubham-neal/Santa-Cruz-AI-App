@@ -1,4 +1,6 @@
 import React from 'react';
+import { Label } from 'office-ui-fabric-react/lib/Label';
+import { Text } from 'office-ui-fabric-react/lib/Text';
 
 export class RealTimeMetrics extends React.Component {
     static defaultProps = {
@@ -65,50 +67,33 @@ export class RealTimeMetrics extends React.Component {
                         margin: 10
                     }}
                 >
-                    <div
-                        style={{
-                            marginBottom: 10,
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        Real time metrics
-                    </div>
                     <div>
+                        <Label style={{fontWeight: 'bold'}}>Real time metrics</Label>
+                    </div>
+                    <Text variant={'medium'} block>
                         People detections in frame
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         <b>{this.props.detections}</b>
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         People detections in zones ({names})
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         <b>{this.props.collisions}</b>
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         Max people detections in frame per second
-                            </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         <b>{this.state.maxDetectionsPerSecond}</b>
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         Max people detections in zones ({names}) per second
-                    </div>
-                    <div>
+                    </Text>
+                    <Text variant={'medium'} block>
                         <b>{this.state.maxCollisionsPerSecond}</b>
-                    </div>
-                    {/* <div>
-                        Total max people detections in frame per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalDetections}</b>
-                    </div>
-                    <div>
-                        Total max people detections in zones ({names}) per second
-                    </div>
-                    <div>
-                        <b>{this.state.totalCollisions}</b>
-                    </div> */}
+                    </Text>
                 </div>
             </React.Fragment>
         );

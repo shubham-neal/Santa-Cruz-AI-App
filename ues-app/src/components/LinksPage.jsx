@@ -1,8 +1,11 @@
 import React from 'react';
+import { PrimaryButton } from '@fluentui/react/lib/Button';
+import { Stack } from 'office-ui-fabric-react/lib/Stack';
+import 'office-ui-fabric-react/dist/css/fabric.css';
 
 export class LinksPage extends React.Component {
     static defaultProps = {
-        updateShowLinksPage: (e) => {}
+        updateShowLinksPage: (e) => { }
     }
 
     constructor(props) {
@@ -23,6 +26,7 @@ export class LinksPage extends React.Component {
     render() {
         return (
             <React.Fragment>
+
                 <div style={{
                     display: "flex",
                     flexDirection: "column",
@@ -34,31 +38,29 @@ export class LinksPage extends React.Component {
                     <div
                         style={{
                             display: 'flex',
-                            flexDirection: 'row',
-                            backgroundColor: 'white',
-                            margin: 10,
-                            padding: 10
+                            flexDirection: 'row'
                         }}
                     >
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                        >
-                            <input 
-                                type="button" 
-                                value="Download Deployment Bundle"
+                        <Stack>
+                            <PrimaryButton
+                                style={{
+                                    margin: 5
+                                }}
                                 onClick={(e) => {
                                     window.open('./deployment_bundle.zip');
                                 }}
-                            /><br/>
-                            <input 
-                                type="button" 
-                                value="Start App"
+                            >
+                                Download Deployment Bundle
+                            </PrimaryButton>
+                            <PrimaryButton
+                                style={{
+                                    margin: 5
+                                }}
                                 onClick={this.props.updateShowLinksPage}
-                            />
-                        </div>
+                            >
+                                Start App
+                            </PrimaryButton>
+                        </Stack>
                     </div>
                 </div>
             </React.Fragment>

@@ -1,4 +1,8 @@
 import React from 'react';
+import { DefaultButton } from '@fluentui/react/lib/Button';
+import { Label } from 'office-ui-fabric-react/lib/Label';
+import { Text } from 'office-ui-fabric-react/lib/Text';
+import { TextField } from 'office-ui-fabric-react/lib/TextField';
 
 export class AggregateStatsInTimeWindow extends React.Component {
     static defaultProps = {
@@ -43,13 +47,8 @@ export class AggregateStatsInTimeWindow extends React.Component {
                         margin: 10
                     }}
                 >
-                    <div
-                        style={{
-                            marginBottom: 10,
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        Aggregate stats in time window
+                    <div>
+                        <Label style={{fontWeight: 'bold'}}>Aggregate stats in time window</Label>
                     </div>
                     <div
                         style={{
@@ -85,63 +84,45 @@ export class AggregateStatsInTimeWindow extends React.Component {
                                 </tr>
                                 <tr>
                                     <td>
-                                        Start:
+                                        <Label>Start</Label>
                                     </td>
                                     <td>
-                                        <input
-                                            type="text"
+                                        <TextField
                                             readOnly
-                                            style={{
-                                                width: "100%"
-                                            }}
                                             value={this.state.startDate}
                                         />
                                     </td>
                                     <td>
-                                        <input
-                                            type="text"
+                                        <TextField
                                             readOnly
-                                            style={{
-                                                width: "100%"
-                                            }}
                                             value={this.state.startTime}
                                         />
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>
-                                        End:
+                                        <Label>End</Label>
                                     </td>
                                     <td>
-                                        <input
-                                            type="text"
+                                        <TextField
                                             readOnly
-                                            style={{
-                                                width: "100%"
-                                            }}
                                             value={this.state.endDate}
                                         />
                                     </td>
                                     <td>
-                                        <input
-                                            type="text"
+                                        <TextField
                                             readOnly
-                                            style={{
-                                                width: "100%"
-                                            }}
                                             value={this.state.endTime}
                                         />
                                     </td>
                                 </tr>
                                 <tr>
                                     <td colSpan={3} align="right">
-                                        <input
-                                            type="button"
-                                            value="Calculate"
-                                            disabled={this.endDateTimeRef.current === null || this.endDateTimeRef.current.value === "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
+                                        <DefaultButton
                                             style={{
                                                 marginTop: 10
                                             }}
+                                            disabled={this.endDateTimeRef.current === null || this.endDateTimeRef.current.value === "" || new Date(this.endDateTimeRef.current.value) >= new Date() || new Date(this.endDateTimeRef.current.value) < new Date(2020, 5, 27)}
                                             onClick={(e) => {
                                                 this.setState({
                                                     calculating: true
@@ -149,7 +130,9 @@ export class AggregateStatsInTimeWindow extends React.Component {
                                                     this.calculate();
                                                 });
                                             }}
-                                        />
+                                        >
+                                            Calculate
+                                        </DefaultButton>
                                     </td>
                                 </tr>
                             </tbody>
@@ -158,18 +141,18 @@ export class AggregateStatsInTimeWindow extends React.Component {
                     {
                         this.state.calculating ? <div>Calculating... </div> : (
                             <React.Fragment>
-                                <div>
+                                <Text variant={'medium'} block>
                                     Max people detections in frame per second
-                                </div>
-                                <div>
+                                </Text>
+                                <Text variant={'medium'} block>
                                     <b>{this.state.maxDetectionsPerSecond}</b>
-                                </div>
-                                <div>
+                                </Text>
+                                <Text variant={'medium'} block>
                                     Max people detections in zones ({names}) per second
-                                </div>
-                                <div>
+                                </Text>
+                                <Text variant={'medium'} block>
                                     <b>{this.state.maxCollisionsPerSecond}</b>
-                                </div>
+                                </Text>
                             </React.Fragment>
                         )
                     }

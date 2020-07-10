@@ -1,4 +1,7 @@
 import React from 'react';
+import { TextField } from 'office-ui-fabric-react/lib/TextField';
+import { Card } from '@uifabric/react-cards'
+import 'office-ui-fabric-react/dist/css/fabric.css';
 
 export class Password extends React.Component {
     static defaultProps = {
@@ -34,20 +37,14 @@ export class Password extends React.Component {
                     <div
                         style={{
                             display: 'flex',
-                            flexDirection: 'row',
-                            backgroundColor: 'white',
-                            margin: 10,
-                            padding: 10
+                            flexDirection: 'row'
                         }}
                     >
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
-                        >
-                            <input type="password" placeholder="Enter password" onChange={this.props.updatePassword} />
-                        </div>
+                        <TextField
+                            type="password"
+                            label="Enter password"
+                            onChange={this.props.updatePassword}
+                        />
                     </div>
                 </div>
             </React.Fragment>
