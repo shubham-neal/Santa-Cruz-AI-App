@@ -9,7 +9,6 @@ import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 import { LinksPage } from './components/LinksPage';
-import { Card } from '@uifabric/react-cards';
 import { Azure } from './components/Azure';
 
 const { BlobServiceClient, DefaultAzureCredential } = require("@azure/storage-blob");
@@ -20,7 +19,7 @@ const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=20
 const defaultAzureCredential = null; //new DefaultAzureCredential();
 const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`, defaultAzureCredential);
 
-const isAdmin = false;// process.env.REACT_APP_ADMIN || false;
+const isAdmin = process.env.REACT_APP_ADMIN || false;
 
 class App extends React.Component {
     constructor(props) {
