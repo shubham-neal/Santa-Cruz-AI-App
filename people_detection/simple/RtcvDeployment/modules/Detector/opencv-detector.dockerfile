@@ -1,5 +1,5 @@
-ARG ACR_NAME_RTPT
-FROM  ${ACR_NAME_RTPT}/opencv_base:latest-amd64
+ARG ACR_NAME
+FROM  ${ACR_NAME}/opencv_base:latest-amd64
 
 RUN pip3 install Flask
 
