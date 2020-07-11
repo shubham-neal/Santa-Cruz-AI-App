@@ -9,6 +9,7 @@ import { CountOfPeopleVsTime } from './components/CountOfPeopleVsTime';
 import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWindow';
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 import { Azure } from './components/Azure';
+import { EditZones } from './components/EditZones';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 const account = 'adlsunifiededgedev001';
@@ -17,7 +18,9 @@ const blobPath = 'Office/cam001';
 const sharedAccessSignature = "?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
 const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
 
-const isAdmin = process.env.REACT_APP_ADMIN === "true" ? true : false;
+const isAdmin = false;
+
+const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
 
 // demo =           "rtsp": "/tmp/video/caffeteria.mp4",
 // live =           "rtsp": "rtsp://rtspsim:554/media/caffeteria.mkv",
@@ -56,8 +59,6 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
-
         socket.on('connect', function () {
             console.log('connected!');
         });
@@ -65,10 +66,27 @@ class App extends React.Component {
             const data = JSON.parse(message);
             this.updateData(data);
         });
+        socket.on('passwordchecked', (message) => {
+            const data = JSON.parse(message);
+            if (data.success) {
+                localStorage.setItem("UES-APP-PASSWORD", btoa(data.value));
+                this.setState({
+                    accessGranted: true
+                });
+            }
+        })
+
+
+        let password = "";
+        const passwordEncoded = localStorage.getItem("UES-APP-PASSWORD") || "";
+        if (passwordEncoded !== "") {
+            const passwordDecoded = atob(passwordEncoded);
+            this.checkPassword(passwordDecoded);
+        }
 
         let aggregator = this.state.aggregator;
         const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
-        if(aggregatorEncoded !== "") {
+        if (aggregatorEncoded !== "") {
             const aggregatorDecoded = atob(aggregatorEncoded);
             aggregator = JSON.parse(aggregatorDecoded);
             this.setState({
@@ -79,109 +97,117 @@ class App extends React.Component {
 
     render() {
         return this.state.accessGranted ? (
-                <React.Fragment>
-                    <Azure />
-                    <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        margin: 10,
-                        padding: 10
-                    }}>
+            <React.Fragment>
+                <Azure />
+                <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: 10,
+                    padding: 10
+                }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            backgroundColor: 'white',
+                            margin: 10,
+                            padding: 10
+                        }}
+                    >
                         <div
                             style={{
                                 display: 'flex',
-                                flexDirection: 'row',
+                                flexDirection: 'column'
+                            }}
+                        >
+                            {
+                                this.isAdmin ? (
+                                    <Pivot>
+                                        <PivotItem
+                                            headerText="Demo"
+                                        />
+                                        <PivotItem
+
+                                            headerText="Live"
+                                        />
+                                    </Pivot>
+                                ) : null
+                            }
+                            <Camera
+                                fps={this.state.fps}
+                                width={this.state.width}
+                                height={this.state.height}
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                image={this.state.image}
+                                updateAggregator={this.updateAggregator}
+                            />
+                            <Pivot
+                                onLinkClick={(item) => {
+                                    this.setState({
+                                        realTimeChart: item.props.itemKey === "realtime"
+                                    });
+                                }}
+                            >
+                                <PivotItem
+                                    headerText="Real time"
+                                    itemKey="realtime"
+                                />
+                                <PivotItem
+                                    headerText="Aggregate"
+                                    itemKey="aggregate"
+                                />
+                            </Pivot>
+                            {
+                                this.state.realTimeChart ?
+                                    <CountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+                                    /> :
+                                    <AggregateCountOfPeopleVsTime
+                                        aggregator={this.state.aggregator}
+                                        frame={this.state.frame}
+                                        collisions={this.state.collisions}
+                                        detections={this.state.detections}
+
+                                        aggregateChartMetrics={this.state.aggregateChartMetrics}
+                                    />
+                            }
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
                                 backgroundColor: 'white',
                                 margin: 10,
                                 padding: 10
                             }}
                         >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}
-                            >
-                                <Pivot>
-                                    <PivotItem
-                                        headerText="Demo"
-                                    />
-                                    <PivotItem
-
-                                        headerText="Live"
-                                    />
-                                </Pivot>
-                                <Camera
-                                    fps={this.state.fps}
-                                    width={this.state.width}
-                                    height={this.state.height}
-                                    aggregator={this.state.aggregator}
-                                    frame={this.state.frame}
-                                    image={this.state.image}
-                                    updateAggregator={this.updateAggregator}
-                                />
-                                <Pivot
-                                    onLinkClick={(item) => {
-                                        this.setState({
-                                            realTimeChart: item.props.itemKey === "realtime"
-                                        });
-                                    }}
-                                >
-                                    <PivotItem
-                                        headerText="Real time"
-                                        itemKey="realtime"
-                                    />
-                                    <PivotItem
-                                        headerText="Aggregate"
-                                        itemKey="aggregate"
-                                    />
-                                </Pivot>
-                                {
-                                    this.state.realTimeChart ?
-                                        <CountOfPeopleVsTime
-                                            aggregator={this.state.aggregator}
-                                            frame={this.state.frame}
-                                            collisions={this.state.collisions}
-                                            detections={this.state.detections}
-                                        /> :
-                                        <AggregateCountOfPeopleVsTime
-                                            aggregator={this.state.aggregator}
-                                            frame={this.state.frame}
-                                            collisions={this.state.collisions}
-                                            detections={this.state.detections}
-
-                                            aggregateChartMetrics={this.state.aggregateChartMetrics}
-                                        />
-                                }
-                            </div>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    backgroundColor: 'white',
-                                    margin: 10,
-                                    padding: 10
-                                }}
-                            >
-                                <RealTimeMetrics
-                                    aggregator={this.state.aggregator}
-                                    frame={this.state.frame}
-                                    collisions={this.state.collisions}
-                                    detections={this.state.detections}
-                                />
-                                <AggregateStatsInTimeWindow
-                                    aggregator={this.state.aggregator}
-                                    isBBoxInZones={this.isBBoxInZones}
-                                    blobServiceClient={this.state.blobServiceClient}
-                                    updateAggregateChartMetrics={this.updateAggregateChartMetrics}
-                                />
-                            </div>
+                            <RealTimeMetrics
+                                aggregator={this.state.aggregator}
+                                frame={this.state.frame}
+                                collisions={this.state.collisions}
+                                detections={this.state.detections}
+                            />
+                            <AggregateStatsInTimeWindow
+                                aggregator={this.state.aggregator}
+                                isBBoxInZones={this.isBBoxInZones}
+                                blobServiceClient={this.state.blobServiceClient}
+                                updateAggregateChartMetrics={this.updateAggregateChartMetrics}
+                            />
+                            <EditZones
+                                aggregator={this.state.aggregator}
+                                updateAggregator={this.updateAggregator}
+                            />
                         </div>
                     </div>
-                </React.Fragment>
-            ) : (
+                </div>
+            </React.Fragment>
+        ) : (
                 <React.Fragment>
                     <Azure />
                     <Password updatePassword={this.updatePassword} />
@@ -246,11 +272,11 @@ class App extends React.Component {
 
     updatePassword = (e) => {
         const value = e.target.value;
-        if (value === '8675309') {
-            this.setState({
-                accessGranted: true
-            });
-        }
+        this.checkPassword(value);
+    }
+
+    checkPassword = (value) => {
+        socket.emit("checkpassword", value);
     }
 
     // detections

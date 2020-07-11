@@ -149,7 +149,7 @@ export class AggregateCountOfPeopleVsTime extends React.Component {
                     ],
                     borderWidth: 1
                 }, {
-                    label: 'Max people detections in zone per minute',
+                    label: 'Max people detections in zones per minute',
                     data: this.state.metrics.collisions,
                     backgroundColor: [
                         'transparent'

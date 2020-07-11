@@ -140,7 +140,7 @@ export class CountOfPeopleVsTime extends React.Component {
                     ],
                     borderWidth: 1
                 }, {
-                    label: 'Max people detections in zone per second',
+                    label: 'Max people detections in zones per second',
                     data: this.state.maxPerSecond.collisions,
                     backgroundColor: [
                         'transparent'

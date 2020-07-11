@@ -70,7 +70,7 @@ export class Camera extends React.Component {
                         onMouseUp={(e) => this.dragging = false}
                         onMouseMove={(e) => { this.updateMousePos(e); this.movePoint(e); }}
                     />
-                    <input
+                    {/* <input
                         type="text"
                         style={{
                             textAlign: 'center',
@@ -80,7 +80,7 @@ export class Camera extends React.Component {
                         onChange={(e) => {
                             this.state.aggregator.zones[this.state.selectedZoneIndex].name = e.target.value;
                         }}
-                    />
+                    /> */}
                 </div>
             </React.Fragment>
         );

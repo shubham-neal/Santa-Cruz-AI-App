@@ -1,6 +1,5 @@
 import React from 'react';
 import { TextField } from 'office-ui-fabric-react/lib/TextField';
-import { Card } from '@uifabric/react-cards'
 import 'office-ui-fabric-react/dist/css/fabric.css';
 
 export class Password extends React.Component {
