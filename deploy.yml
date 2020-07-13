@@ -101,14 +101,10 @@ steps:
       
       [ -v LOG_FILE ] && sed -i 's#^\(LOG_FILE[ ]*=\).*#\1\"$LOG_FILE\"#g' "$VARIABLES_FILE_PATH"
       
-      [ -v USE_EXISTING_RG ] && sed -i 's#^\(USE_EXISTING_RG[ ]*=\).*#\1\"$USE_EXISTING_RG\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v USE_EXISTING_IOT_HUB_DEVICE ] && sed -i 's#^\(USE_EXISTING_IOT_HUB_DEVICE[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB_DEVICE\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v PUSH_RESULTS_TO_EVENT_HUB ] && sed -i 's#^\(PUSH_RESULTS_TO_EVENT_HUB[ ]*=\).*#\1\"$PUSH_RESULTS_TO_EVENT_HUB\"#g' "$VARIABLES_FILE_PATH"
+      [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
 
       [ -v EVENTHUB_NAMESPACE ] && sed -i 's#^\(EVENTHUB_NAMESPACE[ ]*=\).*#\1\"$EVENTHUB_NAMESPACE\"#g' "$VARIABLES_FILE_PATH"
-
+      
       [ -v EVENTHUB_NAME ] && sed -i 's#^\(EVENTHUB_NAME[ ]*=\).*#\1\"$EVENTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v EVENTHUB_ENDPOINT_NAME ] && sed -i 's#^\(EVENTHUB_ENDPOINT_NAME[ ]*=\).*#\1\"$EVENTHUB_ENDPOINT_NAME\"#g' "$VARIABLES_FILE_PATH"
