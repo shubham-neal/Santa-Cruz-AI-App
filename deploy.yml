@@ -32,7 +32,7 @@ steps:
       # We are checking the the result returned by shellcheck.
       SHELL_CHECK_RESULT=$(shellcheck ./setup.sh -x)
       if [ -z "$SHELL_CHECK_RESULT" ]; then
-          echo "No Warnings"
+          echo "Pass: There are no warnings from shellcheck"
       else
           echo "The following are the Warnings"
           echo "$SHELL_CHECK_RESULT"
@@ -139,8 +139,8 @@ steps:
       echo "Starting script"
       
       # We're changing the working directory so we can use the other files by their names instead of full path
-      if [ -v WORKING_DIRECTORY ] && [ ! -z WORKING_DIRECTORY ]; then
-          echo "changing directory"
+      if [ -v "WORKING_DIRECTORY" ] && [ ! -z "$WORKING_DIRECTORY" ]; then
+          echo "Changing directory to \"$WORKING_DIRECTORY\""
           cd "$WORKING_DIRECTORY"
       fi
       
@@ -151,39 +151,44 @@ steps:
       # 3. curl
       # 4. python-pip
       # 5. iotedgedev
-      if(! apt list --installed | grep -c -w sshpass); then 
+      if( ! apt list --installed | grep -c -w sshpass ); then 
           echo "Installing sshpass"
           sudo apt-get install sshpass 
-      
+          echo "Installed sshpass"
       fi
 
-      if(! apt list --installed | grep -c -w jq); then 
+      if( ! apt list --installed | grep -c -w jq ); then 
           echo "Installing jq"
           sudo apt-get install jq 
-      
+          echo "Installed jq"
       fi
       
-      if(! apt list --installed | grep -c -w curl); then 
+      if( ! apt list --installed | grep -c -w curl ); then 
           echo "Installing curl"
           sudo apt-get install curl 
-      
+          echo "Installed curl"
       fi
       
       
       if(! apt list --installed | grep -c -w python-pip); then 
-          echo "installing pip"
+          echo "Installing pip"
           sudo apt-get install python-pip
-      
+          echo "Installed pip"
       fi
       
-      if (! pip list --format=columns | grep -c -w iotedgedev); then
+      if ( ! pip list --format=columns | grep -c -w iotedgedev ); then
           echo "Installing iotedgedev"
           sudo pip install iotedgedev
+          echo "Installed iotedgedev"
       fi
       
       # Install azure-cli-iot-ext extention in azure cli
-      [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]] &&  az extension add --name azure-cli-iot-ext
-      
+      if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+        echo "Installing azure-cli-iot-ext extension"
+        az extension add --name azure-cli-iot-ext
+        echo "Installed azure-cli-iot-ext extension"
+      fi
+
       # We are declaring WasIPRuleUpdated variable to track whether the Network Security Group rule in Edge Device has been updated
       WasIPRuleUpdated="0"
       # Update NSG Incoming IP rule for Edge Device if IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED is set to true
