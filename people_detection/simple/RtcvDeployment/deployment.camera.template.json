@@ -71,7 +71,7 @@
                   "Binds": [
                     "/tmp/video:/tmp/video"
                   ],
-                  "Runtime": "nvidia",
+                  "Runtime": "$RUNTIME",
                   "ShmSize": 536870912
                 }
               }
