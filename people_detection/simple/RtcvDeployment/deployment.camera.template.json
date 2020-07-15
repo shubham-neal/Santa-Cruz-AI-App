@@ -69,7 +69,6 @@
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
                   ],
                   "Runtime": "nvidia",
