@@ -73,14 +73,7 @@
                     "/tmp/video:/tmp/video"
                   ],
                   "Runtime": "nvidia",
-                  "ShmSize": 536870912,
-                  "PortBindings": {
-                    "5010/tcp": [
-                      {
-                        "HostPort": "5010"
-                      }
-                    ]
-                  }
+                  "ShmSize": 536870912
                 }
               }
             }
