@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 import './App.css';
 import { Pivot, PivotItem } from 'office-ui-fabric-react/lib/Pivot';
 import io from 'socket.io-client';
@@ -10,18 +11,19 @@ import { AggregateStatsInTimeWindow } from './components/AggregateStatsInTimeWin
 import { AggregateCountOfPeopleVsTime } from './components/AggregateCountOfPeopleVsTime';
 import { Azure } from './components/Azure';
 import { EditZones } from './components/EditZones';
+import { report } from 'process';
 
 const { BlobServiceClient } = require("@azure/storage-blob");
 
-const account = 'adlsunifiededgedev001';
-const containerName = 'still-images';
-const blobPath = 'Office/cam001';
-const sharedAccessSignature = "sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
-const blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
+let account = null; //'adlsunifiededgedev001';
+let containerName = null; //'still-images';
+let blobPath = null; //'Office/cam001';
+let sharedAccessSignature = null; //"sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2021-06-17T08:40:10Z&st=2020-06-17T00:40:10Z&spr=https&sig=rOA0RnsukPtfqNfqa7STBNtEG7LPwTP4aZcD2h0et%2B0%3D";
+let blobServiceClient = null;// new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
 
 const isAdmin = false;
 
-const socket = io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
+let socket = null;// io('wss://ues-messages-app.azurewebsites.net', { transports: ['websocket'] });
 
 // demo =           "rtsp": "/tmp/video/caffeteria.mp4",
 // live =           "rtsp": "rtsp://rtspsim:554/media/caffeteria.mkv",
@@ -60,40 +62,58 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        socket.on('connect', function () {
-            console.log('connected!');
-        });
-        socket.on('message', (message) => {
-            const data = JSON.parse(message);
-            this.updateData(data);
-        });
-        socket.on('passwordchecked', (message) => {
-            const data = JSON.parse(message);
-            if (data.success) {
-                localStorage.setItem("UES-APP-PASSWORD", btoa(data.value));
-                this.setState({
-                    accessGranted: true
+        axios.get(`./settings`)
+            .then((response) => {
+                console.log(response);
+                const data = response.data;
+                // blob storage
+                account = data.account;
+                containerName = data.containerName;
+                blobPath = data.blobPath;
+                sharedAccessSignature = data.sharedAccessSignature;
+                blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
+
+                const location = document.location.host
+
+                // messages
+                socket = io(`wss://${window.location.host}`, { transports: ['websocket'] });
+
+                socket.on('connect', function () {
+                    console.log('connected!');
                 });
-            }
-        })
+                socket.on('message', (message) => {
+                    const data = JSON.parse(message);
+                    this.updateData(data);
+                });
+                socket.on('passwordchecked', (message) => {
+                    const data = JSON.parse(message);
+                    if (data.success) {
+                        localStorage.setItem("UES-APP-PASSWORD", btoa(data.value));
+                        this.setState({
+                            accessGranted: true
+                        });
+                    }
+                })
 
+                // password
+                let password = "";
+                const passwordEncoded = localStorage.getItem("UES-APP-PASSWORD") || "";
+                if (passwordEncoded !== "") {
+                    const passwordDecoded = atob(passwordEncoded);
+                    this.checkPassword(passwordDecoded);
+                }
 
-        let password = "";
-        const passwordEncoded = localStorage.getItem("UES-APP-PASSWORD") || "";
-        if (passwordEncoded !== "") {
-            const passwordDecoded = atob(passwordEncoded);
-            this.checkPassword(passwordDecoded);
-        }
-
-        let aggregator = this.state.aggregator;
-        const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
-        if (aggregatorEncoded !== "") {
-            const aggregatorDecoded = atob(aggregatorEncoded);
-            aggregator = JSON.parse(aggregatorDecoded);
-            this.setState({
-                aggregator: aggregator
+                // aggregator
+                let aggregator = this.state.aggregator;
+                const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
+                if (aggregatorEncoded !== "") {
+                    const aggregatorDecoded = atob(aggregatorEncoded);
+                    aggregator = JSON.parse(aggregatorDecoded);
+                    this.setState({
+                        aggregator: aggregator
+                    });
+                }
             });
-        }
     }
 
     render() {
