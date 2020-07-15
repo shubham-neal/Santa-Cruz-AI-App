@@ -58,33 +58,25 @@
           "detector": {
             "version": "1.0",
             "type": "docker",
-            "env" : {
-              "DISPLAY": {
-                "value": "$DISPLAY"
-              },
-              "QT_X11_NO_MITSHM": {
-                "value": "1"
-              }
-            },
             "status": "running",
             "restartPolicy": "always",
             "settings": {
               "image": "${MODULES.Detector}",
               "createOptions": {
-                "ExposedPorts" : {
+                "ExposedPorts": {
                   "5010/tcp": {}
                 },
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
-                  ]
+                  ],
+                  "Runtime": "$RUNTIME",
+                  "ShmSize": 536870912
                 }
               }
             }
           }
-
         },
         "runtime": {
           "settings": {
@@ -161,8 +153,7 @@
             "detector": "$PEOPLE_DETECTOR",
             "inference": true,
             "interval": "$UPLOAD_FREQ_SEC",
-            "enabled": true,
-            "gpu": true
+            "enabled": true
           }
         }
       }
