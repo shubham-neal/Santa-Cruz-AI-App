@@ -16,16 +16,18 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      if(! apt list --installed | grep -c -w shellcheck ); then
+      IS_SHELLCHECK_INSTALLED=$(apt list --installed | grep -c -w shellcheck)
+      if [ "$IS_SHELLCHECK_INSTALLED" -eq 0 ]; then
           echo "Installing shellcheck"
           sudo apt-get install shellcheck
           echo "Installed shellcheck"
       fi
             
       # We're changing the working directory so we can use the other files by their names instead of full path
-      if [ -v WORKING_DIRECTORY ] && [ ! -z WORKING_DIRECTORY ]; then
+      if [ -v WORKING_DIRECTORY ] && [ ! -z "WORKING_DIRECTORY" ]; then
           echo "changing directory"
           cd "$WORKING_DIRECTORY"
+          echo "Changed directory to \"$WORKING_DIRECTORY\""
       fi
             
       # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
@@ -43,7 +45,7 @@ steps:
 # This step updates the values in variable.template file using the pipeline variables
 # This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
 - task: Bash@3
-  enabled: false
+  enabled: true
   displayName: 'Update values in variable.template file using pipeline variables'
   env:
     SP_APP_PWD: $(SP_APP_PWD)
@@ -102,7 +104,9 @@ steps:
       [ -v LOG_FILE ] && sed -i 's#^\(LOG_FILE[ ]*=\).*#\1\"$LOG_FILE\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
-
+      
+      [ -v PUSH_RESULTS_TO_EVENT_HUB ] && sed -i 's#^\(PUSH_RESULTS_TO_EVENT_HUB[ ]*=\).*#\1\"$PUSH_RESULTS_TO_EVENT_HUB\"#g' "$VARIABLES_FILE_PATH"
+      
       [ -v EVENTHUB_NAMESPACE ] && sed -i 's#^\(EVENTHUB_NAMESPACE[ ]*=\).*#\1\"$EVENTHUB_NAMESPACE\"#g' "$VARIABLES_FILE_PATH"
       
       [ -v EVENTHUB_NAME ] && sed -i 's#^\(EVENTHUB_NAME[ ]*=\).*#\1\"$EVENTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
@@ -128,7 +132,7 @@ steps:
 
 # This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
 - task: Bash@3
-  enabled: false
+  enabled: true
   displayName: 'Setup current container and run setup.sh script'
   env:
     SP_APP_PWD: $(SP_APP_PWD)
@@ -142,6 +146,7 @@ steps:
       if [ -v "WORKING_DIRECTORY" ] && [ ! -z "$WORKING_DIRECTORY" ]; then
           echo "Changing directory to \"$WORKING_DIRECTORY\""
           cd "$WORKING_DIRECTORY"
+          echo "Changed directory"
       fi
       
       # Install required packages if they are not already installed
@@ -151,32 +156,33 @@ steps:
       # 3. curl
       # 4. python-pip
       # 5. iotedgedev
-      if( ! apt list --installed | grep -c -w sshpass ); then 
+      IS_SSHPASS_INSTALLED=$(apt list --installed | grep -c -w sshpass)
+      if [ "$IS_SSHPASS_INSTALLED" -eq 0 ]; then 
           echo "Installing sshpass"
           sudo apt-get install sshpass 
           echo "Installed sshpass"
       fi
-
-      if( ! apt list --installed | grep -c -w jq ); then 
+      IS_JQ_INSTALLED=$(apt list --installed | grep -c -w jq)
+      if [ "$IS_JQ_INSTALLED" -eq 0 ]; then 
           echo "Installing jq"
           sudo apt-get install jq 
           echo "Installed jq"
       fi
-      
-      if( ! apt list --installed | grep -c -w curl ); then 
+      IS_CURL_INSTALLED=$(apt list --installed | grep -c -w curl)
+      if [ "$IS_CURL_INSTALLED" -eq 0 ]; then 
           echo "Installing curl"
           sudo apt-get install curl 
           echo "Installed curl"
       fi
       
-      
-      if(! apt list --installed | grep -c -w python-pip); then 
+      IS_PIP_INSTALLED=$(apt list --installed | grep -c -w python-pip)
+      if [ "$IS_PIP_INSTALLED" -eq 0 ]; then 
           echo "Installing pip"
           sudo apt-get install python-pip
           echo "Installed pip"
       fi
-      
-      if ( ! pip list --format=columns | grep -c -w iotedgedev ); then
+      IS_IOTEDGEDEV_INSTALLED=$(pip list --format=columns | grep -c -w iotedgedev)
+      if [ "$IS_IOTEDGEDEV_INSTALLED" -eq 0 ]; then
           echo "Installing iotedgedev"
           sudo pip install iotedgedev
           echo "Installed iotedgedev"
@@ -219,7 +225,7 @@ steps:
       		fi
       		
       	else
-      		echo "IP Address is type is not enabled in the NSG rule, we are not adding IP address explicitly"
+      		echo "[WARNING]: IP Address type is not enabled in the NSG rule, we are not adding IP address explicitly"
       	fi
       fi
       
@@ -250,7 +256,7 @@ steps:
       		fi
       		
       	else
-      		echo "IP Address is type is not enabled in the NSG rule, we can not update the IP address explicitly"
+      		echo "[WARNING]: IP Address type is not enabled in the NSG rule, we can not update the IP address explicitly"
       	fi
       fi
       
