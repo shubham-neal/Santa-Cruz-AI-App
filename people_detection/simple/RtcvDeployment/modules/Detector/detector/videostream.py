@@ -26,7 +26,7 @@ class VideoStream:
     self.cam = stream_source
     self.interval = interval 
     self.frame_grabber = None
-    self.is_rtsp = self.cam.lower().startswith('rtsp')
+    self.is_rtsp = str(self.cam).lower().startswith('rtsp')
 
     self.fps = None
     self.delay_frames = None
