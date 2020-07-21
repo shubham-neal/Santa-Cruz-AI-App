@@ -15,7 +15,7 @@ app = Flask(__name__)
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
 
-detector = Detector(use_gpu=True)
+detector = Detector(use_gpu=True, people_only=True)
 
 def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
@@ -68,7 +68,7 @@ if __name__== "__main__":
   debug = False
 
   if debug:
-    main_debug(False)
-
-  start_app()  
+    main_debug(True)
+  else:
+    start_app()  
   

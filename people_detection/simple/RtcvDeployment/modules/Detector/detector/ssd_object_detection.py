@@ -94,7 +94,7 @@ class Detector:
 
     for detection in detections:
       # draw the prediction on the frame
-      label = "{}: {:.2f}%".format(detection["label"], detection["confidence"])
+      label = "{}: {:.2f}".format(detection["label"], detection["confidence"])
       startX, startY, endX, endY = (np.array(detection["bbox"]) * np.array([w, h, w, h])).astype("int")
       idx = detection["class"]
 
