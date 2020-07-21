@@ -21,6 +21,8 @@ RUN apt-get upgrade && apt-get update && apt-get install -y  \
         curl \
         libglib2.0-0 \
         libsm6 \
+        libssl-dev \
+        libffi-dev \
         libxext6 \
         libxrender1 \
         vim \
@@ -49,13 +51,9 @@ RUN cd /opencv && mkdir build && cd build && \
 	-D INSTALL_PYTHON_EXAMPLES=OFF \
 	-D INSTALL_C_EXAMPLES=OFF \
 	-D OPENCV_ENABLE_NONFREE=ON \
-	-D WITH_CUDA=ON \
-	-D WITH_CUDNN=ON \
-	-D OPENCV_DNN_CUDA=ON \
-	-D ENABLE_FAST_MATH=1 \
-	-D CUDA_FAST_MATH=1 \
-	-D CUDA_ARCH_BIN=7.0 7.5 \
-	-D WITH_CUBLAS=1 \
+	-D WITH_CUDA=OFF \
+	-D WITH_CUDNN=OFF \
+	-D OPENCV_DNN_CUDA=OFF \
 	-D OPENCV_EXTRA_MODULES_PATH=/opencv_contrib/modules \
 	-D HAVE_opencv_python3=ON \
         -D PYTHON_DEFAULT_EXECUTABLE=$(which python3) \
