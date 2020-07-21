@@ -7,7 +7,7 @@
             "version": "latest",
             "platforms": {
                 "amd64": "./opencv_base.amd64.dockerfile",
-                "arm64": "./opencv_base.arm64.dockerfile"
+                "arm64v8": "./opencv_base.arm64v8.dockerfile"
             }
         },
         "buildOptions": "",
