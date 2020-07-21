@@ -6,7 +6,8 @@
         "tag": {
             "version": "${CAMERA_CONTAINER_IMAGE_TAG}",
             "platforms": {
-                "amd64": "./camera-stream.dockerfile"
+                "amd64": "./camera-stream.amd64.dockerfile",
+                "arm64": "./camera-stream.arm64.dockerfile"
             }
         },
         "buildOptions": ["--build-arg ACR_NAME=${ACR_NAME}"],
