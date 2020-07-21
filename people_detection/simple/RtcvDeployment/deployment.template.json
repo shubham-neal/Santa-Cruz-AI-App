@@ -212,7 +212,9 @@
             "settings": {
               "image": "${MODULES.RTSPServer}",
               "createOptions": {
-                "Cmd": ["./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"],
+                "Cmd": [
+                  "./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"
+                ],
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
@@ -291,6 +293,16 @@
                 }
               }
             }
+          },
+          "SampleModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.SampleModule}",
+              "createOptions": {}
+            }
           }
         },
         "runtime": {
@@ -350,7 +362,8 @@
     "$edgeHub": {
       "properties.desired": {
         "routes": {
-          "AllToHub": "FROM /messages/* INTO $upstream"
+          "AllToHub": "FROM /messages/* INTO $upstream",
+          "SampleModuleToIoTHub": "FROM /messages/modules/SampleModule/outputs/* INTO $upstream"
         },
         "schemaVersion": "1.0",
         "storeAndForwardConfiguration": {

@@ -6,8 +6,8 @@
         "tag": {
             "version": "latest",
             "platforms": {
-                "amd64": "./opencv_base.dockerfile",
-                "arm64": "./opencv_base_arm.dockerfile"
+                "amd64": "./opencv_base.amd64.dockerfile",
+                "arm64": "./opencv_base.arm64.dockerfile"
             }
         },
         "buildOptions": "",
