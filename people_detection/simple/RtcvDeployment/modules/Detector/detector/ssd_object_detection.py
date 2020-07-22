@@ -24,8 +24,8 @@ class Detector:
   def __init__(self, use_gpu=True, confidence=0.5, people_only=True):
     self.confidence = confidence
     
-    prototxt = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.prototxt")
-    caffemodel = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.caffemodel")
+    prototxt = os.path.join(os.path.dirname(__file__), "net/caffe/MobileNetSSD_deploy.prototxt")
+    caffemodel = os.path.join(os.path.dirname(__file__), "net/caffe/MobileNetSSD_deploy.caffemodel")
 
     self.net = cv2.dnn.readNetFromCaffe(prototxt, caffemodel)
     self.class_idx = None
