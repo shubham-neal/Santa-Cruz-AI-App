@@ -30,16 +30,16 @@ Steps:
 	1. Configure following variables in [setup-brainbox-managed-disk.sh](setup-brainbox-managed-disk.sh)
 
 
-		|    Variable Name  | Description |
-		|---------------------|-------------|
-		|    TENANT_ID  |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | ID for your subscription         |
-		|    RESOURCE_GROUP | Resource Group Name or ID          |
-		|    LOCATION   |  Azure Region location         |
-		|    DISK_NAME   |  Name for the managed disk that will be created          |
-		|    USE_INTERACTIVE_LOGIN   |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |
+		|    Variable Name  | Is it Required? | Description |
+		|---------------------|-------------|-------------|
+		|    TENANT_ID  | Required |  ID for your tenant |
+		|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
+		|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
+		|    LOCATION   | Required |  Azure Region location         |
+		|    DISK_NAME   | Required |  Name for the managed disk that will be created          |
+		|    USE_INTERACTIVE_LOGIN   | Required |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
+		|    SP_APP_ID   | Optional |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
+		|    SP_APP_PWD   | Optional |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |
 
 	2. Run the [setup-brainbox-managed-disk.sh](setup-brainbox-managed-disk.sh) script 
 
@@ -62,17 +62,17 @@ Steps:
 	Using shell script:
 	1. Configure following variables in [setup-brainbox-vm.sh](setup-brainbox-vm.sh)
 
-		|    Variable Name  | Description |
-		|---------------------|-------------|
-		|    VM_NAME  |  Name of the VM that will be created |
-		|    TENANT_ID  |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | ID for your subscription         |
-		|    RESOURCE_GROUP | Resource Group Name or ID          |
-		|    LOCATION   |  Azure Region location         |
-		|    DISK_NAME   |  Name for the managed disk that will be used to create VM          |
-		|    USE_INTERACTIVE_LOGIN   |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |		
+		|    Variable Name  | Is it Required? | Description |
+		|---------------------|-------------|-------------|
+		|    VM_NAME  | Required |  Name of the VM that will be created |
+		|    TENANT_ID  | Required |  ID for your tenant |
+		|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
+		|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
+		|    LOCATION   | Required |  Azure Region location         |
+		|    DISK_NAME   | Required |  Name for the managed disk that will be used to create VM          |
+		|    USE_INTERACTIVE_LOGIN   | Required |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
+		|    SP_APP_ID   | Optional |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
+		|    SP_APP_PWD   | Optional |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |		
 	2. Run the [setup-brainbox-vm.sh](setup-brainbox-vm.sh) script 
 
 3. Note down the public IP of the VM. This will be used later in deployment script as EDGE_DEVICE_IP.
@@ -178,43 +178,71 @@ Steps:
 	sudo cp ./azcopy_linux_amd64_*/azcopy /usr/bin/
 	```
 
+1. Install Node JS and npm
+
+	```
+	curl -sL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+	sudo apt-get install -y nodejs
+	```
+
+## Supported Deployment Scenarios:
+
+### End to end deployment (Developer / dogfooding experience)
+- Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device
+	
+### Edge Module Deployment (End-user unboxing experience)
+- Uses an existing resource group, IoT Hub, and Edge Device that has already been onboarded
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device
+
+
 ### Fill in Variables in variables.template file for your Azure Deployment:
 Before deploying, you will need to fill out the values in the variables.template file. A description of each value is provided in the table below:
 
-|Name |Description  |
-|---|---|
-|TENANT_ID|Provide tenant id of your organization here   |
-|SUBSCRIPTION_ID|Provide subscription id here   |
-|USE_EXISTING_RESOURCES|If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
-|RESOURCE_GROUP|Name of a resource group which will be created for the app.    |
-|LOCATION|Azure Data Centre location for the resource group and resources. Exp. East US   |
-|IOTHUB_NAME|Name of the IoT Hub   |
-|DEVICE_NAME|Name of the IoT Edge device on IoT Hub   |
-|DEPLOYMENT_NAME|Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|
-|USE_INTERACTIVE_LOGIN_FOR_AZURE|If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used|
-|SP_APP_ID|ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
-|SP_APP_PWD|Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
-|CREATE_AZURE_MONITOR|If the value is set to "true", a new service principal with monitor role on the IoT hub will be created and the values will be set in the deployment template file |
-|AZURE_MONITOR_SP_NAME|Service Principal name of the Azure Monitor service  |
-|IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE|Value should be "true" if the script is running on the Edge device|
-|EDGE_DEVICE_IP|IP of the Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
-|EDGE_DEVICE_USERNAME|Username of an account on Edge device, this account should have access to modify files on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"   |
-|EDGE_DEVICE_PASSWORD|Password for the account on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
-|MANIFEST_TEMPLATE_NAME|Name of the template manifest file   |
-|MANIFEST_ENVIRONMENT_VARIABLES_FILENAME|Name of the environment variable file containing values/secret   |
-|PRE_GENERATED_MANIFEST_FILENAME|Name of the pre-generated manifest file. If this is not empty, this file will be used for deployment on Edge device. In case this is empty, the manifest template and environment files will be used to generate a manifest file.	|
-|PUSH_RESULTS_TO_ADLS|If the value is set to "true", telemetry data will be pushed to ADLS	|
-|STORAGE_ACCOUNT_NAME|Storage account name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|BLOBCONTAINER_NAME|Container name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|ADLS_ENDPOINT_NAME|Custom Data Lake Endpoint for Edge device in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|IOTHUB_ADLS_ROUTENAME|Route name for the data to be pushed to ADLS in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|ADLS_ROUTING_CONDITION|Condition for filtering the routing data for adls route |
-|PUSH_RESULTS_TO_EVENT_HUB|If the value is set to "true", the script will set up required resources to enable data push to event hub|
-|EVENTHUB_NAMESPACE|Name of the event hub namespace. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
-|EVENTHUB_NAME|Name of the event hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
-|EVENTHUB_ROUTENAME|Name of the route that will push data to event hub through event hub custom endpoint. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
-|EVENTHUB_ENDPOINT_NAME| Name of the custom endpoint that will be created to push data to Event Hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
-|EVENTHUB_ROUTING_CONDITION| Condition for filtering the routing data for event hub route|
+|Name | Is it Required? |Description  |
+|---|---|---|
+|TENANT_ID| Required |Provide tenant id of your organization here   |
+|SUBSCRIPTION_ID| Required |Provide subscription id here   |
+|USE_EXISTING_RESOURCES| Required |If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
+|RESOURCE_GROUP| Required |Name of a resource group which will be created for the app.    |
+|LOCATION| Required |Azure Data Centre location for the resource group and resources. Exp. East US   |
+|IOTHUB_NAME| Required |Name of the IoT Hub   |
+|DEVICE_NAME| Required |Name of the IoT Edge device on IoT Hub   |
+|DEPLOYMENT_NAME| Required |Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|
+|USE_INTERACTIVE_LOGIN_FOR_AZURE| Required |If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used|
+|SP_APP_ID| Optional |ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
+|SP_APP_PWD| Optional |Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
+|CREATE_AZURE_MONITOR| Required |If the value is set to "true", a new service principal with monitor role on the IoT hub will be created and the values will be set in the deployment template file |
+|AZURE_MONITOR_SP_NAME| Optional |Service Principal name of the Azure Monitor service  |
+|IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE| Required |Value should be "true" if the script is running on the Edge device|
+|EDGE_DEVICE_IP| Optional |IP of the Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
+|EDGE_DEVICE_USERNAME| Optional |Username of an account on Edge device, this account should have access to modify files on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"   |
+|EDGE_DEVICE_PASSWORD| Optional |Password for the account on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
+|MANIFEST_TEMPLATE_NAME| Optional |Name of the template manifest file   |
+|MANIFEST_ENVIRONMENT_VARIABLES_FILENAME| Optional |Name of the environment variable file containing values/secret   |
+|PRE_GENERATED_MANIFEST_FILENAME| Optional |Name of the pre-generated manifest file. If this is not empty, this file will be used for deployment on Edge device. In case this is empty, the manifest template and environment files will be used to generate a manifest file.	|
+|CUSTOM_VIDEO_SOURCE| Optional |Custom video that user can provide for the Edge device   |
+|DEFAULT_ROUTE_ROUTING_CONDITION| Required |Routing condition for inbuilt IoT Hub endpoint 'events'. Special characters must be escaped in the string   |
+|PUSH_RESULTS_TO_ADLS| Required |If the value is set to "true", telemetry data will be pushed to ADLS	|
+|STORAGE_ACCOUNT_NAME| Optional |Storage account name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
+|BLOBCONTAINER_NAME| Optional |Container name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
+|ADLS_ENDPOINT_NAME| Optional |Custom Data Lake Endpoint for Edge device in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
+|IOTHUB_ADLS_ROUTENAME| Optional |Route name for the data to be pushed to ADLS in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
+|ADLS_ROUTING_CONDITION| Optional |Condition for filtering the routing data for adls route. Special characters must be escaped in the string |
+|PUSH_RESULTS_TO_EVENT_HUB| Required |If the value is set to "true", the script will set up required resources to enable data push to event hub|
+|EVENTHUB_NAMESPACE| Optional |Name of the event hub namespace. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
+|EVENTHUB_NAME| Optional |Name of the event hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
+|EVENTHUB_ROUTENAME| Optional |Name of the route that will push data to event hub through event hub custom endpoint. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
+|EVENTHUB_ENDPOINT_NAME| Optional | Name of the custom endpoint that will be created to push data to Event Hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
+|EVENTHUB_ROUTING_CONDITION| Optional | Condition for filtering the routing data for event hub route. Special characters must be escaped in the string|
+|SETUP_FRONTEND_APP| Optional | Set it to true to deploy front end application on Azure App Service to monitor the feed from Edge Device|
+|APP_SERVICE_PLAN_NAME| Optional | App Service Plan name for the front end application. Required if SETUP_FRONTEND_APP is set to true|
+|APP_SERVICE_PLAN_SKU| Optional | Sku for the App Service Plan of the front end application. Required if SETUP_FRONTEND_APP is set to true|
+|WEBAPP_NAME| Optional |Name of the Azure Web App for front end application. Required if SETUP_FRONTEND_APP is set to true|
+|PASSWORD_FOR_WEBSITE_LOGIN| Optional | Password for the Azure Web App. Required if SETUP_FRONTEND_APP is set to true|
+|WEBAPP_DEPLOYMENT_ZIP| Optional | Deployment zip for the Azure Web App. If this is not provided, front end application repositories must be present in parent directory of setup script|
 
 ### Run Setup Script To Deploy Solution
 After all values have been specified in the variables.template file, proceeed to running the [setup.sh](setup.sh) script which automates deployment and setup of required resources for Person Tracking App.
