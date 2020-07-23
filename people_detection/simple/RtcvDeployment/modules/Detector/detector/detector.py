@@ -17,7 +17,7 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
                     level=logging.INFO)
 
 #detector = Detector(use_gpu=True, people_only=True)
-detector = OpenVinoDetector()
+detector = OpenVinoDetector(device_name="MYRIAD")
 
 def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
