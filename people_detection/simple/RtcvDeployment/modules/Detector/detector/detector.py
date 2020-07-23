@@ -6,6 +6,7 @@ from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
 import numpy as np
 import json
+from common import display
 
 from flask import Flask, jsonify, request
 # for HTTP/1.1 support
@@ -17,7 +18,7 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
                     level=logging.INFO)
 
 #detector = Detector(use_gpu=True, people_only=True)
-detector = OpenVinoDetector(device_name="MYRIAD")
+detector = OpenVinoDetector(device_name="CPU")
 
 def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
@@ -33,7 +34,7 @@ def main_debug(displaying):
     if not displaying:
       continue
 
-    frame = Detector.display(frame, detections)
+    frame = display(frame, detections)
     # # check to see if the output frame should be displayed to our
     # # screen
     cv2.imshow("Frame", frame)

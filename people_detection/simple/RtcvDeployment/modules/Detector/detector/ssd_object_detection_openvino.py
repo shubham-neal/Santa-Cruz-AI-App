@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 import logging
 from openvino.inference_engine import IECore
-from common import CLASSES, COLORS
+from common import CLASSES, format_detections
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -95,9 +95,6 @@ class OpenVinoDetector:
           xmax = proposal[5]
           ymax = proposal[6]
 
-          results.append({"bbox": [xmin, ymin, xmax, ymax], 
-              "label": CLASSES[idx], 
-              "confidence": float(confidence), 
-              "class": idx })
+          results.append(format_detections(xmin, ymin, xmax, ymax, idx, confidence))
 
     return results
