@@ -13,6 +13,12 @@ error() {
     echo "$(tput setaf 1)$(date +"%Y-%m-%d %T") [ERROR]"
 }
 
+exitWithError() {
+    # Reset console color
+    echo "$(tput sgr0)"
+    exit 1
+}
+
 # Generating a random number. This will be used in case a user provided name is not unique.
 RANDOM_SUFFIX="${RANDOM:0:3}"
 
@@ -70,17 +76,26 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Checking if the required variables are configured"
 printf "%60s\n" " " | tr ' ' '-'
 
-VARIABLE_TEMPLATE_FILENAME="frontend-variables.template"
+SETUP_VARIABLES_TEMPLATE_FILENAME="variables.template"
 
-if [ ! -f "$VARIABLE_TEMPLATE_FILENAME" ]; then
-    echo "$(error) \"$VARIABLE_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
-    exit 1
+if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
+    echo "$(error) \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
+    exitWithError
+fi
+
+FRONTEND_VARIABLES_TEMPLATE_FILENAME="frontend-variables.template"
+
+if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
+    echo "$(error) \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\"."
+    exitWithError
 fi
 
 # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
 # shellcheck source=/dev/null
-# Read variable values from VARIABLE_TEMPLATE_FILENAME file in current directory
-source "$VARIABLE_TEMPLATE_FILENAME"
+# Read variable values from FRONTEND_VARIABLES_TEMPLATE_FILENAME file in current directory
+source "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+# Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
+source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
 # Checking the existence and values of mandatory variables
 
@@ -95,7 +110,6 @@ checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
 checkValue "LOCATION" "$LOCATION"
 checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
-
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
 
@@ -114,15 +128,14 @@ fi
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
     # Check if there are any required variables which are not defined
     if [ "${#ARRAY_NOT_DEFINED_VARIABLES[@]}" -gt 0 ]; then
-        echo "$(error) The following variables must be defined in the variables file"
+        echo "$(error) The following variables must be defined in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
         printf '%s\n' "${ARRAY_NOT_DEFINED_VARIABLES[@]}"
     fi
-    # Check if there are any required variables which are empty
-    if [ "${#ARRAY_VARIABLES_WITHOUT_VALUES[@]}" -gt 0 ]; then
-        echo "$(error) The following variables must have a value in the variables file"
+  
+        echo "$(error) The following variables must have a value in the variables files in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
         printf '%s\n' "${ARRAY_VARIABLES_WITHOUT_VALUES[@]}"
     fi
-    exit 1
+    exitWithError
 fi
 
 echo "$(info) The required variables are defined and have a non-empty value"
@@ -158,66 +171,11 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo Configuring Front End Web App
 printf "%60s\n" " " | tr ' ' '-'
 
-SOLUTION_DIR="$PWD"
-
-if [ -d ""$SOLUTION_DIR"/../ues-app" ] && [ -d ""$SOLUTION_DIR"/../ues-messages-app" ]; then
-
-    NODE_VERSION=$(node -v)
-    NPM_VERSION=$(npm -v)
-
-    if [ -z "$NODE_VERSION" ] || [ -z "$NPM_VERSION" ]; then
-        echo "$(error) This solution requires a recent version of npm and nodejs to be installed."
-        echo "$(error) You do not currently have these packages, you must install them using the below commands."
-        echo "$(error) curl -sL https://deb.nodesource.com/setup_lts.x | sudo -E bash -"
-        echo "$(error) sudo apt-get install -y nodejs"
-        exit 1
-    fi
-
-    echo "$(info) Building app"
-    cd $SOLUTION_DIR/../ues-app/app
-    npm install
-    npm run build --prod --nomaps
-
-    echo "$(info) Copying contents to front-end app"
-    if [ -d ""$SOLUTION_DIR"/../ues-app/api/public" ]; then
-        rm -r $SOLUTION_DIR/../ues-app/api/public
-    fi
-    cp -r build/ $SOLUTION_DIR/../ues-app/api/public
-
-    cd $SOLUTION_DIR/../ues-app/api
-    npm install
-
-    echo "$(info) Zipping up solution for deployment"
-    zip -r -q people-detection-app.zip .
-
-    WEBAPP_DEPLOYMENT_ZIP=""$PWD"/people-detection-app.zip"
-
-    cd "$SOLUTION_DIR"
-else
-    echo "$(error) use-app and use-messages-app repos must be present in the parent directory of setup.sh file"
-    exit 1
-fi
-
-WEBAPP_RUNTIME="node|10.15"
-
-# Retrieve IoT Hub Connection String
-IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
-
-# Retrieve connection string for storage account
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
-
-# Set expiry date of token as current + 1 year
-SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
-STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "lr" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name "$STORAGE_ACCOUNT_NAME" --query "connectionString" --output tsv)
+WEBAPP_DEPLOYMENT_ZIP="people-detection-app.zip"
 
 # Create CORS policy for frontend app
 az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string $STORAGE_CONNECTION_STRING --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
-
-EXISTING_APP_SERVICE_PLAN=$(az appservice plan list --resource-group "$RESOURCE_GROUP" --query "[?name=='$APP_SERVICE_PLAN_NAME'].{Name:name}" --output tsv)
-if [ -z "$EXISTING_APP_SERVICE_PLAN" ]; then
-    echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
-    az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+EXITING_APP_SERvice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
     echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
 else
     if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
@@ -225,12 +183,9 @@ else
     else
         echo "$(info) App Service Plan \"$APP_SERVICE_PLAN_NAME\" already exists"
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
-        APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_SUFFIX}
         # Writing the updated value back to variables file
-        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$VARIABLE_TEMPLATE_FILENAME"
-        echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
-        az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
-        echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
+        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$VARIABL az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
     fi
 fi
 
@@ -242,7 +197,6 @@ if [ -z "$EXISTING_WEB_APP" ]; then
 else
     if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
         echo "$(info) Using existing Web App Plan \"$WEBAPP_NAME\""
-    else
         echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
         WEBAPP_NAME=${WEBAPP_NAME}${RANDOM_SUFFIX}
@@ -257,7 +211,6 @@ fi
 echo "$(info) Updating config to add app settings, connection string and enable web sockets on webapp \"$WEBAPP_NAME\""
 
 # Update appsettings on WebApp
-# TBA: Check if this needs to be hard-coded
 STORAGE_BLOB_PATH="Office/cam001"
 WEBSITE_HTTPLOGGING_RETENTION_DAYS="7"
 WEBSITE_NODE_DEFAULT_VERSION="10.15.2"
