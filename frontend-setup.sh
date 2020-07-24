@@ -15,7 +15,7 @@ error() {
 
 exitWithError() {
     # Reset console color
-    echo "$(tput sgr0)"
+    tput sgr0
     exit 1
 }
 
@@ -91,9 +91,10 @@ if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
 fi
 
 # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
-# shellcheck source=/dev/null
+# shellcheck source=frontend-variables.template
 # Read variable values from FRONTEND_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+# shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
@@ -131,7 +132,8 @@ if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
         echo "$(error) The following variables must be defined in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
         printf '%s\n' "${ARRAY_NOT_DEFINED_VARIABLES[@]}"
     fi
-  
+    # Check if there are any required variables which are empty
+    if [ "${#ARRAY_VARIABLES_WITHOUT_VALUES[@]}" -gt 0 ]; then
         echo "$(error) The following variables must have a value in the variables files in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
         printf '%s\n' "${ARRAY_VARIABLES_WITHOUT_VALUES[@]}"
     fi
@@ -174,8 +176,25 @@ printf "%60s\n" " " | tr ' ' '-'
 WEBAPP_DEPLOYMENT_ZIP="people-detection-app.zip"
 
 # Create CORS policy for frontend app
-az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string $STORAGE_CONNECTION_STRING --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
-EXITING_APP_SERvice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
+
+# Retrieve IoT Hub Connection String
+IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
+
+# Retrieve connection string for storage account
+STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
+
+# Set expiry date of token as current + 1 year
+SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
+STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "lr" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
+
+# Create CORS policy for frontend app
+az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
+
+EXISTING_APP_SERVICE_PLAN=$(az appservice plan list --resource-group "$RESOURCE_GROUP" --query "[?name=='$APP_SERVICE_PLAN_NAME'].{Name:name}" --output tsv)
+if [ -z "$EXISTING_APP_SERVICE_PLAN" ]; then
+    echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
+    az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
     echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
 else
     if [ "$USE_EXISTING_RESOURCES" == "true" ]; then

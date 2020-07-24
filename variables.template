@@ -24,6 +24,10 @@ STORAGE_ACCOUNT_NAME=""
 EDGE_DEVICE_IP=""
 EDGE_DEVICE_USERNAME=""
 EDGE_DEVICE_PASSWORD=""
+# Set it to 'nvidia' to use Nvidia GPU on Edge Device. Set it to 'runc' to use CPU for detector module
+DETECTOR_MODULE_RUNTIME=""
+# Specify the architecture of the Edge Device.
+EDGE_DEVICE_ARCHITECTURE=""
 
 # Manifest Details
 MANIFEST_TEMPLATE_NAME=""

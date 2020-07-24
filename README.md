@@ -110,12 +110,15 @@ Refer to the following list for variables in the variables.template file.
 |USE_EXISTING_RESOURCES| Required |If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
 |RESOURCE_GROUP| Required |Name of a resource group which will be created for the app.    |
 |LOCATION| Required |Azure Data Centre location for the resource group and resources. |
+|INSTALL_REQUIRED_PACKAGES| Required |Whether or not to install required packaged dependencies. This is useful if you are not running the setup from Azure Cloud Shell. Set to "true" to install the dependencies or "false" to skip installation. |
 |IOTHUB_NAME| Required |Name of the IoT Hub   |
 |DEVICE_NAME| Required |Name of the IoT Edge device on IoT Hub   |
 |STORAGE_ACCOUNT_NAME| Required |Storage account name for ADLS. |
 |EDGE_DEVICE_IP| Required |IP of the Edge device.  |
 |EDGE_DEVICE_USERNAME| Required |Username of an account on Edge device, this account should have access to modify files on Edge device.    |
 |EDGE_DEVICE_PASSWORD| Required |Password for the account on Edge device|
+|DETECTOR_MODULE_RUNTIME| Required |Runtime for Detector module on Edge Device. Set it to 'runc' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'nvidia' to use GPU to run detector module|
+|EDGE_DEVICE_ARCHITECTURE| Required |Specify the architecture of the Edge Device. Currently supported values are amd64 and arm64v8.|
 |MANIFEST_TEMPLATE_NAME| Required |Name of the template manifest file   |
 |MANIFEST_ENVIRONMENT_VARIABLES_FILENAME| Required |Name of the environment variable file containing values/secret   |
 |DEPLOYMENT_NAME| Required |Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|

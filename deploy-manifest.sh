@@ -15,7 +15,7 @@ error() {
 
 exitWithError() {
     # Reset console color
-    echo "$(tput sgr0)"
+    tput sgr0
     exit 1
 }
 
@@ -82,7 +82,7 @@ fi
 
 
 # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
-# shellcheck source=/dev/null
+# shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
@@ -118,6 +118,8 @@ checkValue "DEPLOYMENT_NAME" "$DEPLOYMENT_NAME"
 checkValue "EDGE_DEVICE_IP" "$EDGE_DEVICE_IP"
 checkValue "EDGE_DEVICE_USERNAME" "$EDGE_DEVICE_USERNAME"
 checkValue "EDGE_DEVICE_PASSWORD" "$EDGE_DEVICE_PASSWORD"
+checkValue "DETECTOR_MODULE_RUNTIME" "$DETECTOR_MODULE_RUNTIME"
+checkValue "EDGE_DEVICE_ARCHITECTURE" "$EDGE_DEVICE_ARCHITECTURE"
 
 # Check the existence and value of the optional variables depending on the value of mandatory variables
 # Pass a third variable so checkValue function will return whether the variable is empty or not
@@ -156,7 +158,57 @@ if [ ! -f "${MANIFEST_ENVIRONMENT_VARIABLES_FILENAME}" ] || [ ! -f "${MANIFEST_T
     exitWithError
 fi
 
-if [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
+# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment. 
+# There are different installation steps for Cloud Shell as it does not allow root access to the script
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+
+    if [ -z "$(command -v sshpass)" ]; then
+
+    echo "$(info) Installing sshpass"
+    # Download the sshpass package to current machine
+    apt-get download sshpass
+    # Install sshpass package in current working directory
+    dpkg -x sshpass*.deb ~
+    # Add the executable directory path in PATH 
+    echo "PATH=~/usr/bin:$PATH" >> ~/.bashrc
+    source ~/.bashrc
+    # Remove the package file
+    rm sshpass*.deb
+
+        if [ -z "$(command -v sshpass)" ]; then
+            echo "$(error) sshpass is not installed"
+            exitWithError
+        else
+            echo "$(info) Installed sshpass"
+        fi
+
+    fi
+    
+    if [ -z "$(command -v iotedgedev)" ]; then
+    echo "$(info) Installing iotedgedev"
+
+    # Install iotedgedev package
+    pip install iotedgedev==2.0.2
+    # Add iotedgedev path to PATH variable
+    echo "PATH=~/.local/bin:$PATH" >> ~/.bashrc
+    source ~/.bashrc
+
+        if [ -z "$(command -v iotedgedev)" ]; then
+            echo "$(error) iotedgedev is not installed"
+            exitWithError
+        else
+            echo "$(info) Installed iotedgedev"
+        fi
+    fi
+
+    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+            echo "$(info) Installing azure-cli-iot-ext extension"
+            az extension add --name azure-cli-iot-ext
+    fi
+
+    # jq, pip and rsync packages are pre-installed in the cloud shell 
+
+elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     # We will check if any of the following package manager are installed in current machine:
     # apt, yum, dnf, zypper
@@ -181,29 +233,29 @@ if [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
         echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
     else
 
-        echo "Installing required packages"
+        echo "$(info) Installing required packages"
 
-        echo "Installing sshpass"
+        echo "$(info) Installing sshpass"
         sudo "$PACKAGE_MANAGER" install -y sshpass
 
-        echo "Installing jq"
+        echo "$(info) Installing jq"
         sudo "$PACKAGE_MANAGER" install -y jq
 
-        echo "Installing pip"
+        echo "$(info) Installing pip"
         sudo "$PACKAGE_MANAGER" install -y python-pip
 
-        echo "Installing iotedgedev"
-        sudo pip install iotedgedev
+        echo "$(info) Installing iotedgedev"
+        sudo pip install iotedgedev==2.0.2
 
-        echo "Installing rsync"
+        echo "$(info) Installing rsync"
         sudo "$PACKAGE_MANAGER" install -y rsync
 
         if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "Installing azure-cli-iot-ext extension"
+            echo "$(info) Installing azure-cli-iot-ext extension"
             az extension add --name azure-cli-iot-ext
         fi
 
-        echo "Package Installation step is complete"
+        echo "$(info) Package Installation step is complete"
     fi
 fi
 
@@ -432,17 +484,22 @@ fi
     #     echo "$(info) Completed Update of Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
     # fi
 
+    # Update the value of RUNTIME variable in environment variable file
+    sed -i 's#^\(RUNTIME[ ]*=\).*#\1\"'"$DETECTOR_MODULE_RUNTIME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+    # Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
+    sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+
     echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
     echo -n "" >.env
     cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
-    echo "CAMERA_BLOB_SAS=$STORAGE_CONNECTION_STRING_WITH_SAS" >>.env
     echo "$(info) Copied values to .env"
 
     echo "$(info) Generating manifest file from template file"
     # Generate manifest file
-    iotedgedev genconfig --file "$MANIFEST_TEMPLATE_NAME"
+    iotedgedev genconfig --file "$MANIFEST_TEMPLATE_NAME" --platform "$EDGE_DEVICE_ARCHITECTURE"
 
     echo "$(info) Generated manifest file"
+
 
     #Construct file path of the manifest file by getting file name of template file and replace 'template.' with '' if it has .json extension
     #iotedgedev service used deployment.json filename if the provided file does not have .json extension
@@ -476,14 +533,14 @@ fi
 # is intended to let the user provide their own video file instead of using the sample video provided as part of this repo.
 # TODO: check if the path starts with "rtsp://" and skip the upload step but update the .env file accordingly
 echo "$(info) Creating video directory on edge device"
-sshpass -p $EDGE_DEVICE_PASSWORD ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" "mkdir -p /tmp/video"
+sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "mkdir -p /tmp/video"
 
 if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
     echo "$(info) Copying sample video to edge device"
-    sshpass -p $EDGE_DEVICE_PASSWORD rsync ./staircase.mp4 "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
+    sshpass -p "$EDGE_DEVICE_PASSWORD" scp ./staircase.mp4 "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
 else
     echo "$(info) Copying custom video to edge device"
-    sshpass -p $EDGE_DEVICE_PASSWORD rsync $CUSTOM_VIDEO_SOURCE "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
+    sshpass -p "$EDGE_DEVICE_PASSWORD" scp "$CUSTOM_VIDEO_SOURCE" "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
 fi
 
 # This step deploys the configured deployment manifest to the edge device. After completed,

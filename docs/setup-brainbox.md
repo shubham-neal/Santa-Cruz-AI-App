@@ -3,56 +3,24 @@
 
 Follow these steps to create brainbox VM.
 
-1. Create a new managed disk from VHD file
-
-	Using shell script:
-	1. Configure following variables in [setup-brainbox-managed-disk.sh](setup-brainbox-managed-disk.sh)
+1. Configure following variables in [brainbox-variables.template](/brainbox-variables.template)
 
 
-		|    Variable Name  | Is it Required? | Description |
-		|---------------------|-------------|-------------|
-		|    TENANT_ID  | Required |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
-		|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
-		|    LOCATION   | Required |  Azure Region location         |
-		|    DISK_NAME   | Required |  Name for the managed disk that will be created          |
-		|    USE_INTERACTIVE_LOGIN   | Required |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   | Optional |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   | Optional |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |
+	|    Variable Name  | Is it Required? | Description |
+	|---------------------|-------------|-------------|
+	|    USE_INTERACTIVE_LOGIN   | Required |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
+	|    TENANT_ID  | Required |  ID for your tenant |
+	|    SP_APP_ID   | Optional |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
+	|    SP_APP_PWD   | Optional |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |
+	|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
+	|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
+	|    LOCATION   | Required |  Azure Region location         |
+	|    DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is brainbox         |
+	|    STORAGE_TYPE | Optional | Underlying storage SKU. Default value is Premium_LRS  |
+	|    VM_NAME  | Optional |  Name of the VM that will be created. Default value is brainbox |
+	|    VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS1_v2  |
 
-	1. Run the [setup-brainbox-managed-disk.sh](/../setup-brainbox-managed-disk.sh) script 
-
-1. Create a new VM from disk
-
-	Using Azure portal:
-	1. Open the managed disk created in above step in Azure Portal
-	1. Select "Create VM"
-
-		![Create VM using Managed Disk](/MarkdownImages/create_vm_azure_portal_step_1.png)
-		
-	1. Provide name to the VM, select None in Public Inbound Ports and click on Create+Review
-
-		![Create VM](/MarkdownImages/create_vm_azure_portal_step_2.png)
-
-	1. Click on Create
-	
-		![Create VM](/MarkdownImages/obfuscated_create_vm_azure_portal_step_3.png)
-
-	Using shell script:
-	1. Configure following variables in [setup-brainbox-vm.sh](setup-brainbox-vm.sh)
-
-		|    Variable Name  | Is it Required? | Description |
-		|---------------------|-------------|-------------|
-		|    VM_NAME  | Required |  Name of the VM that will be created |
-		|    TENANT_ID  | Required |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
-		|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
-		|    LOCATION   | Required |  Azure Region location         |
-		|    DISK_NAME   | Required |  Name for the managed disk that will be used to create VM          |
-		|    USE_INTERACTIVE_LOGIN   | Required |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   | Optional |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   | Optional |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |		
-	1. Run the [setup-brainbox-vm.sh](/../setup-brainbox-vm.sh) script 
+1. Run the [setup-brainbox-vm.sh](/setup-brainbox-vm.sh) script 
 
 1. Note down the public IP of the VM. This will be used later in deployment script as EDGE_DEVICE_IP.
 
@@ -79,7 +47,6 @@ Follow these steps to create brainbox VM.
 	You should see a screen similar to the following when connected to the brainbox machine.
 
 	![Test Connectivity](/MarkdownImages/brainbox_vm_screenshot.png)
-
 
 ## Changes to VHD
 
