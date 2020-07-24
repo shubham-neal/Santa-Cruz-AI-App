@@ -81,7 +81,8 @@ steps:
       people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
       people_detection/simple/RtcvDeployment/deployment.camera.template.json
       people_detection/simple/RtcvDeployment/prod.env
-      people_detection/simple/RtcvDeployment/prod_gpu.env
+      mariner-vm-setup.sh
+      mariner-vm-variables.template
       setup.sh
       deploy-manifest.sh
       variables.template

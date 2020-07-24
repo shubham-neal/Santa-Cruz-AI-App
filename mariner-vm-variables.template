@@ -1,0 +1,22 @@
+# Set it to true to use interactive login. If it is not set to true, service principal will be used for login.
+USE_INTERACTIVE_LOGIN_FOR_AZURE="="
+TENANT_ID=""
+# SP_APP_ID is the client id of the service principal. Service Principal should have access to create resources in given resource group
+SP_APP_ID=""
+# SP_APP_PWD is the client secret of the service principal.
+SP_APP_PWD=""
+
+# Azure Resource Group details
+SUBSCRIPTION_ID=""
+RESOURCE_GROUP=""
+LOCATION=""
+
+# Name of the managed disk. Default value is "brainbox"
+DISK_NAME=""
+# Storage SKU. Default value is "Premium_LRS"
+STORAGE_TYPE=""
+
+# Name of the brainbox VM on Azure. Default value is "brainbox"
+VM_NAME=""
+# The VM size to be created. Default value is "Standard_DS1_v2"
+VM_SIZE=""

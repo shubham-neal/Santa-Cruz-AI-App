@@ -169,7 +169,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     dpkg -x sshpass*.deb ~
     # Add the executable directory path in PATH 
     echo "PATH=~/usr/bin:$PATH" >> ~/.bashrc
-    source ~/.bashrc
+    PATH=~/usr/bin:$PATH
     # Remove the package file
     rm sshpass*.deb
 
@@ -189,7 +189,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     pip install iotedgedev==2.0.2
     # Add iotedgedev path to PATH variable
     echo "PATH=~/.local/bin:$PATH" >> ~/.bashrc    
-    source ~/.bashrc
+    PATH=~/.local/bin:$PATH
 
         if [ -z "$(command -v iotedgedev)" ]; then
             echo "$(error) iotedgedev is not installed"
@@ -598,14 +598,14 @@ echo "$(info) IoT Edge service restart is complete"
 # is intended to let the user provide their own video file instead of using the sample video provided as part of this repo.
 # TODO: check if the path starts with "rtsp://" and skip the upload step but update the .env file accordingly
 echo "$(info) Creating video directory on edge device"
-sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "mkdir -p /tmp/video"
+sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "mkdir -p /var/tmp/video"
 
 if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
     echo "$(info) Copying sample video to edge device"
-    sshpass -p "$EDGE_DEVICE_PASSWORD" scp ./staircase.mp4 "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
+    sshpass -p "$EDGE_DEVICE_PASSWORD" scp ./staircase.mp4 "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/var/tmp/video/sample-video.mp4
 else
     echo "$(info) Copying custom video to edge device"
-    sshpass -p "$EDGE_DEVICE_PASSWORD" scp "$CUSTOM_VIDEO_SOURCE" "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/tmp/video/sample-video.mp4
+    sshpass -p "$EDGE_DEVICE_PASSWORD" scp "$CUSTOM_VIDEO_SOURCE" "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/var/tmp/video/sample-video.mp4
 fi
 
 # This step deploys the configured deployment manifest to the edge device. After completed,

@@ -130,7 +130,7 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Checking if the required variables are configured"
 printf "%60s\n" " " | tr ' ' '-'
 
-SETUP_VARIABLES_TEMPLATE_FILENAME="brainbox-variables.template"
+SETUP_VARIABLES_TEMPLATE_FILENAME="mariner-vm-variables.template"
 
 if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
     echo "$(error) \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
@@ -162,7 +162,7 @@ fi
 if [ -z "$DISK_NAME" ]; then
     # Value is empty for DISK_NAME;
     # Assign Default value
-    DISK_NAME="brainbox"
+    DISK_NAME="mariner"
 fi
 
 if [ -z "$STORAGE_TYPE" ]; then
@@ -174,13 +174,13 @@ fi
 if [ -z "$VM_NAME" ]; then
     # Value is empty for VM_NAME;
     # Assign Default value
-    VM_NAME="brainbox"
+    VM_NAME="marinvervm"
 fi
 
 if [ -z "$VM_SIZE" ]; then
     # Value is empty for VM_SIZE;
     # Assign Default value
-    VM_SIZE="Standard_DS1_v2"
+    VM_SIZE="Standard_DS2_v2"
 fi
 
 # Check if all the variables are set up correctly
@@ -202,7 +202,7 @@ fi
 echo "$(info) The required variables are defined and have a non-empty value"
 
 # VHD_URI is the direct link for VHD file in storage account. The VHD file must be in the current subscription
-VHD_URI="https://georgembbox.blob.core.windows.net/brainbox/brainbox-dev-1.0.MM5.20200603.2120.vhd?sp=r&st=2020-07-15T14:31:52Z&se=2099-12-30T22:31:52Z&spr=https&sv=2019-10-10&sr=b&sig=tS%2BihEfXWPbtDRfsHIs28%2Fi6eeDGp5deUuoQmv%2FPpSg%3D"
+VHD_URI="https://georgembbox.blob.core.windows.net/brainbox/brainbox-dev-1.0.MM5.20200603.2120.v0.0.3.vhd?sp=r&st=2020-07-24T21:41:00Z&se=2021-01-01T08:00:00Z&spr=https&sv=2019-12-12&sr=b&sig=E%2Fe2SO2W25SZhxtCwUzUIj00B60k6iuzuWazWUy%2FyKA%3D"
 
 # Whether to create a rule in NSG for SSH or RDP.
 # The following are the allowed values:
