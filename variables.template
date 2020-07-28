@@ -26,7 +26,7 @@ EDGE_DEVICE_USERNAME=""
 EDGE_DEVICE_PASSWORD=""
 # Set it to 'nvidia' to use Nvidia GPU on Edge Device. Set it to 'runc' to use CPU for detector module
 DETECTOR_MODULE_RUNTIME=""
-# Specify the architecture of the Edge Device.
+# Specify the architecture of the Edge Device. Currently supported values are amd64 and arm64v8.
 EDGE_DEVICE_ARCHITECTURE=""
 
 # Manifest Details

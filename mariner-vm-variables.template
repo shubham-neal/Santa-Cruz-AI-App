@@ -10,13 +10,17 @@ SP_APP_PWD=""
 SUBSCRIPTION_ID=""
 RESOURCE_GROUP=""
 LOCATION=""
+# Set it to true to use an Existing Resource Group
+USE_EXISTING_RESOURCE_GROUP=""
+# Set it to true to install packages in local machine. Not required if script is running from Azure Cloud Shell
+INSTALL_REQUIRED_PACKAGES=""
 
-# Name of the managed disk. Default value is "brainbox"
+# Name of the managed disk. Default value is "mariner"
 DISK_NAME=""
 # Storage SKU. Default value is "Premium_LRS"
 STORAGE_TYPE=""
 
-# Name of the brainbox VM on Azure. Default value is "brainbox"
+# Name of the mariner VM on Azure. Default value is "marinervm"
 VM_NAME=""
-# The VM size to be created. Default value is "Standard_DS1_v2"
+# The VM size to be created. Default value is "Standard_DS2_v2"
 VM_SIZE=""

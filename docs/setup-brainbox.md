@@ -15,10 +15,12 @@ Follow these steps to create brainbox VM.
 	|    SUBSCRIPTION_ID     | Required | ID for your subscription         |
 	|    RESOURCE_GROUP | Required | Resource Group Name or ID          |
 	|    LOCATION   | Required |  Azure Region location         |
-	|    DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is brainbox         |
+	|    USE_EXISTING_RESOURCE_GROUP   | Required |  If the value is set to "yes", the script will use an existing resource group or create a new one if it does not exist in the given subscription. If it is not set to true, the script will fail if there is an existing resource group with the given name in Azure.          |
+	|    INSTALL_REQUIRED_PACKAGES   | Optional |  Set it to true to install packages in local machine. It is not required if script is running from Azure Cloud Shell        |
+	|    DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is mariner         |
 	|    STORAGE_TYPE | Optional | Underlying storage SKU. Default value is Premium_LRS  |
-	|    VM_NAME  | Optional |  Name of the VM that will be created. Default value is brainbox |
-	|    VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS1_v2  |
+	|    VM_NAME  | Optional |  Name of the VM that will be created. Default value is marinervm |
+	|    VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS2_v2  |
 
 1. Run the [setup-brainbox-vm.sh](/setup-brainbox-vm.sh) script 
 

@@ -175,14 +175,14 @@ printf "%60s\n" " " | tr ' ' '-'
 
 WEBAPP_DEPLOYMENT_ZIP="people-detection-app.zip"
 
-# Create CORS policy for frontend app
-az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
-
 # Retrieve IoT Hub Connection String
 IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
 
 # Retrieve connection string for storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
+
+# Create CORS policy for frontend app
+az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
 
 # Set expiry date of token as current + 1 year
 SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
@@ -202,9 +202,12 @@ else
     else
         echo "$(info) App Service Plan \"$APP_SERVICE_PLAN_NAME\" already exists"
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
+        APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_SUFFIX}
         # Writing the updated value back to variables file
-        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$VARIABL az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
-$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
+        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$VARIABLE_TEMPLATE_FILENAME"
+        echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
+        az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+        echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
     fi
 fi
 
@@ -216,6 +219,7 @@ if [ -z "$EXISTING_WEB_APP" ]; then
 else
     if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
         echo "$(info) Using existing Web App Plan \"$WEBAPP_NAME\""
+    else
         echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
         WEBAPP_NAME=${WEBAPP_NAME}${RANDOM_SUFFIX}

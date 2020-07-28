@@ -91,21 +91,13 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 
 elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
-    # We will check if any of the following package manager are installed in current machine:
-    # apt, yum, dnf, zypper
-    PACKAGE_MANAGER=""
-    PACKAGE_MANAGER_VERSION_APT=$(command -v apt)
-    PACKAGE_MANAGER_VERSION_YUM=$(command -v yum)
-    PACKAGE_MANAGER_VERSION_DNF=$(command -v dnf)
-    PACKAGE_MANAGER_VERSION_ZYPPER=$(command -v zypper)
-
-    if [ ! -z "$PACKAGE_MANAGER_VERSION_APT" ]; then
+    if [ ! -z "$(command -v apt)" ]; then
         PACKAGE_MANAGER="apt"
-    elif [ ! -z "$PACKAGE_MANAGER_VERSION_YUM" ]; then
-        PACKAGE_MANAGER="yum"
-    elif [ ! -z "$PACKAGE_MANAGER_VERSION_DNF" ]; then
+    elif [ ! -z "$(command -v dnf)" ]; then
         PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$PACKAGE_MANAGER_VERSION_ZYPPER" ]; then
+    elif [ ! -z "$(command -v yum)" ]; then
+        PACKAGE_MANAGER="dnf"
+    elif [ ! -z "$(command -v zypper)" ]; then
         PACKAGE_MANAGER="zypper"
     fi
 
