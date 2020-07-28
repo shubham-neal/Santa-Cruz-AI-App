@@ -3,6 +3,22 @@
     "$edgeAgent": {
       "properties.desired": {
         "modules": {
+          "rtspsim": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
+              "createOptions": {
+                "HostConfig": {
+                  "Binds": [
+                    "/var/tmp/video:/live/mediaServer/media"
+                  ]
+                }
+              }
+            }
+          },
           "camerastream": {
             "version": "1.0",
             "type": "docker",
@@ -26,7 +42,7 @@
                   "IpcMode": "host",
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
-                    "/tmp/video:/tmp/video"
+                    "/var/tmp/video:/tmp/video"
                   ],
                   "PortBindings": {
                     "56780/tcp": [
@@ -53,7 +69,7 @@
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
-                    "/tmp/video:/tmp/video"
+                    "/var/tmp/video:/tmp/video"
                   ],
                   "Runtime": "$RUNTIME",
                   "ShmSize": 536870912

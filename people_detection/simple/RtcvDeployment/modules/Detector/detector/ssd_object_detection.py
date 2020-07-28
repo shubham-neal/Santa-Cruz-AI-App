@@ -7,6 +7,7 @@ import numpy as np
 import imutils
 import cv2
 import os, logging
+from common import CLASSES, COLORS, format_detections
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -14,25 +15,20 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 class Detector:
 # initialize the list of class labels MobileNet SSD was trained to
 # detect, then generate a set of bounding box colors for each class
-  CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
-    "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
-    "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
-    "sofa", "train", "tvmonitor"]
-  COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
-    # load our serialized model from disk
+  # load our serialized model from disk
   def __init__(self, use_gpu=True, confidence=0.5, people_only=True):
     self.confidence = confidence
     
-    prototxt = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.prototxt")
-    caffemodel = os.path.join(os.path.dirname(__file__), "net/MobileNetSSD_deploy.caffemodel")
+    prototxt = os.path.join(os.path.dirname(__file__), "net/caffe/MobileNetSSD_deploy.prototxt")
+    caffemodel = os.path.join(os.path.dirname(__file__), "net/caffe/MobileNetSSD_deploy.caffemodel")
 
     self.net = cv2.dnn.readNetFromCaffe(prototxt, caffemodel)
     self.class_idx = None
 
     # we are interested in detecting people only
     if people_only:
-      self.class_idx = self.CLASSES.index("person")
+      self.class_idx = CLASSES.index("person")
 
     # check if we are going to use GPU
     if use_gpu:
@@ -85,24 +81,6 @@ class Detector:
           
           [startX, startY, endX, endY] = detections[0, 0, i, 3:7].astype("float")
 
-          results.append({"bbox": [startX, startY, endX, endY], "label": self.CLASSES[idx], "confidence": float(confidence), "class": idx })
+          results.append(format_detections(startX, startY, endX, endY, idx, confidence))
 
       return results
-
-  def display(self, frame, detections):		
-    (h, w) = frame.shape[:2]
-
-    for detection in detections:
-      # draw the prediction on the frame
-      label = "{}: {:.2f}".format(detection["label"], detection["confidence"])
-      startX, startY, endX, endY = (np.array(detection["bbox"]) * np.array([w, h, w, h])).astype("int")
-      idx = detection["class"]
-
-      cv2.rectangle(frame, (startX, startY), (endX, endY),
-        self.COLORS[idx], 2)
-      y = startY - 15 if startY - 15 > 15 else startY + 15
-      cv2.putText(frame, label, (startX, y),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.COLORS[idx], 2)
-
-    return frame
-    

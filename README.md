@@ -2,239 +2,151 @@
 
 This document serves to walk through the end-user deployment and onboarding experience for the open source people detection on Azure Brainbox. 
 
-## Changes to VHD
-Several changes were necessary for making the VHD file so it can be deployed as an Azure VM. A detailed list of changes is listed below.
 
-- IoT Edge Configuration
-	- File: /etc/iotedge/config.yaml
-	- Changes:
-		- changed hostname to "brainbox"
+## Mariner OS VM Creation
+You may wish to create a VM in Azure to emulate the edge device hardware for testing purposes. To create a VM with the custom OS image, please follow the [instructions here](docs/setup-brainbox.md).
 
-- SSH configuration
-	- File: /etc/ssh/sshd_config
-	- Changes:
-		- ClientAliveInterval 180
-		- TCPKeepAlive yes
-		- PermitRootLogin yes
+## Prerequisites
 
-Convert disk from vhdx to vhd using Hyper-V conversion tool
-Expand disk from 10GB to 64GB using Hyper-V conversion tool
-Upload VHD file to blob storage
-
-## Brainbox VM Creation
-
-Steps:
-1. Create a new managed disk from VHD file
-
-	Using shell script:
-	1. Configure following variables in [setup-brainbox-managed-disk.sh](setup-brainbox-managed-disk.sh)
-
-
-		|    Variable Name  | Description |
-		|---------------------|-------------|
-		|    TENANT_ID  |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | ID for your subscription         |
-		|    RESOURCE_GROUP | Resource Group Name or ID          |
-		|    LOCATION   |  Azure Region location         |
-		|    DISK_NAME   |  Name for the managed disk that will be created          |
-		|    USE_INTERACTIVE_LOGIN   |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |
-
-	2. Run the [setup-brainbox-managed-disk.sh](setup-brainbox-managed-disk.sh) script 
-
-2. Create a new VM from disk
-
-	Using Azure portal:
-	1. Open the managed disk created in above step in Azure Portal
-	2. Select "Create VM"
-
-		![Create VM using Managed Disk](/MarkdownImages/create_vm_azure_portal_step_1.png)
-		
-	3. Provide name to the VM, select None in Public Inbound Ports and click on Create+Review
-
-		![Create VM](/MarkdownImages/create_vm_azure_portal_step_2.png)
-
-	4. Click on Create
-	
-		![Create VM](/MarkdownImages/obfuscated_create_vm_azure_portal_step_3.png)
-
-	Using shell script:
-	1. Configure following variables in [setup-brainbox-vm.sh](setup-brainbox-vm.sh)
-
-		|    Variable Name  | Description |
-		|---------------------|-------------|
-		|    VM_NAME  |  Name of the VM that will be created |
-		|    TENANT_ID  |  ID for your tenant |
-		|    SUBSCRIPTION_ID     | ID for your subscription         |
-		|    RESOURCE_GROUP | Resource Group Name or ID          |
-		|    LOCATION   |  Azure Region location         |
-		|    DISK_NAME   |  Name for the managed disk that will be used to create VM          |
-		|    USE_INTERACTIVE_LOGIN   |  Set it to true to use interactive login. If it's not set to true, service principal will be used for login           |
-		|    SP_APP_ID   |   Client ID of Service Principal for login. Only required if USE_INTERACTIVE_LOGIN is not set to true          |
-		|    SP_APP_PWD   |  Client Secret of Service Principal for login. Only required if USE_INTERACTIVE_Login is not set to true           |		
-	2. Run the [setup-brainbox-vm.sh](setup-brainbox-vm.sh) script 
-
-3. Note down the public IP of the VM. This will be used later in deployment script as EDGE_DEVICE_IP.
-
-	![Note down IP](/MarkdownImages/obfuscated_note_down_azure_vm_ip.png)
-
-4. 	Add a SSH rule in Network Security Group of the VM to allow your machine to connect to VM. 
-	
-	Select Networking blade in VM on Azure Portal. Click on Add inbound port rule
-
-	![Inbound SSH rule](/MarkdownImages/add_nsg_rule_step_1.png)	
-	Add values in inbound port rule and select add.
-
-	![Inbound SSH rule](/MarkdownImages/add_nsg_rule_step_2.png)
-
-	If your tenant has enabled Azure Core Security Managed Policy, a default rule blocking SSH port may be auto added to the Network Security Group. You can update that rule to allow access to your IP.
-
-5. Test connectivity to the Brainbox VM
-
-	```
-	ssh root@<brainbox-ip>
-	Enter password when prompted
-	```
-
-	You should see a screen similar to the following when connected to the brainbox machine.
-
-	![Test Connectivity](/MarkdownImages/brainbox_vm_screenshot.png)
-
-## Automated Brainbox Setup / Onboarding
-
-### Prerequisites
-
-- Deployment machine must be a linux-based device. The instructions below have been tested on Ubuntu 18.04 LTS.
-- The user or service principal should have access to create resources in the given subscription in Azure
-- The user/service principal should have access to register applications in active directory
-	* In case of service principal, it needs to have the following Azure Active Directory Graph Application permissions
-	    * Application.ReadWrite.All
-	    * Application.ReadWrite.OwnedBy
-	    * Directory.ReadWrite.All
-        * Directory.Read.All		
-- When using a service principal to authenticate, provide it access to create other service principles for Azure Monitor step
+- The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Ubuntu 18.04 LTS.
+- The user or service principal running the scripts should have access to create resources in the given subscription in Azure
+  - The user/service principal should have access to register applications in active directory
+    * In case of service principal, it needs to have the following Azure Active Directory Graph Application permissions
+        * Application.ReadWrite.All
+        * Application.ReadWrite.OwnedBy
+        * Directory.ReadWrite.All
+          * Directory.Read.All		
+  - When using a service principal to authenticate, provide it access to create other service principles for Azure Monitor step
 - Appropriate ports should be opened on the Edge machine to allow iotedge service to send messages to IoT Hub
 - User running the script should have access to create directories and files on the machine
 - Set values in the [variables.template](variables.template) file before running the script
-- The following packages are required for executing the setup script. Follow the below instructions to install
 
-#### Install Package Dependencies
+## Install Package Dependencies
 
-1. Install jq, sshpass, curl, python-pip packages using your package manager.
-	
-	The following commands use apt package manager in Ubuntu. 
-	```sh
-	 sudo apt update
-	 sudo apt install -y curl jq sshpass python-pip
-	 ```
+- The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
+You can follow the [instruction here](docs/packages-installation-steps.md) if you need to install the required packaged manually.  
 
-1. Install Docker and restart your machine for it to take effect
-	
-	```sh
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sh get-docker.sh
-	sudo usermod -aG docker $USER
-	```
+## Deploy Solution
+Two deployment scenarios are supported. 
 
-1. Install Azure CLI
-	
-	```
-	curl -L https://aka.ms/InstallAzureCli | bash
-	```
-
-1. Install Azure CLI IoT Extension
-	
-	```
-	az extension add --name azure-cli-iot-ext
-	```
-
-1. Install iotedgedev utility
-	
-	```
-	pip install docker-compose
-	pip install iotedgedev
-	```
-
-	You may need to run the below commands to allow your system to find iotedgedev
-	```
-	echo "PATH=~/.local/bin:$PATH" >> ~/.bashrc
-	source ~/.bashrc
-	```
-
-	Test iotedgedev installation by running the below command
-	```
-	iotedgedev --version
-	```
-1. Install AzCopy
-
-	Download AzCopy for linux from [here](https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10#download-azcopy)
-
-	Unzip the downloaded AzCopy gzip file
-
-	Copy the azcopy executable from unzipped directory to /user/bin so it's available for use in the system
-
-	```
-	sudo cp ./azcopy_linux_amd64_*/azcopy /usr/bin/
-	```
-
-### Fill in Variables in variables.template file for your Azure Deployment:
-Before deploying, you will need to fill out the values in the variables.template file. A description of each value is provided in the table below:
-
-|Name |Description  |
-|---|---|
-|TENANT_ID|Provide tenant id of your organization here   |
-|SUBSCRIPTION_ID|Provide subscription id here   |
-|USE_EXISTING_RESOURCES|If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
-|RESOURCE_GROUP|Name of a resource group which will be created for the app.    |
-|LOCATION|Azure Data Centre location for the resource group and resources. Exp. East US   |
-|IOTHUB_NAME|Name of the IoT Hub   |
-|DEVICE_NAME|Name of the IoT Edge device on IoT Hub   |
-|DEPLOYMENT_NAME|Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|
-|USE_INTERACTIVE_LOGIN_FOR_AZURE|If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used|
-|SP_APP_ID|ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
-|SP_APP_PWD|Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
-|CREATE_AZURE_MONITOR|If the value is set to "true", a new service principal with monitor role on the IoT hub will be created and the values will be set in the deployment template file |
-|AZURE_MONITOR_SP_NAME|Service Principal name of the Azure Monitor service  |
-|IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE|Value should be "true" if the script is running on the Edge device|
-|EDGE_DEVICE_IP|IP of the Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
-|EDGE_DEVICE_USERNAME|Username of an account on Edge device, this account should have access to modify files on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"   |
-|EDGE_DEVICE_PASSWORD|Password for the account on Edge device. This is required if IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE is not set to "true"  |
-|MANIFEST_TEMPLATE_NAME|Name of the template manifest file   |
-|MANIFEST_ENVIRONMENT_VARIABLES_FILENAME|Name of the environment variable file containing values/secret   |
-|PRE_GENERATED_MANIFEST_FILENAME|Name of the pre-generated manifest file. If this is not empty, this file will be used for deployment on Edge device. In case this is empty, the manifest template and environment files will be used to generate a manifest file.	|
-|PUSH_RESULTS_TO_ADLS|If the value is set to "true", telemetry data will be pushed to ADLS	|
-|STORAGE_ACCOUNT_NAME|Storage account name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|BLOBCONTAINER_NAME|Container name for ADLS. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|ADLS_ENDPOINT_NAME|Custom Data Lake Endpoint for Edge device in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|IOTHUB_ADLS_ROUTENAME|Route name for the data to be pushed to ADLS in IoT Hub. This is required if PUSH_RESULTS_TO_ADLS is set to "true"	|
-|ADLS_ROUTING_CONDITION|Condition for filtering the routing data for adls route |
-|PUSH_RESULTS_TO_EVENT_HUB|If the value is set to "true", the script will set up required resources to enable data push to event hub|
-|EVENTHUB_NAMESPACE|Name of the event hub namespace. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
-|EVENTHUB_NAME|Name of the event hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true" |
-|EVENTHUB_ROUTENAME|Name of the route that will push data to event hub through event hub custom endpoint. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
-|EVENTHUB_ENDPOINT_NAME| Name of the custom endpoint that will be created to push data to Event Hub. This is required if PUSH_RESULTS_TO_EVENT_HUB is set to "true"|
-|EVENTHUB_ROUTING_CONDITION| Condition for filtering the routing data for event hub route|
-
-### Run Setup Script To Deploy Solution
-After all values have been specified in the variables.template file, proceeed to running the [setup.sh](setup.sh) script which automates deployment and setup of required resources for Person Tracking App.
-
-```sh
-chmod +x ./setup.sh
-./setup.sh
-```
+**Supported Deployment Scenarios:**
+- End-to-end deployment (Developer / dogfooding experience)
+- Edge Module Deployment (End-user-unboxing experience)
 
 
-## The following are the resource naming rules for Azure resources used.
+### Scenario #1: End-to-end deployment (Developer / dogfooding experience)
+
+- Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device
+
+
+  **Deployment Steps:**
+
+    Step 1: Provide required inputs to run the setup scripts
+    - Add values in [variables.template](variables.template) file. You can refer to the [Configuring Variable Template Files](###Configuring-Variable-Template-Files) section to see how to specify values for the variables.
+
+
+    Step 2: Setup the IoT Hub and Edge Device   
+    - Run [setup.sh](setup.sh) script
+
+    ```sh
+    chmod +x setup.sh
+    ./setup.sh
+    ```
+
+
+    Step 3: Setup a Front End app to visualize the results
+    - Add values in [frontend-variables.template](./frontend-variables.template)
+      You can refer to the [Configuring Variable Template Files](###Configuring-Variable-Template-Files) section to see how to specify values for the variables.
+    - Run [frontend-setup.sh](frontend-setup.sh) script
+
+    ```sh
+    chmod +x frontend-setup.sh
+    ./frontend-setup.sh
+    ```
+
+
+### Scenario 2: Edge Module Deployment (End-user unboxing experience)
+
+- Uses an existing resource group, IoT Hub, and Edge Device that has already been onboarded
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device
+
+  **Deployment Steps:**
+
+    Step 1: Provide required inputs to run the setup scripts
+    - Add values in [variables.template](variables.template) file. You can refer to the [Configuring Variable Template Files](###Configuring-Variable-Template-Files) section to see how to specify values for the variables.  
+
+    
+    Step 2: Setup the IoT Hub and Edge Device     
+    - Run [deploy-manifest.sh](deploy-manifest.sh) script
+
+    ```sh
+    ./deploy-manifest.sh
+    ```
+
+
+    Step 3: Setup a Front End app to visualize the results
+    - Add values in [frontend-variables.template](frontend-variables.template) file. You can refer to [Configuring Variable Template Files](###Configuring-Variable-Template-Files) section to see how to specify values for the variables. 
+    - Run [frontend-setup.sh](frontend-setup.sh) script
+
+    ```sh
+    ./frontend-setup.sh
+    ```
+
+
+### Configuring Variable Template Files
+  
+Refer to the following list for variables in the variables.template file.
+  
+|Name | Required? |Description  |
+|---|---|---|
+|USE_INTERACTIVE_LOGIN_FOR_AZURE| Required |If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used|
+|SP_APP_ID| Optional |ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
+|SP_APP_PWD| Optional |Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true"   |
+|TENANT_ID| Required |Provide tenant id of your organization here   |
+|SUBSCRIPTION_ID| Required |Provide subscription id here   |
+|USE_EXISTING_RESOURCES| Required |If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
+|RESOURCE_GROUP| Required |Name of a resource group which will be created for the app.    |
+|LOCATION| Required |Azure Data Centre location for the resource group and resources. |
+|INSTALL_REQUIRED_PACKAGES| Required |Whether or not to install required packaged dependencies. This is useful if you are not running the setup from Azure Cloud Shell. Set to "true" to install the dependencies or "false" to skip installation. |
+|IOTHUB_NAME| Required |Name of the IoT Hub   |
+|DEVICE_NAME| Required |Name of the IoT Edge device on IoT Hub   |
+|STORAGE_ACCOUNT_NAME| Required |Storage account name for ADLS. |
+|EDGE_DEVICE_IP| Required |IP of the Edge device.  |
+|EDGE_DEVICE_USERNAME| Required |Username of an account on Edge device, this account should have access to modify files on Edge device.    |
+|EDGE_DEVICE_PASSWORD| Required |Password for the account on Edge device|
+|DETECTOR_MODULE_RUNTIME| Required |Runtime for Detector module on Edge Device. Set it to 'runc' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'nvidia' to use GPU to run detector module|
+|EDGE_DEVICE_ARCHITECTURE| Required |Specify the architecture of the Edge Device. Currently supported values are amd64 and arm64v8.|
+|MANIFEST_TEMPLATE_NAME| Required |Name of the template manifest file   |
+|MANIFEST_ENVIRONMENT_VARIABLES_FILENAME| Required |Name of the environment variable file containing values/secret   |
+|DEPLOYMENT_NAME| Required |Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|
+|CUSTOM_VIDEO_SOURCE| Optional |Custom video that user can provide for the Edge device   |
+
+  
+Refer to the following list for variables in the frontend-variables.template file.
+
+|Name | Required? |Description  |
+|---|---|---|
+|APP_SERVICE_PLAN_NAME| Required | App Service Plan name for the front end application|
+|APP_SERVICE_PLAN_SKU| Required | Sku for the App Service Plan of the front end application|
+|WEBAPP_NAME| Required |Name of the Azure Web App for front end application|
+|PASSWORD_FOR_WEBSITE_LOGIN| Required | Password for the Azure Web App|
+
+
+
+### Resource Naming Rules in Azure
+
+The following are the resource naming rules for Azure resources which are used in the script. Follow these rules while specifying values in variable files. 
+  
 
 |Entity |Type |Length |Casing |Valid Characters |
 |---|---|---|---|---|
-|RESOURCE_GROUP |Resource Group |1-90 |Case insensitive |Alphanumeric, underscore, and hyphen |
-|IOTHUB_NAME |Iot hub name |3-50 |Case insensitive  |Alphanumerics and hyphens. Can't end with hyphen |
-|DEVICE_NAME |Device Name |1-15 |Case insensitive |Alphanumeric, underscore, and hyphen |
-|STORAGE_ACCOUNT_NAME |Storage Account Name |3-24 |Lower case |Alphanumeric |
-|BLOBCONTAINER_NAME |Blob container name |3-63 |Lower case |Alphanumeric and hyphen .Can't use consecutive hyphens |
-|DEPLOYMENT_NAME |Deployment name |1-64 |Case insensitive |Alphanumerics, underscores, parentheses, hyphens, and periods. |
-|EVENTHUB_NAMESPACE |Eventhub namespace |1-50 |Case insensitive |Alphanumerics, periods, hyphens and underscores.Start and end with letter or number. |
-|EVENTHUB_NAME |Eventhub name |1-50 |Case insensitive |Alphanumerics, periods, hyphens and underscores.Start and end with letter or number. |
-|EVENTHUB_ENDPOINT_NAME |Eventhub endpoint name |1-50 |Case insensitive |Alphanumerics, hyphens, periods, and underscores |
+|RESOURCE_GROUP |Resource Group |1-90 |No casing restriction |Alphanumeric, underscore, and hyphens |
+|IOTHUB_NAME |Iot Hub name |3-50 |No casing restriction  |Alphanumerics and hyphens. Can't end with hyphen |
+|DEVICE_NAME |Device Name |1-15 |No casing restriction |Alphanumeric, underscore, and hyphen |
+|STORAGE_ACCOUNT_NAME |Storage Account Name |3-24 |Lower case only |Alphanumeric |
+|DEPLOYMENT_NAME |Deployment name |1-64 |No casing restriction |Alphanumerics, underscores, parentheses, hyphens, and periods. |
+|APP_SERVICE_PLAN_NAME |ServerFarm |1-40 |No casing restriction |Alphanumerics and hyphens |
+|WEBAPP_NAME |sites |2-60 |No casing restriction |Contains alphanumerics and hyphens. Can't start or end with hyphen. |
