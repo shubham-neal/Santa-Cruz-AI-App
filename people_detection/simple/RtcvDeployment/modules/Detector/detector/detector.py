@@ -1,4 +1,5 @@
 import os
+import io
 import cv2
 import logging
 from ssd_object_detection import Detector
@@ -47,17 +48,27 @@ def main_debug(displaying):
   cv2.destroyAllWindows()
 
 def start_app():
+
+    if debug:
+      import ptvsd
+      ptvsd.enable_attach(('0.0.0.0', 56781))
+      ptvsd.wait_for_attach()
+      ptvsd.break_into_debugger()
+
     # set protocol to 1.1 so we keep the connection open
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
-    #app.run(debug=False, host="0.0.0.0", port=5010)
     app.run(debug=False, host="detector", port=5010)
 
 @app.route("/lva", methods=["POST"])
 def detect_in_frame_lva():
-  r = request
-  nparr = np.fromstring(r.data, np.uint8)
-  img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+  
+
+  imbytes = request.get_data()
+  narr = np.frombuffer(imbytes, dtype='uint8')
+
+  img = cv2.imdecode(narr, cv2.IMREAD_COLOR)
+  
   detections = detector.detect(img)
 
   results = dict()

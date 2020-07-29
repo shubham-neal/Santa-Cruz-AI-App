@@ -48,7 +48,8 @@
               "image": "${MODULES.Detector}",
               "createOptions": {
                 "ExposedPorts": {
-                  "5010/tcp": {}
+                  "5010/tcp": {},
+                  "56781/tcp": {}
                 },
                 "HostConfig": {
                   "IpcMode": "host",
@@ -62,6 +63,11 @@
                     "5010/tcp": [
                       {
                         "HostPort": "5010"
+                      }
+                    ],
+                    "56781/tcp": [
+                      {
+                        "HostPort": "56781"
                       }
                     ]
                   }
