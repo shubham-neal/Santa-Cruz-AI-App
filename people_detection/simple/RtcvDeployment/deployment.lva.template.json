@@ -56,7 +56,7 @@
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/tmp/video:/tmp/video"
                   ],
-                  "Runtime": "nvidia",
+                  "Runtime": "$RUNTIME",
                   "ShmSize": 536870912,
                   "PortBindings": {
                     "5010/tcp": [
