@@ -53,6 +53,17 @@ def start_app():
     #app.run(debug=False, host="0.0.0.0", port=5010)
     app.run(debug=False, host="detector", port=5010)
 
+@app.route("/lva", methods=["POST"])
+def detect_in_frame_lva():
+  r = request
+  nparr = np.fromstring(r.data, np.uint8)
+  img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+  detections = detector.detect(img)
+
+  results = dict()
+  results["inferences"] = detections
+  return jsonify(results)
+
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
   # we are sending a json object
