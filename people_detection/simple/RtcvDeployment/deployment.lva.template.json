@@ -13,7 +13,7 @@
               "createOptions": {
                 "HostConfig": {
                   "Binds": [
-                    "/tmp/video:/live/mediaServer/media"
+                    "$RTSP_VIDEO_INPUT_DIR:/live/mediaServer/media"
                   ]
                 }
               }
