@@ -2,7 +2,7 @@ import os
 import cv2
 import logging
 from ssd_object_detection import Detector
-from ssd_object_detection_openvino import OpenVinoDetector
+#from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
 import numpy as np
 import json
@@ -17,8 +17,8 @@ app = Flask(__name__)
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
 
-#detector = Detector(use_gpu=True, people_only=True)
-detector = OpenVinoDetector(device_name="CPU")
+detector = Detector(use_gpu=True, people_only=True)
+#detector = OpenVinoDetector(device_name="CPU")
 
 def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
@@ -68,7 +68,7 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = True
+  debug = False
 
   if debug:
     main_debug(True)

@@ -204,26 +204,6 @@
               }
             }
           },
-          "rtspserver": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "${MODULES.RTSPServer}",
-              "createOptions": {
-                "Cmd": [
-                  "./RTSPServer/build/rtspserver $STREAM_WITH_RTSP"
-                ],
-                "HostConfig": {
-                  "IpcMode": "host",
-                  "Binds": [
-                    "/tmp/video:/tmp/video"
-                  ]
-                }
-              }
-            }
-          },
           "rtspsim": {
             "version": "1.0",
             "type": "docker",
