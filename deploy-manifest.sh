@@ -161,28 +161,6 @@ fi
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment. 
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
 if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-
-    if [ -z "$(command -v sshpass)" ]; then
-
-    echo "$(info) Installing sshpass"
-    # Download the sshpass package to current machine
-    apt-get download sshpass
-    # Install sshpass package in current working directory
-    dpkg -x sshpass*.deb ~
-    # Add the executable directory path in PATH 
-    echo "PATH=~/usr/bin:$PATH" >> ~/.bashrc
-    PATH=~/usr/bin:$PATH
-    # Remove the package file
-    rm sshpass*.deb
-
-        if [ -z "$(command -v sshpass)" ]; then
-            echo "$(error) sshpass is not installed"
-            exitWithError
-        else
-            echo "$(info) Installed sshpass"
-        fi
-
-    fi
     
     if [ -z "$(command -v iotedgedev)" ]; then
     echo "$(info) Installing iotedgedev"
@@ -226,9 +204,6 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
     else
 
         echo "$(info) Installing required packages"
-
-        echo "$(info) Installing sshpass"
-        sudo "$PACKAGE_MANAGER" install -y sshpass
 
         echo "$(info) Installing jq"
         sudo "$PACKAGE_MANAGER" install -y jq
@@ -481,6 +456,22 @@ fi
     # Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
     sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
+    # This step updates the video stream if specified in the variables.template file. This
+    # is intended to let the user provide their own video stream instead of using the sample video provided as part of this repo.
+    if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
+        echo "$(info) Using default sample video to edge device"    
+    else
+        echo "$(info) Using custom video for edge deployment"
+        
+        if [[ "$CUSTOM_VIDEO_SOURCE" == rtsp://* ]]; then
+            echo "$(info) RTSP URL: $CUSTOM_VIDEO_SOURCE"
+            sed -i 's#^\(CROSSING_VIDEO_URL[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+        else
+            echo "$(error) Custom video source was not of format \"rtsp://path/to/video\". Please provide a valid RTSP URL"
+            exitWithError
+        fi
+    fi
+
     echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
     echo -n "" >.env
     cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
@@ -519,21 +510,6 @@ fi
         echo "$(error) Manifest file \"$PRE_GENERATED_MANIFEST_FILENAME\" does not exist. Please check config folder under current directory: \"$PWD\" to see if manifest file is generated or not"
     fi
 
-
-
-# This step uploads the static video stream to the edge device if specified in the variables.template file. This
-# is intended to let the user provide their own video file instead of using the sample video provided as part of this repo.
-# TODO: check if the path starts with "rtsp://" and skip the upload step but update the .env file accordingly
-echo "$(info) Creating video directory on edge device"
-sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "mkdir -p /var/tmp/video"
-
-if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
-    echo "$(info) Copying sample video to edge device"
-    sshpass -p "$EDGE_DEVICE_PASSWORD" scp ./staircase.mp4 "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/var/tmp/video/sample-video.mp4
-else
-    echo "$(info) Copying custom video to edge device"
-    sshpass -p "$EDGE_DEVICE_PASSWORD" scp "$CUSTOM_VIDEO_SOURCE" "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP":/var/tmp/video/sample-video.mp4
-fi
 
 # This step deploys the configured deployment manifest to the edge device. After completed,
 # the device will begin to pull edge modules and begin executing workloads (including sending
