@@ -18,16 +18,16 @@
 
 # The script currently does not handle the scenario where the endpoint in IoT Hub has a random number appended to it from the setup script during execution
 
-
 # Stop execution on any error in script execution
 set -e
+
+ANY_FAILURES_OCCURRED="false"
 
 # Define helper function for logging. This will change the Error text color to red
 printError() {
   echo "$(tput setaf 1)$1$(tput sgr0)"
+  ANY_FAILURES_OCCURRED="true"
 }
-
-# Reset console color
 
 SETUP_VARIABLES_TEMPLATE_FILENAME="variables.template"
 
@@ -46,7 +46,7 @@ RUN_WEBAPP_CHECKS="true"
 
 if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
   FRONTEND_VARIABLES_TEMPLATE_FILENAME="frontend-variables.template"
-  
+
   if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
     printError "\"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
     exit 1
@@ -57,69 +57,69 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
   source "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
 fi
 
-# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment. 
+# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
 if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 
-    if [ -z "$(command -v sshpass)" ]; then
+  if [ -z "$(command -v sshpass)" ]; then
 
     echo "[INFO] Installing sshpass"
     # Download the sshpass package to current machine
     apt-get download sshpass
     # Install sshpass package in current working directory
     dpkg -x sshpass*.deb ~
-    # Add the executable directory path in PATH 
+    # Add the executable directory path in PATH
     PATH=~/usr/bin:$PATH
     # Remove the package file
     rm sshpass*.deb
 
-        if [ -z "$(command -v sshpass)" ]; then
-            printError "sshpass is not installed"
-            exit 1
-        else
-            echo "[INFO] Installed sshpass"
-        fi
+    if [ -z "$(command -v sshpass)" ]; then
+      printError "sshpass is not installed"
+      exit 1
+    else
+      echo "[INFO] Installed sshpass"
     fi
+  fi
 
-    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "[INFO] Installing azure-cli-iot-ext extension"
-            az extension add --name azure-cli-iot-ext
-    fi
+  if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+    echo "[INFO] Installing azure-cli-iot-ext extension"
+    az extension add --name azure-cli-iot-ext
+  fi
 
-    # jq is pre-installed in the cloud shell 
+  # jq is pre-installed in the cloud shell
 
 elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
-    if [ ! -z "$(command -v apt)" ]; then
-        PACKAGE_MANAGER="apt"
-    elif [ ! -z "$(command -v dnf)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v zypper)" ]; then
-        PACKAGE_MANAGER="zypper"
+  if [ ! -z "$(command -v apt)" ]; then
+    PACKAGE_MANAGER="apt"
+  elif [ ! -z "$(command -v dnf)" ]; then
+    PACKAGE_MANAGER="dnf"
+  elif [ ! -z "$(command -v yum)" ]; then
+    PACKAGE_MANAGER="dnf"
+  elif [ ! -z "$(command -v zypper)" ]; then
+    PACKAGE_MANAGER="zypper"
+  fi
+
+  if [ -z "$PACKAGE_MANAGER" ]; then
+    echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
+    echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
+  else
+
+    echo "[INFO] Installing required packages"
+
+    echo "[INFO] Installing sshpass"
+    sudo "$PACKAGE_MANAGER" install -y sshpass
+
+    echo "[INFO] Installing jq"
+    sudo "$PACKAGE_MANAGER" install -y jq
+
+    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+      echo "[INFO] Installing azure-cli-iot-ext extension"
+      az extension add --name azure-cli-iot-ext
     fi
 
-    if [ -z "$PACKAGE_MANAGER" ]; then
-        echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
-        echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
-    else
-
-        echo "[INFO] Installing required packages"
-
-        echo "[INFO] Installing sshpass"
-        sudo "$PACKAGE_MANAGER" install -y sshpass
-
-        echo "[INFO] Installing jq"
-        sudo "$PACKAGE_MANAGER" install -y jq
-
-        if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "[INFO] Installing azure-cli-iot-ext extension"
-            az extension add --name azure-cli-iot-ext
-        fi
-
-        echo "[INFO] Package Installation step is complete"
-    fi
+    echo "[INFO] Package Installation step is complete"
+  fi
 fi
 
 # Log into azure either in a interactive way or non-interactive way based on a "USE_INTERACTIVE_LOGIN_FOR_AZURE" variable value
@@ -326,7 +326,6 @@ else
   fi
 fi
 
-
 # Retrieve the file names and last modified date for files in data lake container
 DETECTOR_OUTPUT_CONTAINER_DATA=$(az storage fs file list -f "$DETECTOR_OUTPUT_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[*].{name:name}" -o table)
 
@@ -348,8 +347,6 @@ else
   printError "Failed: Data is not present in the container \"$IMAGES_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account. "
 
 fi
-
-
 
 # Checks for Frontend app setup in Resource Group:
 if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
@@ -373,4 +370,11 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
     printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". "
 
   fi
+fi
+
+if [ "$ANY_FAILURES_OCCURRED" == "true" ]; then
+  printError "There were failures in smoke test checks"
+  exit 1
+else
+  echo "All the checks have passed"
 fi
