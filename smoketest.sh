@@ -313,12 +313,12 @@ done
 
 # Check for module status
 # Print Success or Failure based on the length of array:
-if [ "${#DEVICE_MODULES[*]}" -gt 0 ] && [ "${#FAILED_STATUS_ARRAY[@]}" -gt 0 ]; then
+if [ "${#DEVICE_MODULES[*]}" -gt 0 ] && [ "${#FAILED_STATUS_ARRAY[*]}" -gt 0 ]; then
   printError "Failed: RuntimeStatus of following modules are not running on IoT Hub."
   printf '%s\n' "Modules: ${FAILED_STATUS_ARRAY[*]} "
 
 else
-  if [ "${#FAILED_STATUS_ARRAY[*]}" -gt 0 ]; then
+  if [ "${#DEVICE_MODULES[*]}" -gt 0 ]; then
     echo "Passed: RuntimeStatus of following configured modules are running on IoT Hub."
     printf '%s\n' "Modules: ${DEVICE_MODULES[*]}"
   else
