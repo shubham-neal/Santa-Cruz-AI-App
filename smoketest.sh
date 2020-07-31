@@ -23,17 +23,16 @@
 set -e
 
 # Define helper function for logging. This will change the Error text color to red
-error() {
-  tput setaf 1
+printError() {
+  echo "$(tput setaf 1)$1$(tput sgr0)"
 }
 
 # Reset console color
-RESET_COLOR=$(tput sgr0)
 
 SETUP_VARIABLES_TEMPLATE_FILENAME="variables.template"
 
 if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
-  echo "$(error)\"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\" ${RESET_COLOR}"
+  printError "\"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
   exit 1
 fi
 
@@ -49,7 +48,7 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
   FRONTEND_VARIABLES_TEMPLATE_FILENAME="frontend-variables.template"
   
   if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
-    echo "$(error)\"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\"${RESET_COLOR}"
+    printError "\"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
     exit 1
   fi
   # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
@@ -64,7 +63,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 
     if [ -z "$(command -v sshpass)" ]; then
 
-    echo "$(info) Installing sshpass"
+    echo "[INFO] Installing sshpass"
     # Download the sshpass package to current machine
     apt-get download sshpass
     # Install sshpass package in current working directory
@@ -75,15 +74,15 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     rm sshpass*.deb
 
         if [ -z "$(command -v sshpass)" ]; then
-            echo "$(error)sshpass is not installed"
-            exitWithError
+            printError "sshpass is not installed"
+            exit 1
         else
-            echo "$(info) Installed sshpass"
+            echo "[INFO] Installed sshpass"
         fi
     fi
 
     if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-cli-iot-ext extension"
+            echo "[INFO] Installing azure-cli-iot-ext extension"
             az extension add --name azure-cli-iot-ext
     fi
 
@@ -106,20 +105,20 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
         echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
     else
 
-        echo "$(info) Installing required packages"
+        echo "[INFO] Installing required packages"
 
-        echo "$(info) Installing sshpass"
+        echo "[INFO] Installing sshpass"
         sudo "$PACKAGE_MANAGER" install -y sshpass
 
-        echo "$(info) Installing jq"
+        echo "[INFO] Installing jq"
         sudo "$PACKAGE_MANAGER" install -y jq
 
         if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-cli-iot-ext extension"
+            echo "[INFO] Installing azure-cli-iot-ext extension"
             az extension add --name azure-cli-iot-ext
         fi
 
-        echo "$(info) Package Installation step is complete"
+        echo "[INFO] Package Installation step is complete"
     fi
 fi
 
@@ -148,7 +147,7 @@ echo "[INFO] Set current subscription to $SUBSCRIPTION_ID"
 
 # Check for Resource Group, if it exists with the same name provided in variable template then pass the check else throw error
 if [ "$(az group exists -n "$RESOURCE_GROUP")" = false ]; then
-  echo "$(error)Failed: Resource Group \"$RESOURCE_GROUP\" is not present. ${RESET_COLOR}"
+  printError "Failed: Resource Group \"$RESOURCE_GROUP\" is not present. "
 
 else
 
@@ -157,7 +156,7 @@ fi
 
 # Check for IoT Hub, if it exists with the same name as in variable template then pass the test else throw error
 if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" -o tsv)" ]; then
-  echo "$(error)Failed: IoT Hub \"$IOTHUB_NAME\" is not present. ${RESET_COLOR}"
+  printError "Failed: IoT Hub \"$IOTHUB_NAME\" is not present. "
 
 else
 
@@ -169,7 +168,7 @@ DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?de
 
 # Check for IoT Edge Device identity on IoT Hub, if it exists with the same name as in variable template then pass the test else throw error
 if [ -z "$DEVICE" ]; then
-  echo "$(error)Failed: Device \"$DEVICE_NAME\" is not present in IoT Hub \"$IOTHUB_NAME\". ${RESET_COLOR}"
+  printError "Failed: Device \"$DEVICE_NAME\" is not present in IoT Hub \"$IOTHUB_NAME\". "
 
 else
 
@@ -179,7 +178,7 @@ fi
 # Check for Default Route for built-in Event Hub endpoint
 EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP" --query "[?name=='defaultroute'].name" --output tsv)
 if [ -z "$EXISTING_DEFAULT_ROUTE" ]; then
-  echo "$(error)Failed: Default Route for built-in Event Hub endpoint is not present in IoT Hub \"$IOTHUB_NAME\". ${RESET_COLOR}"
+  printError "Failed: Default Route for built-in Event Hub endpoint is not present in IoT Hub \"$IOTHUB_NAME\". "
 
 else
 
@@ -191,7 +190,7 @@ STORAGE_ACCOUNT=$(az storage account list -g "$RESOURCE_GROUP" --query "[?name==
 
 # Check for Storage account, if it exists with same name as in variable template then pass the test else throw error
 if [ -z "$STORAGE_ACCOUNT" ]; then
-  echo "$(error)Failed: Storage account \"$STORAGE_ACCOUNT_NAME\" is not present. ${RESET_COLOR}"
+  printError "Failed: Storage account \"$STORAGE_ACCOUNT_NAME\" is not present. "
 
 else
 
@@ -210,7 +209,7 @@ if [ "$CONTAINER" == "True" ]; then
   echo "Passed: Container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" is present in \"$STORAGE_ACCOUNT_NAME\" Storage account"
 
 else
-  echo "$(error)Failed: Container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" is not present in \"$STORAGE_ACCOUNT_NAME\" Storage account. ${RESET_COLOR}"
+  printError "Failed: Container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" is not present in \"$STORAGE_ACCOUNT_NAME\" Storage account. "
 
 fi
 
@@ -223,7 +222,7 @@ if [ "$CONTAINER" == "True" ]; then
   echo "Passed: Container \"$IMAGES_CONTAINER_NAME\" is present in \"$STORAGE_ACCOUNT_NAME\" Storage account"
 
 else
-  echo "$(error)Failed: Container \"$IMAGES_CONTAINER_NAME\" is not present in \"$STORAGE_ACCOUNT_NAME\" Storage account. ${RESET_COLOR}"
+  printError "Failed: Container \"$IMAGES_CONTAINER_NAME\" is not present in \"$STORAGE_ACCOUNT_NAME\" Storage account. "
 
 fi
 
@@ -231,7 +230,7 @@ ADLS_ENDPOINT_NAME="adls-endpoint"
 
 # Check for Data Lake Storage endpoint in IoT Hub, if it exists with the same name as in variable template pass the test else throw error
 if [ -z "$(az iot hub routing-endpoint list -g "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-type azurestoragecontainer --query "[?name=='$ADLS_ENDPOINT_NAME'].name" -o tsv)" ]; then
-  echo "$(error)Failed: Data Lake Storage endpoint \"$ADLS_ENDPOINT_NAME\" is not present in IoT Hub \"$IOTHUB_NAME\". ${RESET_COLOR}"
+  printError "Failed: Data Lake Storage endpoint \"$ADLS_ENDPOINT_NAME\" is not present in IoT Hub \"$IOTHUB_NAME\". "
 
 else
 
@@ -245,29 +244,7 @@ if [ -n "$(az iot hub route list -g "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" 
   echo "Passed: Route to a Data Lake Storage account \"$IOTHUB_ADLS_ROUTENAME\" is present in IoT Hub \"$IOTHUB_NAME\" "
 
 else
-  echo "$(error)Failed: Route to a Data Lake Storage account \"$IOTHUB_ADLS_ROUTENAME\" is not present in IoT Hub \"$IOTHUB_NAME\". ${RESET_COLOR}"
-
-fi
-
-# Retrieve the file names and last modified date for files in data lake container
-DETECTOR_OUTPUT_CONTAINER_DATA=$(az storage fs file list -f "$DETECTOR_OUTPUT_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[*].{name:name}" -o table)
-
-# Check for data in data lake, if any files exist in container after setup pass the test else throw error
-if [ -n "$DETECTOR_OUTPUT_CONTAINER_DATA" ]; then
-  echo "Passed: Data is present in the container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account"
-else
-  echo "$(error)Failed: Data is not present in the container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account. ${RESET_COLOR}"
-
-fi
-
-# Retrieve the file names and last modified date for files in data lake container
-IMAGES_CONTAINER_CONTAINER_DATA=$(az storage fs file list -f "$IMAGES_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[*].{name:name}" -o table)
-
-# Check for data in data lake, if any files exist in container after setup pass the test else throw error
-if [ -n "$IMAGES_CONTAINER_CONTAINER_DATA" ]; then
-  echo "Passed: Data is present in the container \"$IMAGES_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account"
-else
-  echo "$(error)Failed: Data is not present in the container \"$IMAGES_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account. ${RESET_COLOR}"
+  printError "Failed: Route to a Data Lake Storage account \"$IOTHUB_ADLS_ROUTENAME\" is not present in IoT Hub \"$IOTHUB_NAME\". "
 
 fi
 
@@ -279,7 +256,7 @@ if [ "$DEPLOYMENT_STATUS" == "$DEVICE_NAME" ]; then
   echo "Passed: Deployment is Applied on Edge Device \"$DEVICE_NAME\" "
 
 else
-  echo "$(error)Failed: Deployment is not Applied on Edge Device \"$DEVICE_NAME\". ${RESET_COLOR}"
+  printError "Failed: Deployment is not Applied on Edge Device \"$DEVICE_NAME\". "
 
 fi
 
@@ -299,11 +276,11 @@ if [ -n "$RUNNING_STATUS" ]; then
 
 else
   if [ -n "$INSTALLATION_STATUS" ]; then
-    echo "$(error)Failed: IoT Edge Service is installed but not running on Edge Device. ${RESET_COLOR}"
+    printError "Failed: IoT Edge Service is installed but not running on Edge Device. "
 
   else
 
-    echo "$(error)Failed: IoT Edge Service is not installed on Edge Device. ${RESET_COLOR}"
+    printError "Failed: IoT Edge Service is not installed on Edge Device. "
 
   fi
 fi
@@ -314,7 +291,7 @@ EDGE_AGENT_TWIN=$(az iot hub module-twin show --module-id "\$edgeAgent" --hub-na
 DEVICE_MODULES=$(echo "$EDGE_AGENT_TWIN" | jq -r '.properties.desired.modules' | jq -r 'to_entries[].key')
 FAILED_STATUS_ARRAY=()
 
-echo "$(info) Checking modules status"
+echo "[INFO] Checking modules status"
 # Checking the runtimeStatus of each configured module on Edge device from IoT Hub
 for DEVICE_MODULE in ${DEVICE_MODULES[*]}; do
   # Count 60 is no. retries for checking status after 2second interval
@@ -337,17 +314,42 @@ done
 # Check for module status
 # Print Success or Failure based on the length of array:
 if [ "${#DEVICE_MODULES[*]}" -gt 0 ] && [ "${#FAILED_STATUS_ARRAY[@]}" -gt 0 ]; then
-  echo "$(error)Failed: RuntimeStatus of following modules are not running on IoT Hub."
-  printf '%s\n' "Modules: ${FAILED_STATUS_ARRAY[*]} ${RESET_COLOR}"
+  printError "Failed: RuntimeStatus of following modules are not running on IoT Hub."
+  printf '%s\n' "Modules: ${FAILED_STATUS_ARRAY[*]} "
 
 else
-  if [ "${#DEVICE_MODULES[*]}" -gt 0 ]; then
+  if [ "${#FAILED_STATUS_ARRAY[*]}" -gt 0 ]; then
     echo "Passed: RuntimeStatus of following configured modules are running on IoT Hub."
     printf '%s\n' "Modules: ${DEVICE_MODULES[*]}"
   else
-    echo "$(error)Failed: Modules are not yet configured on IoT Hub. ${RESET_COLOR}"
+    printError "Failed: Modules are not yet configured on IoT Hub. "
   fi
 fi
+
+
+# Retrieve the file names and last modified date for files in data lake container
+DETECTOR_OUTPUT_CONTAINER_DATA=$(az storage fs file list -f "$DETECTOR_OUTPUT_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[*].{name:name}" -o table)
+
+# Check for data in data lake, if any files exist in container after setup pass the test else throw error
+if [ -n "$DETECTOR_OUTPUT_CONTAINER_DATA" ]; then
+  echo "Passed: Data is present in the container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account"
+else
+  printError "Failed: Data is not present in the container \"$DETECTOR_OUTPUT_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account. "
+
+fi
+
+# Retrieve the file names and last modified date for files in data lake container
+IMAGES_CONTAINER_CONTAINER_DATA=$(az storage fs file list -f "$IMAGES_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[*].{name:name}" -o table)
+
+# Check for data in data lake, if any files exist in container after setup pass the test else throw error
+if [ -n "$IMAGES_CONTAINER_CONTAINER_DATA" ]; then
+  echo "Passed: Data is present in the container \"$IMAGES_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account"
+else
+  printError "Failed: Data is not present in the container \"$IMAGES_CONTAINER_NAME\" of \"$STORAGE_ACCOUNT_NAME\" Storage account. "
+
+fi
+
+
 
 # Checks for Frontend app setup in Resource Group:
 if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
@@ -358,7 +360,7 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
     echo "Passed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is present in Resoure group \"$RESOURCE_GROUP\"."
 
   else
-    echo "$(error)Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". ${RESET_COLOR}"
+    printError "Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". "
 
   fi
 
@@ -368,7 +370,7 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
     echo "Passed: Web App \"$WEBAPP_NAME\" is present in Resoure group \"$RESOURCE_GROUP\"."
   else
 
-    echo "$(error)Failed: Web App \"$WEBAPP_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". ${RESET_COLOR}"
+    printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". "
 
   fi
 fi
