@@ -166,7 +166,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     echo "$(info) Installing iotedgedev"
 
     # Install iotedgedev package
-    pip install iotedgedev==2.0.2
+    pip install iotedgedev==2.1.4
     # Add iotedgedev path to PATH variable
     echo "PATH=~/.local/bin:$PATH" >> ~/.bashrc
     PATH=~/.local/bin:$PATH
@@ -212,7 +212,7 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
         sudo "$PACKAGE_MANAGER" install -y python-pip
 
         echo "$(info) Installing iotedgedev"
-        sudo pip install iotedgedev==2.0.2
+        sudo pip install iotedgedev==2.1.4
 
         echo "$(info) Installing rsync"
         sudo "$PACKAGE_MANAGER" install -y rsync
