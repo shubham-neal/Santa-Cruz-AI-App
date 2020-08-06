@@ -32,7 +32,6 @@ exitWithError() {
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
 # If it doesn't exists it adds the variable name to ARRAY_NOT_DEFINED_VARIABLES array and if it exists but doesn't have value, variable name is added ARRAY_VARIABLES_WITHOUT_VALUES array.
-# In case a 3rd positional argument is provided, the function will output 1 if given variable exists and has a non-empty value, else it will output 0.
 # Globals:
 #	ARRAY_VARIABLES_WITHOUT_VALUES
 #	ARRAY_NOT_DEFINED_VARIABLES
@@ -40,9 +39,8 @@ exitWithError() {
 # Arguments:
 #	Name of the variable
 #	Value of the variable
-#	Whether to print the result (Optional)
 # Outputs:
-#	The function writes the results if a 3rd positional parameter is passed in arguments
+#	No output
 ##############################################################################
 checkValue() {
     # The first value passed to the function is the name of the variable
@@ -54,31 +52,15 @@ checkValue() {
             # If the value is empty, add the variable name ($1) to ARRAY_VARIABLES_WITHOUT_VALUES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
             ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
             ARRAY_VARIABLES_WITHOUT_VALUES+=("$1")
-            # The third value is passed to the function when the caller expects the result
-            # The function returns 0 as the value of the variable is empty
-            if [ ! -z "$3" ]; then
-                echo 0
-            fi
-        else
-            # The third value is passed to the function when the caller expects the result
-            # When the variable exists and it's value is not empty, function returns 1
-            if [ ! -z "$3" ]; then
-                echo 1
-            fi
         fi
     else
         # If the variable is not defined, add the variable name to ARRAY_NOT_DEFINED_VARIABLES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
         ARRAY_NOT_DEFINED_VARIABLES+=("$1")
         ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
-        # The third value is passed to the function when the caller expects the result
-        # The function returns 0 as the variable is not defined
-        if [ ! -z "$3" ]; then
-            echo 0
-        fi
     fi
 }
 
-SETUP_VARIABLES_TEMPLATE_FILENAME="mariner-vm-variables.template"
+SETUP_VARIABLES_TEMPLATE_FILENAME="variables.template"
 
 if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
     echo "$(error) \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
@@ -86,21 +68,27 @@ if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
 fi
 
 # The following comment is required for shellcheck, as it does not support variable source file names.
-# shellcheck source=mariner-vm-variables.template
+# shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
+IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
+
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
+fi
+
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
 # In Azure Cloud Shell, azcopy and jq are pre-installed so skip the step
-if [ ! "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     if [ ! -z "$(command -v apt)" ]; then
         PACKAGE_MANAGER="apt"
     elif [ ! -z "$(command -v dnf)" ]; then
         PACKAGE_MANAGER="dnf"
     elif [ ! -z "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="dnf"
+        PACKAGE_MANAGER="yum"
     elif [ ! -z "$(command -v zypper)" ]; then
         PACKAGE_MANAGER="zypper"
     fi
@@ -109,33 +97,64 @@ if [ ! "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ] && [ "$INSTALL_REQUI
         echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
         echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
     else
-        sudo "$PACKAGE_MANAGER" install wget
 
-        echo "$(info) Installing AzCopy"
+        if [ -z "$(command -v wget)" ]; then
+            echo "$(info) Installing wget"
+            sudo "$PACKAGE_MANAGER" install -y wget
+            echo "$(info) Installed wget"
+        fi
 
-        CURRENT_DIRECTORY="$PWD"
-        wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
-        # unzipping the downloaded archive
-        tar -xvf downloadazcopy-v10-linux
-        # changing directory to fetch the azcopy executable
-        cd azcopy_linux*/
-        # Add azcopy to /usr/bin directory
-        sudo cp azcopy /usr/bin/
-        # Return to original directory
-        cd "$CURRENT_DIRECTORY"
-        # Remove the downloaded files
-        rm azcopy_linux* -r
-        rm downloadazcopy-v10-linux
+        INSTALL_AZCOPY="true"
+        if [ ! -z "$(command -v azcopy)" ]; then
+            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
+            requiredVersion="10.5.1"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+                # Current installed azcopy version is higher than required, no need to re-install
+                INSTALL_AZCOPY="false"
+            fi
+        fi
 
-        echo "$(info) Installed AzCopy "
+        if [ "$INSTALL_AZCOPY" == "true" ]; then
 
-        echo "$(info) Installing jq"
-        sudo "$PACKAGE_MANAGER" install jq
-        echo "$(info) Installed jq"
+            echo "$(info) Installing AzCopy"
 
-        echo "$(info) Installing curl"
-        sudo "$PACKAGE_MANAGER" install curl
-        echo "$(info) Installed curl"
+            CURRENT_DIRECTORY="$PWD"
+            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
+            # unzipping the downloaded archive
+            tar -xvf downloadazcopy-v10-linux
+            # changing directory to fetch the azcopy executable
+            cd azcopy_linux*/
+            # Add azcopy to /usr/bin directory
+            sudo cp azcopy /usr/bin/
+            # Return to original directory
+            cd "$CURRENT_DIRECTORY"
+            # Remove the downloaded files
+            rm azcopy_linux* -r
+            rm downloadazcopy-v10-linux
+
+            echo "$(info) Installed AzCopy "
+        fi
+
+        if [ -z "$(command -v jq)" ]; then
+
+            echo "$(info) Installing jq"
+            sudo "$PACKAGE_MANAGER" install -y jq
+            echo "$(info) Installed jq"
+        fi
+
+        if [ -z "$(command -v curl)" ]; then
+
+            echo "$(info) Installing curl"
+            sudo "$PACKAGE_MANAGER" install -y curl
+            echo "$(info) Installed curl"
+        fi
+
+        if [ -z "$(command -v timeout)" ]; then
+            echo "$(info) Installing timeout"
+            sudo "$PACKAGE_MANAGER" install -y timeout
+            echo "$(info) Installed timeout"
+        fi
     fi
 fi
 
@@ -151,16 +170,20 @@ ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
 # Pass the name of the variable and it's value to the checkValue function
-checkValue "TENANT_ID" "$TENANT_ID"
 checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
 checkValue "LOCATION" "$LOCATION"
-checkValue "USE_EXISTING_RESOURCE_GROUP" "$USE_EXISTING_RESOURCE_GROUP"
+checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
 
-IS_NOT_EMPTY=$(checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE" "RETURN_VARIABLE_STATUS")
-if [ "$IS_NOT_EMPTY" == "1" ] && [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    checkValue "SP_APP_ID" "$SP_APP_ID"
-    checkValue "SP_APP_PWD" "$SP_APP_PWD"
+# Skip the variable checks for login variable if current environment is CloudShell
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
+    # Pass the name of the variable and it's value to the checkValue function
+    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
+    checkValue "TENANT_ID" "$TENANT_ID"
+    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
+        checkValue "SP_APP_ID" "$SP_APP_ID"
+        checkValue "SP_APP_PWD" "$SP_APP_PWD"
+    fi
 fi
 
 if [ -z "$DISK_NAME" ]; then
@@ -217,9 +240,12 @@ VHD_URI="https://georgembbox.blob.core.windows.net/brainbox/brainbox-dev-1.0.MM5
 #	RDP: Create an inbound security rule in NSG with priority 1000 for RDP port (3389)
 NSG_RULE="NONE"
 
-if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+    echo "Using existing CloudShell login for Azure CLI"
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
-    az login --tenant "$TENANT_ID" --output "none"
+    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -234,10 +260,10 @@ echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
 if [ "$(az group exists --name "$RESOURCE_GROUP")" == false ]; then
     echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP\""
-    az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+    az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output "none"
     echo "$(info) Successfully created resource group"
 else
-    if [ "$USE_EXISTING_RESOURCE_GROUP" == "true" ]; then
+    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
         echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP\""
     else
         echo "$(error) Resource Group \"$RESOURCE_GROUP\" already exists"
@@ -270,7 +296,7 @@ TOKEN=$(echo "$SAS_URI" | jq -r '.accessSas')
 echo "$(info) Retrieved the SAS Token"
 
 echo "$(info) Copying vhd file from source to destination"
-# Run azcopy if current envrionment is CloudShell else run sudo azcopy.
+# Run azcopy if current environment is CloudShell else run sudo azcopy.
 # azcopy needs to run as superuser in non Cloud Shell environment to be able to create plans
 if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
@@ -299,7 +325,6 @@ else
     exitWithError
 fi
 
-
 CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
 
 echo "$(info) Adding current machine IP address \"$CURRENT_IP_ADDRESS\" in Network Security Group firewall"
@@ -309,9 +334,11 @@ az network nsg rule create --name "AllowSSH" --nsg-name "$NSG_NAME" --priority 1
 
 echo "$(info) Added current machine IP address \"$CURRENT_IP_ADDRESS\" in Network Security Group firewall"
 
-EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "publicIps" --output tsv)
+# Writing the Edge Device IP address value to variables file
+EDGE_DEVICE_PUBLIC_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "publicIps" --output tsv)
+sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"'"$EDGE_DEVICE_PUBLIC_IP"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
 echo "The following are the details for the VM"
-echo "IP Address: \"$EDGE_DEVICE_IP\""
+echo "IP Address: \"$EDGE_DEVICE_PUBLIC_IP\""
 echo "Username: \"root\""
 echo "Password: \"p@ssw0rd\""

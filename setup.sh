@@ -23,7 +23,6 @@ exitWithError() {
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
 # If it doesn't exists it adds the variable name to ARRAY_NOT_DEFINED_VARIABLES array and if it exists but doesn't have value, variable name is added ARRAY_VARIABLES_WITHOUT_VALUES array.
-# In case a 3rd positional argument is provided, the function will output 1 if given variable exists and has a non-empty value, else it will output 0.
 # Globals:
 #	ARRAY_VARIABLES_WITHOUT_VALUES
 #	ARRAY_NOT_DEFINED_VARIABLES
@@ -31,9 +30,8 @@ exitWithError() {
 # Arguments:
 #	Name of the variable
 #	Value of the variable
-#	Whether to print the result (Optional)
 # Outputs:
-#	The function writes the results if a 3rd positional parameter is passed in arguments
+#	No output
 ##############################################################################
 checkValue() {
     # The first value passed to the function is the name of the variable
@@ -45,27 +43,11 @@ checkValue() {
             # If the value is empty, add the variable name ($1) to ARRAY_VARIABLES_WITHOUT_VALUES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
             ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
             ARRAY_VARIABLES_WITHOUT_VALUES+=("$1")
-            # The third value is passed to the function when the caller expects the result
-            # The function returns 0 as the value of the variable is empty
-            if [ ! -z "$3" ]; then
-                echo 0
-            fi
-        else
-            # The third value is passed to the function when the caller expects the result
-            # When the variable exists and it's value is not empty, function returns 1
-            if [ ! -z "$3" ]; then
-                echo 1
-            fi
         fi
     else
         # If the variable is not defined, add the variable name to ARRAY_NOT_DEFINED_VARIABLES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
         ARRAY_NOT_DEFINED_VARIABLES+=("$1")
         ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
-        # The third value is passed to the function when the caller expects the result
-        # The function returns 0 as the variable is not defined
-        if [ ! -z "$3" ]; then
-            echo 0
-        fi
     fi
 }
 
@@ -80,7 +62,6 @@ if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
     exitWithError
 fi
 
-
 # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
 # shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
@@ -93,16 +74,16 @@ ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="true"
 ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
-# Pass the name of the variable and it's value to the checkValue function
-checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
-checkValue "TENANT_ID" "$TENANT_ID"
+IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
+fi
 
 checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
 checkValue "LOCATION" "$LOCATION"
 checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
 checkValue "INSTALL_REQUIRED_PACKAGES" "$INSTALL_REQUIRED_PACKAGES"
-
 
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "DEVICE_NAME" "$DEVICE_NAME"
@@ -121,18 +102,20 @@ checkValue "MANIFEST_TEMPLATE_NAME" "$MANIFEST_TEMPLATE_NAME"
 checkValue "MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 checkValue "DEPLOYMENT_NAME" "$DEPLOYMENT_NAME"
 
-# Check the existence and value of the optional variables depending on the value of mandatory variables
-# Pass a third variable so checkValue function will return whether the variable is empty or not
-IS_NOT_EMPTY=$(checkValue "CREATE_AZURE_MONITOR" "$CREATE_AZURE_MONITOR" "RETURN_VARIABLE_STATUS")
-if [ "$IS_NOT_EMPTY" == "1" ] && [ "$CREATE_AZURE_MONITOR" == "true" ]; then
-    checkValue "AZURE_MONITOR_SP_NAME" "$AZURE_MONITOR_SP_NAME"
+# Skip the variable checks for login variable if current environment is CloudShell
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
+    # Pass the name of the variable and it's value to the checkValue function
+    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
+    checkValue "TENANT_ID" "$TENANT_ID"
+    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
+        checkValue "SP_APP_ID" "$SP_APP_ID"
+        checkValue "SP_APP_PWD" "$SP_APP_PWD"
+    fi
 fi
 
-IS_NOT_EMPTY=$(checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE" "RETURN_VARIABLE_STATUS")
-if [ "$IS_NOT_EMPTY" == "1" ] && [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    checkValue "SP_APP_ID" "$SP_APP_ID"
-    checkValue "SP_APP_PWD" "$SP_APP_PWD"
-fi
+#if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
+#    checkValue "AZURE_MONITOR_SP_NAME" "$AZURE_MONITOR_SP_NAME"
+#fi
 
 # Check if all the variables are set up correctly
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
@@ -156,22 +139,22 @@ if [ ! -f "${MANIFEST_ENVIRONMENT_VARIABLES_FILENAME}" ] || [ ! -f "${MANIFEST_T
     exitWithError
 fi
 
-# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment. 
+# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 
     if [ -z "$(command -v sshpass)" ]; then
 
-    echo "$(info) Installing sshpass"
-    # Download the sshpass package to current machine
-    apt-get download sshpass
-    # Install sshpass package in current working directory
-    dpkg -x sshpass*.deb ~
-    # Add the executable directory path in PATH 
-    echo "PATH=~/usr/bin:$PATH" >> ~/.bashrc
-    PATH=~/usr/bin:$PATH
-    # Remove the package file
-    rm sshpass*.deb
+        echo "$(info) Installing sshpass"
+        # Download the sshpass package to current machine
+        apt-get download sshpass
+        # Install sshpass package in current working directory
+        dpkg -x sshpass*.deb ~
+        # Add the executable directory path in PATH
+        echo "PATH=~/usr/bin:$PATH" >>~/.bashrc
+        PATH=~/usr/bin:$PATH
+        # Remove the package file
+        rm sshpass*.deb
 
         if [ -z "$(command -v sshpass)" ]; then
             echo "$(error) sshpass is not installed"
@@ -181,15 +164,26 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
         fi
 
     fi
-    
-    if [ -z "$(command -v iotedgedev)" ]; then
-    echo "$(info) Installing iotedgedev"
 
-    # Install iotedgedev package
-    pip install iotedgedev==2.1.4
-    # Add iotedgedev path to PATH variable
-    echo "PATH=~/.local/bin:$PATH" >> ~/.bashrc    
-    PATH=~/.local/bin:$PATH
+    INSTALL_IOTEDGEDEV="true"
+    if [ ! -z "$(command -v iotedgedev)" ]; then
+        currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
+        requiredVersion="2.0.2"
+        # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+        if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+            # Current installed iotedgedev version is higher than required, no need to re-install
+            INSTALL_IOTEDGEDEV="false"
+        fi
+    fi
+
+    if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
+        echo "$(info) Installing iotedgedev"
+
+        # Install iotedgedev package, we are using 2.0.2 version as 2.1.4 requires pip upgrades in default CloudShell envrionment
+        pip install iotedgedev==2.0.2
+        # Add iotedgedev path to PATH variable
+        echo "PATH=~/.local/bin:$PATH" >>~/.bashrc
+        PATH=~/.local/bin:$PATH
 
         if [ -z "$(command -v iotedgedev)" ]; then
             echo "$(error) iotedgedev is not installed"
@@ -200,11 +194,11 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     fi
 
     if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-cli-iot-ext extension"
-            az extension add --name azure-cli-iot-ext
+        echo "$(info) Installing azure-cli-iot-ext extension"
+        az extension add --name azure-cli-iot-ext
     fi
 
-    # jq, pip and rsync packages are pre-installed in the cloud shell 
+    # jq and pip packages are pre-installed in the cloud shell
 
 elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
@@ -225,20 +219,46 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
         echo "$(info) Installing required packages"
 
-        echo "$(info) Installing sshpass"
-        sudo "$PACKAGE_MANAGER" install -y sshpass
+        if [ -z "$(command -v sshpass)" ]; then
 
-        echo "$(info) Installing jq"
-        sudo "$PACKAGE_MANAGER" install -y jq
+            echo "$(info) Installing sshpass"
+            sudo "$PACKAGE_MANAGER" install -y sshpass
+        fi
 
-        echo "$(info) Installing pip"
-        sudo "$PACKAGE_MANAGER" install -y python-pip
+        if [ -z "$(command -v jq)" ]; then
 
-        echo "$(info) Installing iotedgedev"
-        sudo pip install iotedgedev==2.1.4
+            echo "$(info) Installing jq"
+            sudo "$PACKAGE_MANAGER" install -y jq
+        fi
 
-        echo "$(info) Installing rsync"
-        sudo "$PACKAGE_MANAGER" install -y rsync
+        if [ -z "$(command -v pip)" ]; then
+
+            echo "$(info) Installing pip"
+            sudo "$PACKAGE_MANAGER" install -y python-pip
+        fi
+
+        INSTALL_IOTEDGEDEV="true"
+        if [ ! -z "$(command -v iotedgedev)" ]; then
+            currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
+            requiredVersion="2.1.4"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+                # Current installed iotedgedev version is higher than required, no need to re-install
+                INSTALL_IOTEDGEDEV="false"
+            fi
+        fi
+
+        if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
+
+            echo "$(info) Installing iotedgedev"
+            sudo pip install iotedgedev==2.1.4
+        fi
+
+        if [ -z "$(command -v timeout)" ]; then
+            echo "$(info) Installing timeout"
+            sudo "$PACKAGE_MANAGER" install timeout
+            echo "$(info) Installed timeout"
+        fi
 
         if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
             echo "$(info) Installing azure-cli-iot-ext extension"
@@ -254,11 +274,12 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Logging into Azure Subscription"
 printf "%60s\n" " " | tr ' ' '-'
 
-# This step checks the value for USE_INTERACTIVE_LOGIN_FOR_AZURE.
-# If the value is true, the script will allow
-if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+    echo "Using existing CloudShell login for Azure CLI"
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
-    az login --tenant "$TENANT_ID" --output "none"
+    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -347,7 +368,6 @@ else
     echo "$(info) Updating existing default IoT Hub route"
     az iot hub route update --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
 fi
-
 
 # Check if the user provided name is valid and available in Azure
 NAME_CHECK_JSON=$(az storage account check-name --name "$STORAGE_ACCOUNT_NAME")
@@ -477,7 +497,6 @@ else
     echo "$(info) Updated existing route \"$IOTHUB_ADLS_ROUTENAME\""
 fi
 
-
 # This step creates a new edge device in the IoT Hub account or will use an existing edge device
 # if the USE_EXISTING_RESOURCES configuration variable is set to true.
 printf "\n%60s\n" " " | tr ' ' '-'
@@ -493,7 +512,6 @@ if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
 else
     echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
 fi
-
 
 # if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
 #     echo "$(info) Retrieve resource id for IoT Hub"
@@ -527,80 +545,84 @@ echo "$(info) Restarting IoT Edge service"
 sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "sudo systemctl restart iotedge"
 echo "$(info) IoT Edge service restart is complete"
 
-
 # This step uses the iotedgedev cli toolkit to inject defined environment variables into a predefined deployment manifest JSON
 # file. Once an environment specific manifest has been generated, the script will deploy to the identified edge device.
 
-    # Create or replace .env file for generating manifest file and copy content from environment file from user to .env file
-    # We are copying the content to .env file as it's required by iotedgedev service
+# Create or replace .env file for generating manifest file and copy content from environment file from user to .env file
+# We are copying the content to .env file as it's required by iotedgedev service
 
-    # if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
-    #     echo "$(info) Updating Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
-    #     # Update Azure Monitor Values in env.template file
-    #     sed -i "s/^\(TELEGRF_AZURE_TENANT_ID\s*=\s*\).*\$/\1$TELEGRAF_AZURE_TENANT_ID/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-    #     sed -i "s/^\(TELEGRF_AZURE_CLIENT_ID\s*=\s*\).*\$/\1$TELEGRAF_AZURE_CLIENT_ID/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-    #     sed -i "s/^\(TELEGRF_AZURE_CLIENT_SECRET\s*=\s*\).*\$/\1$TELEGRAF_AZURE_CLIENT_SECRET/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-    #     echo "$(info) Completed Update of Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
-    # fi
+# if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
+#     echo "$(info) Updating Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
+#     # Update Azure Monitor Values in env.template file
+#     sed -i "s/^\(TELEGRF_AZURE_TENANT_ID\s*=\s*\).*\$/\1$TELEGRAF_AZURE_TENANT_ID/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+#     sed -i "s/^\(TELEGRF_AZURE_CLIENT_ID\s*=\s*\).*\$/\1$TELEGRAF_AZURE_CLIENT_ID/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+#     sed -i "s/^\(TELEGRF_AZURE_CLIENT_SECRET\s*=\s*\).*\$/\1$TELEGRAF_AZURE_CLIENT_SECRET/" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+#     echo "$(info) Completed Update of Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
+# fi
 
-    # Update the value of RUNTIME variable in environment variable file
-    sed -i 's#^\(RUNTIME[ ]*=\).*#\1\"'"$DETECTOR_MODULE_RUNTIME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-    # Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
-    sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+# Update the value of RUNTIME variable in environment variable file
+sed -i 's#^\(RUNTIME[ ]*=\).*#\1\"'"$DETECTOR_MODULE_RUNTIME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+# Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
+sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
-    # This step updates the video stream if specified in the variables.template file. This
-    # is intended to let the user provide their own video stream instead of using the sample video provided as part of this repo.
-    if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
-        echo "$(info) Using default sample video to edge device"    
+# This step updates the video stream if specified in the variables.template file. This
+# is intended to let the user provide their own video stream instead of using the sample video provided as part of this repo.
+if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
+    echo "$(info) Using default sample video to edge device"
+else
+    echo "$(info) Using custom video for edge deployment"
+
+    if [[ "$CUSTOM_VIDEO_SOURCE" == rtsp://* ]]; then
+        echo "$(info) RTSP URL: $CUSTOM_VIDEO_SOURCE"
+        sed -i 's#^\(CROSSING_VIDEO_URL[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
     else
-        echo "$(info) Using custom video for edge deployment"
-        
-        if [[ "$CUSTOM_VIDEO_SOURCE" == rtsp://* ]]; then
-            echo "$(info) RTSP URL: $CUSTOM_VIDEO_SOURCE"
-            sed -i 's#^\(CROSSING_VIDEO_URL[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-        else
-            echo "$(error) Custom video source was not of format \"rtsp://path/to/video\". Please provide a valid RTSP URL"
-            exitWithError
-        fi
+        echo "$(error) Custom video source was not of format \"rtsp://path/to/video\". Please provide a valid RTSP URL"
+        exitWithError
     fi
+fi
 
-    echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
-    echo -n "" >.env
-    cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
-    echo "$(info) Copied values to .env"
+echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
+echo -n "" >.env
+cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
+echo "$(info) Copied values to .env"
 
-    echo "$(info) Generating manifest file from template file"
-    # Generate manifest file
-    iotedgedev genconfig --file "$MANIFEST_TEMPLATE_NAME" --platform "$EDGE_DEVICE_ARCHITECTURE"
+if [ "$EDGE_DEVICE_ARCHITECTURE" == "Intel" ]; then
+    PLATFORM_ARCHITECTURE="amd64"
+elif [ "$EDGE_DEVICE_ARCHITECTURE" == "ARM" ]; then
+    PLATFORM_ARCHITECTURE="arm64v8"
+fi
 
-    echo "$(info) Generated manifest file"
+echo "$(info) Generating manifest file from template file"
+# Generate manifest file
+iotedgedev genconfig --file "$MANIFEST_TEMPLATE_NAME" --platform "$PLATFORM_ARCHITECTURE"
 
-    #Construct file path of the manifest file by getting file name of template file and replace 'template.' with '' if it has .json extension
-    #iotedgedev service used deployment.json filename if the provided file does not have .json extension
-    #We are prefixing ./config to the filename as iotedgedev service creates a config folder and adds the manifest file in that folder
+echo "$(info) Generated manifest file"
 
-    # if .json then remove template. if present else deployment.json
-    if [[ "$MANIFEST_TEMPLATE_NAME" == *".json"* ]]; then
-        # Check if the file name is like name.template.json, if it is construct new name as name.json
-        # Remove last part (.json) from file name
-        TEMPLATE_FILE_NAME="${MANIFEST_TEMPLATE_NAME%.*}"
-        # Get the last part form file name and check if it is template
-        IS_TEMPLATE="${TEMPLATE_FILE_NAME##*.}"
-        if [ "$IS_TEMPLATE" == "template" ]; then
-            # Get everything but the last part (.template) and append .json to construct new name
-            TEMPLATE_FILE_NAME="${TEMPLATE_FILE_NAME%.*}.json"
-            PRE_GENERATED_MANIFEST_FILENAME="./config/$(basename "$TEMPLATE_FILE_NAME")"
-        else
-            PRE_GENERATED_MANIFEST_FILENAME="./config/$(basename "$MANIFEST_TEMPLATE_NAME")"
-        fi
+#Construct file path of the manifest file by getting file name of template file and replace 'template.' with '' if it has .json extension
+#iotedgedev service used deployment.json filename if the provided file does not have .json extension
+#We are prefixing ./config to the filename as iotedgedev service creates a config folder and adds the manifest file in that folder
+
+# if .json then remove template. if present else deployment.json
+if [[ "$MANIFEST_TEMPLATE_NAME" == *".json"* ]]; then
+    # Check if the file name is like name.template.json, if it is construct new name as name.json
+    # Remove last part (.json) from file name
+    TEMPLATE_FILE_NAME="${MANIFEST_TEMPLATE_NAME%.*}"
+    # Get the last part form file name and check if it is template
+    IS_TEMPLATE="${TEMPLATE_FILE_NAME##*.}"
+    if [ "$IS_TEMPLATE" == "template" ]; then
+        # Get everything but the last part (.template) and append .json to construct new name
+        TEMPLATE_FILE_NAME="${TEMPLATE_FILE_NAME%.*}.json"
+        PRE_GENERATED_MANIFEST_FILENAME="./config/$(basename "$TEMPLATE_FILE_NAME")"
     else
-        PRE_GENERATED_MANIFEST_FILENAME="./config/deployment.json"
+        PRE_GENERATED_MANIFEST_FILENAME="./config/$(basename "$MANIFEST_TEMPLATE_NAME")"
     fi
+else
+    PRE_GENERATED_MANIFEST_FILENAME="./config/deployment.json"
+fi
 
-    if [ ! -f "$PRE_GENERATED_MANIFEST_FILENAME" ]; then
-        echo "$(error) Manifest file \"$PRE_GENERATED_MANIFEST_FILENAME\" does not exist. Please check config folder under current directory: \"$PWD\" to see if manifest file is generated or not"
-    fi
-
+if [ ! -f "$PRE_GENERATED_MANIFEST_FILENAME" ]; then
+    echo "$(error) Manifest file \"$PRE_GENERATED_MANIFEST_FILENAME\" does not exist. Please check config folder under current directory: \"$PWD\" to see if manifest file is generated or not"
+fi
 
 # This step deploys the configured deployment manifest to the edge device. After completed,
 # the device will begin to pull edge modules and begin executing workloads (including sending

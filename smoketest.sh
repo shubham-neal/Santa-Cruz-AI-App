@@ -16,8 +16,6 @@
 #13. App Service plan is present or not in Resource Group.
 #14. Web App is present or not in Resource Group.
 
-# The script currently does not handle the scenario where the endpoint in IoT Hub has a random number appended to it from the setup script during execution
-
 # Stop execution on any error in script execution
 set -e
 
@@ -41,25 +39,17 @@ fi
 # Read variable values from variables.template file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
-# Set the variable value to decide, Whether to perform test for frontend app setup or not:
+# Set the variable value to decide, Whether to perform test for frontend app setup or not, Default is true.
 RUN_WEBAPP_CHECKS="true"
 
-if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
-  FRONTEND_VARIABLES_TEMPLATE_FILENAME="frontend-variables.template"
-
-  if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
-    printError "\"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
-    exit 1
-  fi
-  # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
-  # shellcheck source=variables.template
-  # Read variable values from FRONTEND_VARIABLES_TEMPLATE_FILENAME file in current directory
-  source "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+  IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
 fi
 
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 
   if [ -z "$(command -v sshpass)" ]; then
 
@@ -86,7 +76,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     az extension add --name azure-cli-iot-ext
   fi
 
-  # jq is pre-installed in the cloud shell
+  # jq and timeout are pre-installed in the cloud shell
 
 elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
@@ -95,7 +85,7 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
   elif [ ! -z "$(command -v dnf)" ]; then
     PACKAGE_MANAGER="dnf"
   elif [ ! -z "$(command -v yum)" ]; then
-    PACKAGE_MANAGER="dnf"
+    PACKAGE_MANAGER="yum"
   elif [ ! -z "$(command -v zypper)" ]; then
     PACKAGE_MANAGER="zypper"
   fi
@@ -107,11 +97,24 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     echo "[INFO] Installing required packages"
 
-    echo "[INFO] Installing sshpass"
-    sudo "$PACKAGE_MANAGER" install -y sshpass
+    if [ -z "$(command -v sshpass)" ]; then
 
-    echo "[INFO] Installing jq"
-    sudo "$PACKAGE_MANAGER" install -y jq
+      echo "$(info) Installing sshpass"
+      sudo "$PACKAGE_MANAGER" install -y sshpass
+    fi
+
+    if [ -z "$(command -v jq)" ]; then
+
+      echo "$(info) Installing jq"
+      sudo "$PACKAGE_MANAGER" install -y jq
+    fi
+
+    if [ -z "$(command -v timeout)" ]; then
+
+      echo "$(info) Installing timeout"
+      sudo "$PACKAGE_MANAGER" install -y timeout
+      echo "$(info) Installed timeout"
+    fi
 
     if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
       echo "[INFO] Installing azure-cli-iot-ext extension"
@@ -122,21 +125,18 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
   fi
 fi
 
-# Log into azure either in a interactive way or non-interactive way based on a "USE_INTERACTIVE_LOGIN_FOR_AZURE" variable value
-if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-  echo "[INFO] Attempting Login with User Authentication"
-
-  az login --tenant "$TENANT_ID"
-
-  echo "[INFO] Login Successful"
-
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+  echo "Using existing CloudShell login for Azure CLI"
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+  echo "[INFO] Attempting login"
+  # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+  timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (printError "Interactive login timed out" && exit 1)
+  echo "[INFO] Login successful"
 else
-  echo "[INFO] Attempting Login with Service Principal Account"
-
+  echo "[INFO] Attempting login with Service Principal account"
   # Using service principal as it will not require user interaction
   az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-
-  echo "[INFO] Login Successful"
+  echo "[INFO] Login successful"
 fi
 
 echo "[INFO] Setting current subscription to $SUBSCRIPTION_ID"
@@ -285,9 +285,9 @@ else
   fi
 fi
 
-# Retreive all details of modules configured on Edge device
+# Retrieve all details of modules configured on Edge device
 EDGE_AGENT_TWIN=$(az iot hub module-twin show --module-id "\$edgeAgent" --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME")
-# Retreive names of modules configured on Edge device
+# Retrieve names of modules configured on Edge device
 DEVICE_MODULES=$(echo "$EDGE_AGENT_TWIN" | jq -r '.properties.desired.modules' | jq -r 'to_entries[].key')
 FAILED_STATUS_ARRAY=()
 
@@ -296,7 +296,7 @@ echo "[INFO] Checking modules status"
 for DEVICE_MODULE in ${DEVICE_MODULES[*]}; do
   # Count 60 is no. retries for checking status after 2second interval
   for ((i = 1; i <= 60; i++)); do
-    # Retreive all the configured module details on Edge device from IoT Hub
+    # Retrieve all the configured module details on Edge device from IoT Hub
     EDGE_AGENT_TWIN=$(az iot hub module-twin show --module-id "\$edgeAgent" --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME")
     MODULE_STATUS=$(echo "$EDGE_AGENT_TWIN" | jq -r .properties.reported.modules[\""$DEVICE_MODULE"\"].runtimeStatus)
 
@@ -354,20 +354,20 @@ if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
   # Check if App Service plan is created or not in Resource Group:
   if [ -n "$(az appservice plan show --name "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --query "name" -o tsv)" ]; then
 
-    echo "Passed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is present in Resoure group \"$RESOURCE_GROUP\"."
+    echo "Passed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is present in Resource group \"$RESOURCE_GROUP\"."
 
   else
-    printError "Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". "
+    printError "Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resource group \"$RESOURCE_GROUP\". "
 
   fi
 
   # Check if Web App is created or not in Resource Group:
   if [ -n "$(az webapp show --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --query "name" -o tsv)" ]; then
 
-    echo "Passed: Web App \"$WEBAPP_NAME\" is present in Resoure group \"$RESOURCE_GROUP\"."
+    echo "Passed: Web App \"$WEBAPP_NAME\" is present in Resource group \"$RESOURCE_GROUP\"."
   else
 
-    printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resoure group \"$RESOURCE_GROUP\". "
+    printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resource group \"$RESOURCE_GROUP\". "
 
   fi
 fi

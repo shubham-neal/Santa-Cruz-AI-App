@@ -1,17 +1,42 @@
 # Azure Login Details 
+
+# Set it to true to use interactive login. If it is not set to true, service principal will be used for login.
 USE_INTERACTIVE_LOGIN_FOR_AZURE=""
-SP_APP_ID=""
-SP_APP_PWD=""
 TENANT_ID=""
+# SP_APP_ID is the client id of the service principal. Service Principal should have access to create resources in given resource group
+SP_APP_ID=""
+# SP_APP_PWD is the client secret of the service principal.
+SP_APP_PWD=""
 
 # Azure Region and Resource Group Details
+
 SUBSCRIPTION_ID=""
-# Set it 'true' to use existing resources
-USE_EXISTING_RESOURCES=""
 RESOURCE_GROUP=""
 LOCATION=""
+# Set it 'true' to use existing resources
+USE_EXISTING_RESOURCES=""
 # Set it to 'true' to install required packages on machine
 INSTALL_REQUIRED_PACKAGES=""
+
+# Mariner VM and Disk Details
+
+# Name of the managed disk. Default value is "mariner"
+DISK_NAME=""
+# Storage SKU. Default value is "Premium_LRS"
+STORAGE_TYPE=""
+# Name of the mariner VM on Azure. Default value is "marinervm"
+VM_NAME=""
+# The VM size to be created. Default value is "Standard_DS2_v2"
+VM_SIZE=""
+
+# The value of EDGE_DEVICE_IP is filled in by mariner-vm-setup script. 
+EDGE_DEVICE_IP=""
+EDGE_DEVICE_USERNAME=""
+EDGE_DEVICE_PASSWORD=""
+# Set it to 'nvidia' to use Nvidia GPU on Edge Device. Set it to 'runc' to use CPU for detector module
+DETECTOR_MODULE_RUNTIME=""
+# Specify the architecture of the Edge Device. Currently supported values are Intel and ARM.
+EDGE_DEVICE_ARCHITECTURE=""
 
 # IoT Hub Details
 IOTHUB_NAME=""
@@ -20,17 +45,16 @@ DEVICE_NAME=""
 # ADLS Details
 STORAGE_ACCOUNT_NAME=""
 
-# Brainbox Details
-EDGE_DEVICE_IP=""
-EDGE_DEVICE_USERNAME=""
-EDGE_DEVICE_PASSWORD=""
-# Set it to 'nvidia' to use Nvidia GPU on Edge Device. Set it to 'runc' to use CPU for detector module
-DETECTOR_MODULE_RUNTIME=""
-# Specify the architecture of the Edge Device. Currently supported values are amd64 and arm64v8.
-EDGE_DEVICE_ARCHITECTURE=""
 
 # Manifest Details
 MANIFEST_TEMPLATE_NAME=""
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=""
 DEPLOYMENT_NAME=""
 CUSTOM_VIDEO_SOURCE=""
+
+# Frontend Webapp Details
+
+APP_SERVICE_PLAN_NAME=""
+APP_SERVICE_PLAN_SKU=""
+WEBAPP_NAME=""
+PASSWORD_FOR_WEBSITE_LOGIN=""

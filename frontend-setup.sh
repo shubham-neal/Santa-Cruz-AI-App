@@ -26,7 +26,6 @@ RANDOM_SUFFIX="${RANDOM:0:3}"
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
 # If it doesn't exists it adds the variable name to ARRAY_NOT_DEFINED_VARIABLES array and if it exists but doesn't have value, variable name is added ARRAY_VARIABLES_WITHOUT_VALUES array.
-# In case a 3rd positional argument is provided, the function will output 1 if given variable exists and has a non-empty value, else it will output 0.
 # Globals:
 #	ARRAY_VARIABLES_WITHOUT_VALUES
 #	ARRAY_NOT_DEFINED_VARIABLES
@@ -34,9 +33,8 @@ RANDOM_SUFFIX="${RANDOM:0:3}"
 # Arguments:
 #	Name of the variable
 #	Value of the variable
-#	Whether to print the result (Optional)
 # Outputs:
-#	The function writes the results if a 3rd positional parameter is passed in arguments
+#	No output
 ##############################################################################
 checkValue() {
     # The first value passed to the function is the name of the variable
@@ -48,27 +46,11 @@ checkValue() {
             # If the value is empty, add the variable name ($1) to ARRAY_VARIABLES_WITHOUT_VALUES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
             ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
             ARRAY_VARIABLES_WITHOUT_VALUES+=("$1")
-            # The third value is passed to the function when the caller expects the result
-            # The function returns 0 as the value of the variable is empty
-            if [ ! -z "$3" ]; then
-                echo 0
-            fi
-        else
-            # The third value is passed to the function when the caller expects the result
-            # When the variable exists and it's value is not empty, function returns 1
-            if [ ! -z "$3" ]; then
-                echo 1
-            fi
         fi
     else
         # If the variable is not defined, add the variable name to ARRAY_NOT_DEFINED_VARIABLES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
         ARRAY_NOT_DEFINED_VARIABLES+=("$1")
         ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
-        # The third value is passed to the function when the caller expects the result
-        # The function returns 0 as the variable is not defined
-        if [ ! -z "$3" ]; then
-            echo 0
-        fi
     fi
 }
 
@@ -83,17 +65,7 @@ if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
     exitWithError
 fi
 
-FRONTEND_VARIABLES_TEMPLATE_FILENAME="frontend-variables.template"
-
-if [ ! -f "$FRONTEND_VARIABLES_TEMPLATE_FILENAME" ]; then
-    echo "$(error) \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\"."
-    exitWithError
-fi
-
 # The following comment is for ignoring the source file check for shellcheck, as it does not support variable source file names currently
-# shellcheck source=frontend-variables.template
-# Read variable values from FRONTEND_VARIABLES_TEMPLATE_FILENAME file in current directory
-source "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
 # shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
@@ -105,8 +77,42 @@ ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="true"
 ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
+IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
+
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
+fi
+
+# timeout is pre-installed on CloudShell. Skip the installation step if current environment is CloudShell or Install Required Packages is not set to true
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
+
+    if [ ! -z "$(command -v apt)" ]; then
+        PACKAGE_MANAGER="apt"
+    elif [ ! -z "$(command -v dnf)" ]; then
+        PACKAGE_MANAGER="dnf"
+    elif [ ! -z "$(command -v yum)" ]; then
+        PACKAGE_MANAGER="dnf"
+    elif [ ! -z "$(command -v zypper)" ]; then
+        PACKAGE_MANAGER="zypper"
+    fi
+
+    if [ -z "$PACKAGE_MANAGER" ]; then
+        echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
+        echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
+    else
+        echo "$(info) Installing required packages"
+
+        if [ -z "$(command -v timeout)" ]; then
+            echo "$(info) Installing timeout"
+            sudo "$PACKAGE_MANAGER" install -y timeout
+            echo "$(info) Installed timeout"
+        fi
+
+        echo "$(info) Package Installation step is complete"
+    fi
+fi
+
 # Pass the name of the variable and it's value to the checkValue function
-checkValue "TENANT_ID" "$TENANT_ID"
 checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
 checkValue "LOCATION" "$LOCATION"
@@ -119,10 +125,15 @@ checkValue "APP_SERVICE_PLAN_SKU" "$APP_SERVICE_PLAN_SKU"
 checkValue "WEBAPP_NAME" "$WEBAPP_NAME"
 checkValue "PASSWORD_FOR_WEBSITE_LOGIN" "$PASSWORD_FOR_WEBSITE_LOGIN"
 
-IS_NOT_EMPTY=$(checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE" "RETURN_VARIABLE_STATUS")
-if [ "$IS_NOT_EMPTY" == "1" ] && [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    checkValue "SP_APP_ID" "$SP_APP_ID"
-    checkValue "SP_APP_PWD" "$SP_APP_PWD"
+# Skip the variable checks for login variable if current environment is CloudShell
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
+    # Pass the name of the variable and it's value to the checkValue function
+    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
+    checkValue "TENANT_ID" "$TENANT_ID"
+    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
+        checkValue "SP_APP_ID" "$SP_APP_ID"
+        checkValue "SP_APP_PWD" "$SP_APP_PWD"
+    fi
 fi
 
 # Check if all the variables are set up correctly
@@ -147,11 +158,12 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Logging into Azure Subscription"
 printf "%60s\n" " " | tr ' ' '-'
 
-# This step checks the value for USE_INTERACTIVE_LOGIN_FOR_AZURE.
-# If the value is true, the script will allow
-if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+    echo "Using existing CloudShell login for Azure CLI"
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
-    az login --tenant "$TENANT_ID" --output "none"
+    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -181,9 +193,6 @@ IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NA
 # Retrieve connection string for storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
 
-# Create CORS policy for frontend app
-az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET --allowed-headers "*" --exposed-headers "*" --max-age 1000
-
 # Set expiry date of token as current + 1 year
 SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "lr" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
@@ -204,30 +213,42 @@ else
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
         APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_SUFFIX}
         # Writing the updated value back to variables file
-        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$VARIABLE_TEMPLATE_FILENAME"
+        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
         echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
         az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
         echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
     fi
 fi
 
-EXISTING_WEB_APP=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[?name=='$WEBAPP_NAME'].{Name:name}" --output tsv)
-if [ -z "$EXISTING_WEB_APP" ]; then
+# Check if the user provided webapp name is valid and available in Azure
+NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'${WEBAPP_NAME}'","type":"Microsoft.Web/sites"}')
+IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
+
+if [ "$IS_NAME_AVAILABLE" == "true" ]; then
     echo "$(info) Creating Web App \"$WEBAPP_NAME\" in app service plan \"$APP_SERVICE_PLAN_NAME\""
     az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --output "none"
     echo "$(info) Created webapp \"$WEBAPP_NAME\""
+
 else
-    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-        echo "$(info) Using existing Web App Plan \"$WEBAPP_NAME\""
+    # Check the unavailability reason. If the user provided name is invalid, throw error with message received from Azure
+    UNAVAILABILITY_REASON=$(echo "$NAME_CHECK_JSON" | jq -r '.reason')
+    if [ "$UNAVAILABILITY_REASON" == "Invalid" ]; then
+        echo "$(error) UNAVAILABILITY_REASON: $(echo "$NAME_CHECK_JSON" | jq '.message')"
+        exitWithError
     else
-        echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
-        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
-        WEBAPP_NAME=${WEBAPP_NAME}${RANDOM_SUFFIX}
-        # Writing the updated value back to variables file
-        sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$VARIABLE_TEMPLATE_FILENAME"
-        echo "$(info) Creating Web App \"$WEBAPP_NAME\""
-        az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --output "none"
-        echo "$(info) Created Web app \"$WEBAPP_NAME\""
+        EXISTING_WEB_APP=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[?name=='$WEBAPP_NAME'].{Name:name}" --output tsv)
+        if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_WEB_APP" ]; then
+            echo "$(info) Using existing Web App \"$WEBAPP_NAME\""
+        else
+            echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
+            echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
+            WEBAPP_NAME=${WEBAPP_NAME}-${RANDOM_SUFFIX}
+            # Writing the updated value back to variables file
+            sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+            echo "$(info) Creating Web App \"$WEBAPP_NAME\""
+            az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --output "none"
+            echo "$(info) Created Web app \"$WEBAPP_NAME\""
+        fi
     fi
 fi
 
