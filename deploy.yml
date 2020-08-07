@@ -12,7 +12,7 @@ resources:
       branches: 
         include:
         - master
-        - users/kishan/BuildReleasePipelines
+        - users/kartik/DeploymentAutomation
 
 pool:
   vmImage: 'ubuntu-latest'

@@ -322,7 +322,7 @@ IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
     echo "$(info) Creating a storage account \"$STORAGE_ACCOUNT_NAME\""
-    az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --output "none"
+    az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
     echo "$(info) Created storage account \"$STORAGE_ACCOUNT_NAME\""
 else
     # Check the unavailability reason. If the user provided name is invalid, throw error with message received from Azure
@@ -343,7 +343,7 @@ else
             # Writing the updated value back to variables file
             sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"'"$STORAGE_ACCOUNT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating storage account \"$STORAGE_ACCOUNT_NAME\""
-            az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --output "none"
+            az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
             echo "$(info) Created storage account \"$STORAGE_ACCOUNT_NAME\""
         fi
     fi
@@ -354,7 +354,7 @@ STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_G
 
 DETECTOR_OUTPUT_CONTAINER_NAME="detectoroutput"
 # Check if the storage container exists, use it if it already exists else create a new one
-EXISTING_STORAGE_CONTAINER=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --auth-mode "login" --query "[?name=='$DETECTOR_OUTPUT_CONTAINER_NAME'].{Name:name}" --output tsv)
+EXISTING_STORAGE_CONTAINER=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[?name=='$DETECTOR_OUTPUT_CONTAINER_NAME'].{Name:name}" --output tsv)
 if [ -z "$EXISTING_STORAGE_CONTAINER" ]; then
     echo "$(info) Creating storage container \"$DETECTOR_OUTPUT_CONTAINER_NAME\""
     az storage container create --name "$DETECTOR_OUTPUT_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --public-access off --output "none"
@@ -365,7 +365,7 @@ fi
 
 IMAGES_CONTAINER_NAME="still-images"
 # Check if the storage container exists, use it if it already exists else create a new one
-EXISTING_STORAGE_CONTAINER=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --auth-mode "login" --query "[?name=='$IMAGES_CONTAINER_NAME'].{Name:name}" --output tsv)
+EXISTING_STORAGE_CONTAINER=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --query "[?name=='$IMAGES_CONTAINER_NAME'].{Name:name}" --output tsv)
 if [ -z "$EXISTING_STORAGE_CONTAINER" ]; then
     echo "$(info) Creating storage container \"$IMAGES_CONTAINER_NAME\""
     az storage container create --name "$IMAGES_CONTAINER_NAME" --account-name "$STORAGE_ACCOUNT_NAME" --account-key "$STORAGE_ACCOUNT_KEY" --public-access off --output "none"
