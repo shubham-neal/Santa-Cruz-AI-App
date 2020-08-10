@@ -80,7 +80,7 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 fi
 
 checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
-checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
+checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
 checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
 checkValue "INSTALL_REQUIRED_PACKAGES" "$INSTALL_REQUIRED_PACKAGES"
@@ -92,9 +92,6 @@ checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
 
 #checkValue "CREATE_AZURE_MONITOR" "$CREATE_AZURE_MONITOR"
 
-checkValue "EDGE_DEVICE_IP" "$EDGE_DEVICE_IP"
-checkValue "EDGE_DEVICE_USERNAME" "$EDGE_DEVICE_USERNAME"
-checkValue "EDGE_DEVICE_PASSWORD" "$EDGE_DEVICE_PASSWORD"
 checkValue "DETECTOR_MODULE_RUNTIME" "$DETECTOR_MODULE_RUNTIME"
 checkValue "EDGE_DEVICE_ARCHITECTURE" "$EDGE_DEVICE_ARCHITECTURE"
 
@@ -142,28 +139,6 @@ fi
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
-
-    if [ -z "$(command -v sshpass)" ]; then
-
-        echo "$(info) Installing sshpass"
-        # Download the sshpass package to current machine
-        apt-get download sshpass
-        # Install sshpass package in current working directory
-        dpkg -x sshpass*.deb ~
-        # Add the executable directory path in PATH
-        echo "PATH=~/usr/bin:$PATH" >>~/.bashrc
-        PATH=~/usr/bin:$PATH
-        # Remove the package file
-        rm sshpass*.deb
-
-        if [ -z "$(command -v sshpass)" ]; then
-            echo "$(error) sshpass is not installed"
-            exitWithError
-        else
-            echo "$(info) Installed sshpass"
-        fi
-
-    fi
 
     INSTALL_IOTEDGEDEV="true"
     if [ ! -z "$(command -v iotedgedev)" ]; then
@@ -218,12 +193,6 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
     else
 
         echo "$(info) Installing required packages"
-
-        if [ -z "$(command -v sshpass)" ]; then
-
-            echo "$(info) Installing sshpass"
-            sudo "$PACKAGE_MANAGER" install -y sshpass
-        fi
 
         if [ -z "$(command -v jq)" ]; then
 
@@ -298,75 +267,49 @@ az account set --subscription "$SUBSCRIPTION_ID"
 echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
 printf "\n%60s\n" " " | tr ' ' '-'
-echo Configuring Resource Group
+echo "Checking existence of Resource Group and IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
 
-# Create a new resource group if it does not exist already.
-# If it already exists then check value for USE_EXISTING_RESOURCES
+# Check for existence of Resource Group for IoT Hub,
 # and based on that either throw error or use the existing RG
-if [ "$(az group exists --name "$RESOURCE_GROUP")" == false ]; then
-    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP\""
-    az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output "none"
-    echo "$(info) Successfully created resource group \"$RESOURCE_GROUP\""
+if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == true ]; then
+    echo "$(info) Using existing Resource Group: \"$RESOURCE_GROUP_IOT\""
 else
-    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP\""
-    else
-        echo "$(error) Resource Group \"$RESOURCE_GROUP\" already exists"
-        exitWithError
-    fi
+    echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" does not exist"
+    exitWithError
+fi
+
+# Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,
+# and based on that either throw error or use the existing resources
+if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_IOT" -o tsv)" ]; then
+    echo "$(error) IoT Hub \"$IOTHUB_NAME\" does not exist."
+    exitWithError
+else
+    echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
+fi
+
+if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
+    echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
+    exitWithError
+else
+    echo "$(info) Using existing Edge Device \"$IOTHUB_NAME\""
 fi
 
 printf "\n%60s\n" " " | tr ' ' '-'
-echo Configuring IoT Hub
+echo "Configuring IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
-
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
-# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
-# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
-# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub
-# else create a new IoT Hub by appending a random number to the user provided name
-EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-
-if [ -z "$EXISTING_IOTHUB" ]; then
-    echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
-    az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP" --output "none"
-    echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
-else
-    # Check if IoT Hub exists in current resource group. If it doesn't exist in current resource group. Create a new one based on value of USE_EXISTING_RESOURCES
-    EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-    if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_IOTHUB" ]; then
-        echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
-    else
-        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-            echo "$(info) \"$IOTHUB_NAME\" already exists in current subscription but it does not exist in resource group \"$RESOURCE_GROUP\""
-        else
-            echo "$(info) \"$IOTHUB_NAME\" already exists"
-        fi
-        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to \"$IOTHUB_NAME\""
-        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
-        # Writing the updated value back to variables file
-        sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"'"$IOTHUB_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-
-        echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
-        az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP" --output "none"
-        echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
-    fi
-fi
 
 DEFAULT_ROUTE_ROUTING_CONDITION="\$twin.moduleId = 'tracker' OR \$twin.moduleId = 'camerastream'"
 
 # Adding default route in IoT hub. This is used to retrieve messages from IoT Hub
 # as they are generated.
-EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP" --query "[?name=='defaultroute'].name" --output tsv)
+EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='defaultroute'].name" --output tsv)
 if [ -z "$EXISTING_DEFAULT_ROUTE" ]; then
     echo "$(info) Creating default IoT Hub route"
-    az iot hub route create --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
+    az iot hub route create --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
 else
     echo "$(info) Updating existing default IoT Hub route"
-    az iot hub route update --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
+    az iot hub route update --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
 fi
 
 # Check if the user provided name is valid and available in Azure
@@ -375,7 +318,7 @@ IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
     echo "$(info) Creating a storage account \"$STORAGE_ACCOUNT_NAME\""
-    az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
+    az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_IOT" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
     echo "$(info) Created storage account \"$STORAGE_ACCOUNT_NAME\""
 else
     # Check the unavailability reason. If the user provided name is invalid, throw error with message received from Azure
@@ -386,7 +329,7 @@ else
     else
         # Check if the Storage Account exists in current resource group. This handles scenario, where a Storage Account exists but not in current resource group.
         # If it doesn't exists in current Resource Group or USE_EXISTING_RESOURCES is not set to true, create a new storage account by appending a random number to user provided name
-        EXISTENCE_IN_RG=$(az storage account list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP" --query "[?name=='$STORAGE_ACCOUNT_NAME'].{Name:name}" --output tsv)
+        EXISTENCE_IN_RG=$(az storage account list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$STORAGE_ACCOUNT_NAME'].{Name:name}" --output tsv)
         if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTENCE_IN_RG" ]; then
             echo "$(info) Using existing storage account \"$STORAGE_ACCOUNT_NAME\""
         else
@@ -396,14 +339,14 @@ else
             # Writing the updated value back to variables file
             sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"'"$STORAGE_ACCOUNT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating storage account \"$STORAGE_ACCOUNT_NAME\""
-            az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
+            az storage account create --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_IOT" --location "$LOCATION" --sku Standard_RAGRS --kind StorageV2 --enable-hierarchical-namespace true --default-action Allow --output "none"
             echo "$(info) Created storage account \"$STORAGE_ACCOUNT_NAME\""
         fi
     fi
 fi
 
 # Get storage account key
-STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_GROUP" --account-name "$STORAGE_ACCOUNT_NAME" --query "[0].value" | tr -d '"')
+STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_GROUP_IOT" --account-name "$STORAGE_ACCOUNT_NAME" --query "[0].value" | tr -d '"')
 
 DETECTOR_OUTPUT_CONTAINER_NAME="detectoroutput"
 # Check if the storage container exists, use it if it already exists else create a new one
@@ -428,7 +371,7 @@ else
 fi
 
 # Retrieve connection string for storage account
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
+STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP_IOT" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
 
 SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "rwacl" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
@@ -438,15 +381,15 @@ ADLS_ENDPOINT_NAME="adls-endpoint"
 
 # Check if a azure storage endpoint with given name already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, check if all the properties are same as provided to current script. If the properties are same, use existing endpoint else create a new one
-EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP" --query "*[?name=='$ADLS_ENDPOINT_NAME'].name" --output tsv)
+EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "*[?name=='$ADLS_ENDPOINT_NAME'].name" --output tsv)
 if [ -z "$EXISTING_ENDPOINT" ]; then
     echo "$(info) Creating a custom endpoint $ADLS_ENDPOINT_NAME in IoT Hub for ADLS"
     # Create a custom-endpoint for storage account on IoT Hub
-    az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
+    az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP_IOT" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
 else
 
     # check details of current endpoint
-    EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --resource-group "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --query "storageContainers[?name=='$ADLS_ENDPOINT_NAME']" --output json)
+    EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --query "storageContainers[?name=='$ADLS_ENDPOINT_NAME']" --output json)
 
     IS_NEW_ENDPOINT_SAME_AS_EXISTING="false"
     if [ ! -z "$EXISTING_ENDPOINT" ]; then
@@ -456,7 +399,7 @@ else
         EXISTING_SA_NAME=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].connectionString' | cut -d';' -f 3 | cut -d'=' -f 2)
         EXISTING_SA_CONTAINER=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].containerName')
 
-        if [ "$EXISTING_SA_RG" == "$RESOURCE_GROUP" ] && [ "$EXISTING_SA_SUBSCRIPTION" == "$SUBSCRIPTION_ID" ] && [ "$EXISTING_SA_NAME" == "$STORAGE_ACCOUNT_NAME" ] && [ "$EXISTING_SA_CONTAINER" == "$DETECTOR_OUTPUT_CONTAINER_NAME" ]; then
+        if [ "$EXISTING_SA_RG" == "$RESOURCE_GROUP_IOT" ] && [ "$EXISTING_SA_SUBSCRIPTION" == "$SUBSCRIPTION_ID" ] && [ "$EXISTING_SA_NAME" == "$STORAGE_ACCOUNT_NAME" ] && [ "$EXISTING_SA_CONTAINER" == "$DETECTOR_OUTPUT_CONTAINER_NAME" ]; then
             IS_NEW_ENDPOINT_SAME_AS_EXISTING="true"
         fi
     fi
@@ -471,7 +414,7 @@ else
         sed -i 's#^\(ADLS_ENDPOINT_NAME[ ]*=\).*#\1\"'"$ADLS_ENDPOINT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
         echo "$(info) Creating a custom endpoint \"$ADLS_ENDPOINT_NAME\" in IoT Hub for ADLS"
         # Create a custom-endpoint for storage account on IoT Hub
-        az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
+        az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP_IOT" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
         echo "$(info) Created custom endpoint \"$ADLS_ENDPOINT_NAME\""
     fi
 fi
@@ -488,29 +431,13 @@ if [ -z "$EXISTING_IOTHUB_ADLS_ROUTE" ]; then
 
     echo "$(info) Creating a route in IoT Hub for ADLS custom endpoint"
     # Create a route for storage endpoint on IoT Hub
-    az iot hub route create --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
+    az iot hub route create --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
     echo "$(info) Created route \"$IOTHUB_ADLS_ROUTENAME\" in IoT Hub \"$IOTHUB_NAME\""
 else
 
     echo "$(info) Updating existing route \"$IOTHUB_ADLS_ROUTENAME\""
-    az iot hub route update --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
+    az iot hub route update --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
     echo "$(info) Updated existing route \"$IOTHUB_ADLS_ROUTENAME\""
-fi
-
-# This step creates a new edge device in the IoT Hub account or will use an existing edge device
-# if the USE_EXISTING_RESOURCES configuration variable is set to true.
-printf "\n%60s\n" " " | tr ' ' '-'
-echo Configuring Edge Device in IoT Hub
-printf "%60s\n" " " | tr ' ' '-'
-
-# Check if a Edge Device with given name already exists in IoT Hub. Create a new one if it doesn't exist already.
-EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
-if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
-    echo "$(info) Creating an Edge device \"$DEVICE_NAME\" in IoT Hub \"$IOTHUB_NAME\""
-    az iot hub device-identity create --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME" --edge-enabled --output "none"
-    echo "$(info) Created \"$DEVICE_NAME\" device in IoT Hub \"$IOTHUB_NAME\""
-else
-    echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
 fi
 
 # if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
@@ -524,26 +451,6 @@ fi
 #     TELEGRAF_AZURE_CLIENT_SECRET=$(echo "$AZ_MONITOR_SP" | jq -r '.password')
 #     echo "$(info) Azure Monitor creation is complete"
 # fi
-
-# The following steps retrieves the connection string for the edge device an uses it to onboard
-# the device using sshpass. This step may fail if the edge device's network firewall
-# does not allow ssh access. Please make sure the edge device is on the local area
-# network and is accepting ssh requests.
-echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
-EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity show-connection-string --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
-
-echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
-CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
-# Replace placeholder connection string with actual value for Edge device
-# Using sshpass and ssh to update the value on Edge device
-Command="sudo sed -i -e '/device_connection_string:/ s#\"[^\"][^\"]*\"#\"$EDGE_DEVICE_CONNECTION_STRING\"#' $CONFIG_FILE_PATH"
-sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "$Command"
-echo "$(info) Config.yaml update is complete"
-
-echo "$(info) Restarting IoT Edge service"
-# Restart the service on Edge device
-sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "sudo systemctl restart iotedge"
-echo "$(info) IoT Edge service restart is complete"
 
 # This step uses the iotedgedev cli toolkit to inject defined environment variables into a predefined deployment manifest JSON
 # file. Once an environment specific manifest has been generated, the script will deploy to the identified edge device.
@@ -560,8 +467,17 @@ echo "$(info) IoT Edge service restart is complete"
 #     echo "$(info) Completed Update of Azure Monitor variables in \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\""
 # fi
 
+
+if [ "$DETECTOR_MODULE_RUNTIME" == "CPU" ]; then
+    MODULE_RUNTIME="runc"
+elif [ "$DETECTOR_MODULE_RUNTIME" == "NVIDIA" ]; then
+    MODULE_RUNTIME="nvidia"
+elif [ "$DETECTOR_MODULE_RUNTIME" == "MOVIDIUS" ]; then
+    MODULE_RUNTIME="movidius"
+fi
+
 # Update the value of RUNTIME variable in environment variable file
-sed -i 's#^\(RUNTIME[ ]*=\).*#\1\"'"$DETECTOR_MODULE_RUNTIME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(RUNTIME[ ]*=\).*#\1\"'"$MODULE_RUNTIME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 # Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
 sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
@@ -586,9 +502,9 @@ echo -n "" >.env
 cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
 echo "$(info) Copied values to .env"
 
-if [ "$EDGE_DEVICE_ARCHITECTURE" == "Intel" ]; then
+if [ "$EDGE_DEVICE_ARCHITECTURE" == "X86" ]; then
     PLATFORM_ARCHITECTURE="amd64"
-elif [ "$EDGE_DEVICE_ARCHITECTURE" == "ARM" ]; then
+elif [ "$EDGE_DEVICE_ARCHITECTURE" == "ARM64" ]; then
     PLATFORM_ARCHITECTURE="arm64v8"
 fi
 

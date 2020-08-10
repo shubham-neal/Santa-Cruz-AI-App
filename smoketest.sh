@@ -2,19 +2,22 @@
 
 #List of checks done by script:
 #1.  IoT Edge Service is running or not on Edge machine.
-#2.  Resource Group is present or not.
-#3.  IoT Hub is present or not in Resource Group.
+#2.  Resource Group for IoT Hub is present or not.
+#3.  IoT Hub is present or not in Resource Group for IoT.
 #4.  IoT Hub Device is present or not.
 #5.  Default Route for built-in Event Hub endpoint is present or not in IoT Hub.
-#6.  Storage account is present or not in the resource group.
+#6.  Storage account is present or not in the Resource Group for IoT.
 #7.  Containers are present or not in Storage account.
 #8.  Custom Data Lake Storage endpoint is present or not in IoT Hub.
 #9.  Route to a Data Lake Storage account is present or not in IoT Hub.
 #10. Data files are present or not in both 'detectoroutput' & still-images storage account containers.
 #11. Deployment of manifest file is successfully applied to the edge device or not.
 #12. Validating the runtimeStatus of each configured module on Edge device.
-#13. App Service plan is present or not in Resource Group.
-#14. Web App is present or not in Resource Group.
+#13. App Service plan is present or not in Resource Group for IoT.
+#14. Web App is present or not in Resource Group for IoT.
+#15. Resource Group for VM is present or not.
+#16. Mariner Disk is present or not in Resource Group for VM.
+#17. Mariner VM is present or not in Resource Group for VM.
 
 # Stop execution on any error in script execution
 set -e
@@ -41,6 +44,8 @@ source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
 # Set the variable value to decide, Whether to perform test for frontend app setup or not, Default is true.
 RUN_WEBAPP_CHECKS="true"
+# Set the variable value to decide, Whether to perform test for Mariner VM setup or not, Default is true.
+RUN_VM_CHECKS="true"
 
 IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
 if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
@@ -145,17 +150,70 @@ az account set --subscription "$SUBSCRIPTION_ID"
 
 echo "[INFO] Set current subscription to $SUBSCRIPTION_ID"
 
-# Check for Resource Group, if it exists with the same name provided in variable template then pass the check else throw error
-if [ "$(az group exists -n "$RESOURCE_GROUP")" = false ]; then
-  printError "Failed: Resource Group \"$RESOURCE_GROUP\" is not present. "
+# Checks for Mariner VM setup;
+if [ "$RUN_VM_CHECKS" == "true" ]; then
+
+  if [ -z "$DISK_NAME" ]; then
+    # Value is empty for DISK_NAME;
+    # Assign Default value
+    DISK_NAME="mariner"
+  fi
+
+  if [ -z "$STORAGE_TYPE" ]; then
+    # Value is empty for STORAGE_TYPE;
+    # Assign Default value
+    STORAGE_TYPE="Premium_LRS"
+  fi
+
+  if [ -z "$VM_NAME" ]; then
+    # Value is empty for VM_NAME;
+    # Assign Default value
+    VM_NAME="marinervm"
+  fi
+
+  if [ -z "$VM_SIZE" ]; then
+    # Value is empty for VM_SIZE;
+    # Assign Default value
+    VM_SIZE="Standard_DS2_v2"
+  fi
+
+  # Check for Resource Group of VM, if it exists with the same name provided in variable template then pass the check else throw error
+  if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == "false" ]; then
+    printError "Failed: Resource Group for VM\"$RESOURCE_GROUP_DEVICE\" is not present. "
+
+  else
+    echo "Passed: Resource Group for VM \"$RESOURCE_GROUP_DEVICE\" is present"
+  fi
+
+  # Check if Mariner Disk is created or not in Resource Group for VM;
+  if [ -n "$(az disk list --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$DISK_NAME'].{Name:name}" --output tsv)" ]; then
+    echo "Passed: Mariner Disk \"$DISK_NAME\" is present in Resource group \"$RESOURCE_GROUP_DEVICE\"."
+
+  else
+    printError "Failed: Mariner Disk \"$DISK_NAME\" is not present in Resource group \"$RESOURCE_GROUP_DEVICE\"."
+
+  fi
+
+  # Check if Mariner VM is created or not in Resource Group for VM;
+  if [ -n "$(az vm list --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$VM_NAME'].{Name:name}" --output tsv)" ]; then
+    echo "Passed: Mariner VM \"$VM_NAME\" is present in Resource group \"$RESOURCE_GROUP_DEVICE\"."
+
+  else
+    printError "Failed: Mariner VM \"$VM_NAME\" is not present in Resource group \"$RESOURCE_GROUP_DEVICE\"."
+
+  fi
+fi
+
+# Check for Resource Group of IoT Hub, if it exists with the same name provided in variable template then pass the check else throw error
+if [ "$(az group exists -n "$RESOURCE_GROUP_IOT")" = false ]; then
+  printError "Failed: Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" is not present. "
 
 else
-
-  echo "Passed: Resource Group \"$RESOURCE_GROUP\" is present"
+  echo "Passed: Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" is present"
 fi
 
 # Check for IoT Hub, if it exists with the same name as in variable template then pass the test else throw error
-if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" -o tsv)" ]; then
+if [ -z "$(az iot hub list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$IOTHUB_NAME'].{Name:name}" -o tsv)" ]; then
   printError "Failed: IoT Hub \"$IOTHUB_NAME\" is not present. "
 
 else
@@ -164,7 +222,7 @@ else
 fi
 
 # Retrieve IoT Edge device name to check whether it has been registered on IoT Hub or not
-DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
+DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
 
 # Check for IoT Edge Device identity on IoT Hub, if it exists with the same name as in variable template then pass the test else throw error
 if [ -z "$DEVICE" ]; then
@@ -176,7 +234,7 @@ else
 fi
 
 # Check for Default Route for built-in Event Hub endpoint
-EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP" --query "[?name=='defaultroute'].name" --output tsv)
+EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='defaultroute'].name" --output tsv)
 if [ -z "$EXISTING_DEFAULT_ROUTE" ]; then
   printError "Failed: Default Route for built-in Event Hub endpoint is not present in IoT Hub \"$IOTHUB_NAME\". "
 
@@ -186,7 +244,7 @@ else
 fi
 
 # Retrieve the name of Storage account to check if it exists
-STORAGE_ACCOUNT=$(az storage account list -g "$RESOURCE_GROUP" --query "[?name=='$STORAGE_ACCOUNT_NAME'].name" -o tsv)
+STORAGE_ACCOUNT=$(az storage account list -g "$RESOURCE_GROUP_IOT" --query "[?name=='$STORAGE_ACCOUNT_NAME'].name" -o tsv)
 
 # Check for Storage account, if it exists with same name as in variable template then pass the test else throw error
 if [ -z "$STORAGE_ACCOUNT" ]; then
@@ -198,7 +256,7 @@ else
 fi
 
 # Retrieve account key to check for container existence
-STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_GROUP" --account-name "$STORAGE_ACCOUNT_NAME" --query "[0].value" | tr -d '"')
+STORAGE_ACCOUNT_KEY=$(az storage account keys list --resource-group "$RESOURCE_GROUP_IOT" --account-name "$STORAGE_ACCOUNT_NAME" --query "[0].value" | tr -d '"')
 
 DETECTOR_OUTPUT_CONTAINER_NAME="detectoroutput"
 # Retrieve status of container existence
@@ -229,7 +287,7 @@ fi
 ADLS_ENDPOINT_NAME="adls-endpoint"
 
 # Check for Data Lake Storage endpoint in IoT Hub, if it exists with the same name as in variable template pass the test else throw error
-if [ -z "$(az iot hub routing-endpoint list -g "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --endpoint-type azurestoragecontainer --query "[?name=='$ADLS_ENDPOINT_NAME'].name" -o tsv)" ]; then
+if [ -z "$(az iot hub routing-endpoint list -g "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --endpoint-type azurestoragecontainer --query "[?name=='$ADLS_ENDPOINT_NAME'].name" -o tsv)" ]; then
   printError "Failed: Data Lake Storage endpoint \"$ADLS_ENDPOINT_NAME\" is not present in IoT Hub \"$IOTHUB_NAME\". "
 
 else
@@ -240,7 +298,7 @@ fi
 IOTHUB_ADLS_ROUTENAME="adls-route"
 
 # Check for Route to a Data Lake Storage account in IoT Hub, if it exists then pass the test else throw error
-if [ -n "$(az iot hub route list -g "$RESOURCE_GROUP" --hub-name "$IOTHUB_NAME" --query "[?name=='$IOTHUB_ADLS_ROUTENAME'].name" -o tsv)" ]; then
+if [ -n "$(az iot hub route list -g "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --query "[?name=='$IOTHUB_ADLS_ROUTENAME'].name" -o tsv)" ]; then
   echo "Passed: Route to a Data Lake Storage account \"$IOTHUB_ADLS_ROUTENAME\" is present in IoT Hub \"$IOTHUB_NAME\" "
 
 else
@@ -352,22 +410,22 @@ fi
 if [ "$RUN_WEBAPP_CHECKS" == "true" ]; then
 
   # Check if App Service plan is created or not in Resource Group:
-  if [ -n "$(az appservice plan show --name "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --query "name" -o tsv)" ]; then
+  if [ -n "$(az appservice plan show --name "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "name" -o tsv)" ]; then
 
-    echo "Passed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is present in Resource group \"$RESOURCE_GROUP\"."
+    echo "Passed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is present in Resource group \"$RESOURCE_GROUP_IOT\"."
 
   else
-    printError "Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resource group \"$RESOURCE_GROUP\". "
+    printError "Failed: App Service plan \"$APP_SERVICE_PLAN_NAME\" is not present in Resource group \"$RESOURCE_GROUP_IOT\". "
 
   fi
 
   # Check if Web App is created or not in Resource Group:
-  if [ -n "$(az webapp show --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --query "name" -o tsv)" ]; then
+  if [ -n "$(az webapp show --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "name" -o tsv)" ]; then
 
-    echo "Passed: Web App \"$WEBAPP_NAME\" is present in Resource group \"$RESOURCE_GROUP\"."
+    echo "Passed: Web App \"$WEBAPP_NAME\" is present in Resource group \"$RESOURCE_GROUP_IOT\"."
   else
 
-    printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resource group \"$RESOURCE_GROUP\". "
+    printError "Failed: Web App \"$WEBAPP_NAME\" is not present in Resource group \"$RESOURCE_GROUP_IOT\". "
 
   fi
 fi

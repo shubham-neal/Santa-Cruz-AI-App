@@ -8,10 +8,13 @@ SP_APP_ID=""
 # SP_APP_PWD is the client secret of the service principal.
 SP_APP_PWD=""
 
-# Azure Region and Resource Group Details
+# Azure Region and Resource Groups Details
 
 SUBSCRIPTION_ID=""
-RESOURCE_GROUP=""
+# Name of the Resource Group where Edge Device VM will be created
+RESOURCE_GROUP_DEVICE=""
+# Name of the Resource Group where other resources will be created
+RESOURCE_GROUP_IOT=""
 LOCATION=""
 # Set it 'true' to use existing resources
 USE_EXISTING_RESOURCES=""
@@ -33,9 +36,9 @@ VM_SIZE=""
 EDGE_DEVICE_IP=""
 EDGE_DEVICE_USERNAME=""
 EDGE_DEVICE_PASSWORD=""
-# Set it to 'nvidia' to use Nvidia GPU on Edge Device. Set it to 'runc' to use CPU for detector module
+# Specify the runtime for detector module. Currently supported values are 'CPU', 'NVIDIA', 'MOVIDIUS'.
 DETECTOR_MODULE_RUNTIME=""
-# Specify the architecture of the Edge Device. Currently supported values are Intel and ARM.
+# Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.
 EDGE_DEVICE_ARCHITECTURE=""
 
 # IoT Hub Details

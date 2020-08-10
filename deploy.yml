@@ -12,7 +12,6 @@ resources:
       branches: 
         include:
         - master
-        - users/kartik/DeploymentAutomation
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -23,14 +22,15 @@ variables:
 stages:
 - stage: 'Deploy'
   jobs:
-  - job: 'Deploy_PersonTrackingApp_to_a_test_environment'
+  - job: 'Deploy'
+    displayName: 'Deploy Person Tracking App to a test environment'
     steps:
     - checkout: none
     - download: none
 
     - task: Bash@3
       enabled: true
-      displayName: 'Delete existing resource group'
+      displayName: 'Delete existing resource groups'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
       inputs:
@@ -40,14 +40,24 @@ stages:
                           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          if [ "$(az group exists --name "$RESOURCE_GROUP")" == false ]; then
-              echo "Resource Group: \"$RESOURCE_GROUP\" does not exist in current subscription."
-              echo "Skipping deleting of resource group"
+          if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
           else
-              echo "Resource Group: \"$RESOURCE_GROUP\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP\""
-              az group delete --resource-group "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP\""
+              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+              az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
+          fi
+
+          if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
+          else
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
+              az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
           fi
 
     - task: DownloadPipelineArtifact@2
@@ -112,8 +122,10 @@ stages:
           
           [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v RESOURCE_GROUP ] && sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"$RESOURCE_GROUP\"#g' "$VARIABLES_FILE_PATH"
+          [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
           
+          [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
+
           [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
@@ -202,7 +214,7 @@ stages:
           set -e
 
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "publicIps" --output tsv)
+          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
           VARIABLES_FILE_PATH="variables.template"
           # Update the IP parameter in variables.template file
           sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
@@ -262,7 +274,7 @@ stages:
           echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
           sleep 15m
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "publicIps" --output tsv)
+          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
           VARIABLES_FILE_PATH="variables.template"
           # Update the IP parameter in variables.template file
           sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
@@ -280,7 +292,7 @@ stages:
 - stage: Release
   jobs:
   - deployment: 'Release'
-    displayName: 'Release_bundle_zip_to_storage_account'
+    displayName: 'Release bundle zip to storage account'
     environment: 'ApproveOverallRelease'
     strategy:
       runOnce:
@@ -359,8 +371,14 @@ stages:
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
-                echo "Deleting resource group \"$RESOURCE_GROUP\""
+                echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
                 
-                az group delete --resource-group "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
                 
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP\""
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                
+                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
+                
+                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""

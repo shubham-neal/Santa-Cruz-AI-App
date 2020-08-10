@@ -114,7 +114,7 @@ fi
 
 # Pass the name of the variable and it's value to the checkValue function
 checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
-checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
+checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
 checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
@@ -191,7 +191,7 @@ WEBAPP_DEPLOYMENT_ZIP="people-detection-app.zip"
 IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
 
 # Retrieve connection string for storage account
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
+STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP_IOT" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
 
 # Set expiry date of token as current + 1 year
 SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
@@ -200,10 +200,10 @@ STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account
 # Create CORS policy for frontend app
 az storage cors add --account-name "$STORAGE_ACCOUNT_NAME" --connection-string "$STORAGE_CONNECTION_STRING" --services b --origins "*" --methods GET HEAD --allowed-headers "*" --exposed-headers "*" --max-age 1000
 
-EXISTING_APP_SERVICE_PLAN=$(az appservice plan list --resource-group "$RESOURCE_GROUP" --query "[?name=='$APP_SERVICE_PLAN_NAME'].{Name:name}" --output tsv)
+EXISTING_APP_SERVICE_PLAN=$(az appservice plan list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$APP_SERVICE_PLAN_NAME'].{Name:name}" --output tsv)
 if [ -z "$EXISTING_APP_SERVICE_PLAN" ]; then
     echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
-    az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+    az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
     echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
 else
     if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
@@ -215,7 +215,7 @@ else
         # Writing the updated value back to variables file
         sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
         echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
-        az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP" --output "none"
+        az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
         echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
     fi
 fi
@@ -226,7 +226,7 @@ IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
     echo "$(info) Creating Web App \"$WEBAPP_NAME\" in app service plan \"$APP_SERVICE_PLAN_NAME\""
-    az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --output "none"
+    az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
     echo "$(info) Created webapp \"$WEBAPP_NAME\""
 
 else
@@ -236,7 +236,7 @@ else
         echo "$(error) UNAVAILABILITY_REASON: $(echo "$NAME_CHECK_JSON" | jq '.message')"
         exitWithError
     else
-        EXISTING_WEB_APP=$(az webapp list --resource-group "$RESOURCE_GROUP" --query "[?name=='$WEBAPP_NAME'].{Name:name}" --output tsv)
+        EXISTING_WEB_APP=$(az webapp list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$WEBAPP_NAME'].{Name:name}" --output tsv)
         if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_WEB_APP" ]; then
             echo "$(info) Using existing Web App \"$WEBAPP_NAME\""
         else
@@ -246,7 +246,7 @@ else
             # Writing the updated value back to variables file
             sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating Web App \"$WEBAPP_NAME\""
-            az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP" --output "none"
+            az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
             echo "$(info) Created Web app \"$WEBAPP_NAME\""
         fi
     fi
@@ -260,23 +260,23 @@ WEBSITE_HTTPLOGGING_RETENTION_DAYS="7"
 WEBSITE_NODE_DEFAULT_VERSION="10.15.2"
 IMAGES_CONTAINER_NAME="still-images"
 
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "PASSWORD=$PASSWORD_FOR_WEBSITE_LOGIN" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "STORAGE_BLOB_ACCOUNT=$STORAGE_ACCOUNT_NAME" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "STORAGE_BLOB_CONTAINER_NAME=$IMAGES_CONTAINER_NAME" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "STORAGE_BLOB_PATH=$STORAGE_BLOB_PATH" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "WEBSITE_HTTPLOGGING_RETENTION_DAYS=$WEBSITE_HTTPLOGGING_RETENTION_DAYS" --output "none"
-az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "WEBSITE_NODE_DEFAULT_VERSION=$WEBSITE_NODE_DEFAULT_VERSION" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "PASSWORD=$PASSWORD_FOR_WEBSITE_LOGIN" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "STORAGE_BLOB_ACCOUNT=$STORAGE_ACCOUNT_NAME" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "STORAGE_BLOB_CONTAINER_NAME=$IMAGES_CONTAINER_NAME" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "STORAGE_BLOB_PATH=$STORAGE_BLOB_PATH" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "WEBSITE_HTTPLOGGING_RETENTION_DAYS=$WEBSITE_HTTPLOGGING_RETENTION_DAYS" --output "none"
+az webapp config appsettings set --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "WEBSITE_NODE_DEFAULT_VERSION=$WEBSITE_NODE_DEFAULT_VERSION" --output "none"
 
 # Update connection string on WebApp
-az webapp config connection-string set --connection-string-type Custom --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "EventHub=$IOTHUB_CONNECTION_STRING" --output "none"
+az webapp config connection-string set --connection-string-type Custom --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP_IOT" --settings "EventHub=$IOTHUB_CONNECTION_STRING" --output "none"
 
 # Turn on web sockets
-az webapp config set --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" --web-sockets-enabled true --output "none"
+az webapp config set --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --web-sockets-enabled true --output "none"
 
 echo "$(info) Web App settings have been configured"
 
 echo "$(info) Deploying Web App using \"$WEBAPP_DEPLOYMENT_ZIP\" zip file"
 # Step to deploy the app to azure
-az webapp deployment source config-zip --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" --src "$WEBAPP_DEPLOYMENT_ZIP" --output "none"
+az webapp deployment source config-zip --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --src "$WEBAPP_DEPLOYMENT_ZIP" --output "none"
 echo "$(info) Deployment is complete"

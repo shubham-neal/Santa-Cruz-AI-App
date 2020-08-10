@@ -63,7 +63,6 @@ stages:
           people_detection/simple/RtcvDeployment/prod.env
           mariner-vm-setup.sh
           setup.sh
-          deploy-manifest.sh
           variables.template
           frontend-setup.sh
           smoketest.sh
