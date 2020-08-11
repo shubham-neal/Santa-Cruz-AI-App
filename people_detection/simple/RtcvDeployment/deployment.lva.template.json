@@ -43,9 +43,6 @@
             "settings": {
               "image": "marketplace.azurecr.io/intel_corporation/open_vino",
               "createOptions": {
-                "ExposedPorts": {
-                  "4000/tcp": {}
-                },
                 "Cmd": [
                   "/ams_wrapper/start_ams.py",
                   "--ams_port=4000",
