@@ -1,63 +1,90 @@
-# Azure Login Details 
+#
+# Variables configuration for people detector AI deployment
+#
 
-# Set it to true to use interactive login. If it is not set to true, service principal will be used for login.
-USE_INTERACTIVE_LOGIN_FOR_AZURE=""
+#####################################################################
+# Section 1: General configuration which applies to all components
+#####################################################################
+#
+# Enter your corporate tenant ID from Azure Active Directory:
 TENANT_ID=""
-# SP_APP_ID is the client id of the service principal. Service Principal should have access to create resources in given resource group
+# Subscription ID to host your deployments:
+SUBSCRIPTION_ID=""
+# Azure Region for your deployment:
+LOCATION=""
+#
+# Hardware execution environment for this deployment
+# AI execution hardware: set to 'CPU' for CPU-based dectector in cloud, 'MOVIDIUS' for Intel Myriad X VPU, or 'NVIDIA' to use Nvidia GPU:
+DETECTOR_MODULE_RUNTIME=""
+# Specify the CPU architecture of the Edge Device. Currently supported values are X86 and ARM64:
+EDGE_DEVICE_ARCHITECTURE=""
+#
+
+#####################################################################
+# Section 2: Virtualized Eye VM in the public cloud
+#####################################################################
+#
+# Resource Group name which will host the Eye VM. This name must be unique within your subscription:
+RESOURCE_GROUP_DEVICE=""
+# Eye Linux VM managed disk name. This will be created within your resource group:
+DISK_NAME=""
+# Name of the mariner VM on Azure. This will be created within your resource group:
+VM_NAME=""
+#
+
+#####################################################################
+# Section 3: IoT Hub + Storage configuration to route and host the AI output
+#####################################################################
+#
+# Resource Group name which will host the IoT Hub. This name must be unique within your subscription:
+RESOURCE_GROUP_IOT=""
+# IoT Hub name within your Resource Group:
+IOTHUB_NAME=""
+# IoT Device name within your IoT Hub:
+DEVICE_NAME=""
+# Azure Data Lake Account name to host the AI imagery output of the Eye device
+# This name is an Azure storage URL and must be globally unique. It cannot contain dashes or spaces:
+STORAGE_ACCOUNT_NAME=""
+#
+
+#####################################################################
+# Section 4: Vizualization UX application
+#####################################################################
+#
+# The name of your app within Azure Websites. This is your own private name and will not be public:
+APP_SERVICE_PLAN_NAME=""
+# This is the public name of the vizualization UX URL. This name must be globally unique in Azure Website:
+WEBAPP_NAME=""
+# This is the password to login to the UX webapp. Best practice is to assign a password so others can't see your AI camera output:
+PASSWORD_FOR_WEBSITE_LOGIN=""
+#
+
+
+#####################################################################
+#####################################################################
+#####################################################################
+# You shouldn't need to edit any lines below this point unless you need to change the defaults
+#####################################################################
+
+# Section 1: Generall configuration
+USE_INTERACTIVE_LOGIN_FOR_AZURE="true"
 SP_APP_ID=""
-# SP_APP_PWD is the client secret of the service principal.
 SP_APP_PWD=""
 
-# Azure Region and Resource Groups Details
+USE_EXISTING_RESOURCES="false"
+INSTALL_REQUIRED_PACKAGES="true"
 
-SUBSCRIPTION_ID=""
-# Name of the Resource Group where Edge Device VM will be created
-RESOURCE_GROUP_DEVICE=""
-# Name of the Resource Group where other resources will be created
-RESOURCE_GROUP_IOT=""
-LOCATION=""
-# Set it 'true' to use existing resources
-USE_EXISTING_RESOURCES=""
-# Set it to 'true' to install required packages on machine
-INSTALL_REQUIRED_PACKAGES=""
+# Section 2: Virtualized Eye VM
+STORAGE_TYPE="Premium_LRS"
+VM_SIZE="Standard_DS2_v2"
 
-# Mariner VM and Disk Details
-
-# Name of the managed disk. Default value is "mariner"
-DISK_NAME=""
-# Storage SKU. Default value is "Premium_LRS"
-STORAGE_TYPE=""
-# Name of the mariner VM on Azure. Default value is "marinervm"
-VM_NAME=""
-# The VM size to be created. Default value is "Standard_DS2_v2"
-VM_SIZE=""
-
-# The value of EDGE_DEVICE_IP is filled in by mariner-vm-setup script. 
-EDGE_DEVICE_IP=""
-EDGE_DEVICE_USERNAME=""
-EDGE_DEVICE_PASSWORD=""
-# Specify the runtime for detector module. Currently supported values are 'CPU', 'NVIDIA', 'MOVIDIUS'.
-DETECTOR_MODULE_RUNTIME=""
-# Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.
-EDGE_DEVICE_ARCHITECTURE=""
-
-# IoT Hub Details
-IOTHUB_NAME=""
-DEVICE_NAME=""
-
-# ADLS Details
-STORAGE_ACCOUNT_NAME=""
-
-
-# Manifest Details
-MANIFEST_TEMPLATE_NAME=""
-MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=""
-DEPLOYMENT_NAME=""
+# Section 3: IoT Hub + Storage configuration
+MANIFEST_TEMPLATE_NAME="deployment.camera.template.json"
+MANIFEST_ENVIRONMENT_VARIABLES_FILENAME="prod.env"
+DEPLOYMENT_NAME="eye-deployment"
 CUSTOM_VIDEO_SOURCE=""
 
-# Frontend Webapp Details
 
-APP_SERVICE_PLAN_NAME=""
-APP_SERVICE_PLAN_SKU=""
-WEBAPP_NAME=""
-PASSWORD_FOR_WEBSITE_LOGIN=""
+# Section 4:  Vizualization UX application
+APP_SERVICE_PLAN_SKU="S1"
+
