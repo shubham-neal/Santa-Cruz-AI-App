@@ -32,7 +32,6 @@ exitWithError() {
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
 # If it doesn't exists it adds the variable name to ARRAY_NOT_DEFINED_VARIABLES array and if it exists but doesn't have value, variable name is added ARRAY_VARIABLES_WITHOUT_VALUES array.
-# In case a 3rd positional argument is provided, the function will output 1 if given variable exists and has a non-empty value, else it will output 0.
 # Globals:
 #	ARRAY_VARIABLES_WITHOUT_VALUES
 #	ARRAY_NOT_DEFINED_VARIABLES
@@ -40,9 +39,8 @@ exitWithError() {
 # Arguments:
 #	Name of the variable
 #	Value of the variable
-#	Whether to print the result (Optional)
 # Outputs:
-#	The function writes the results if a 3rd positional parameter is passed in arguments
+#	No output
 ##############################################################################
 checkValue() {
     # The first value passed to the function is the name of the variable
@@ -54,31 +52,15 @@ checkValue() {
             # If the value is empty, add the variable name ($1) to ARRAY_VARIABLES_WITHOUT_VALUES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
             ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
             ARRAY_VARIABLES_WITHOUT_VALUES+=("$1")
-            # The third value is passed to the function when the caller expects the result
-            # The function returns 0 as the value of the variable is empty
-            if [ ! -z "$3" ]; then
-                echo 0
-            fi
-        else
-            # The third value is passed to the function when the caller expects the result
-            # When the variable exists and it's value is not empty, function returns 1
-            if [ ! -z "$3" ]; then
-                echo 1
-            fi
         fi
     else
         # If the variable is not defined, add the variable name to ARRAY_NOT_DEFINED_VARIABLES array and set ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY to false
         ARRAY_NOT_DEFINED_VARIABLES+=("$1")
         ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="false"
-        # The third value is passed to the function when the caller expects the result
-        # The function returns 0 as the variable is not defined
-        if [ ! -z "$3" ]; then
-            echo 0
-        fi
     fi
 }
 
-SETUP_VARIABLES_TEMPLATE_FILENAME="mariner-vm-variables.template"
+SETUP_VARIABLES_TEMPLATE_FILENAME="variables.template"
 
 if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
     echo "$(error) \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" file is not present in current directory: \"$PWD\""
@@ -86,21 +68,58 @@ if [ ! -f "$SETUP_VARIABLES_TEMPLATE_FILENAME" ]; then
 fi
 
 # The following comment is required for shellcheck, as it does not support variable source file names.
-# shellcheck source=mariner-vm-variables.template
+# shellcheck source=variables.template
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
+IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
+
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
+if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
+fi
+
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-# In Azure Cloud Shell, azcopy and jq are pre-installed so skip the step
-if [ ! "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
+# In Azure Cloud Shell, azcopy and jq are pre-installed so only install sshpass and azure-cli-iot-ext extension
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+
+    if [ -z "$(command -v sshpass)" ]; then
+
+        echo "$(info) Installing sshpass"
+        # Download the sshpass package to current machine
+        apt-get download sshpass
+        # Install sshpass package in current working directory
+        dpkg -x sshpass*.deb ~
+        # Add the executable directory path in PATH
+        echo "PATH=~/usr/bin:$PATH" >>~/.bashrc
+        PATH=~/usr/bin:$PATH
+        # Remove the package file
+        rm sshpass*.deb
+
+        if [ -z "$(command -v sshpass)" ]; then
+            echo "$(error) sshpass is not installed"
+            exitWithError
+        else
+            echo "$(info) Installed sshpass"
+        fi
+
+    fi
+
+    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+        echo "$(info) Installing azure-cli-iot-ext extension"
+        az extension add --name azure-cli-iot-ext
+    fi
+
+    # azcopy, jq and timeout are pre-installed on cloud shell.
+
+elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     if [ ! -z "$(command -v apt)" ]; then
         PACKAGE_MANAGER="apt"
     elif [ ! -z "$(command -v dnf)" ]; then
         PACKAGE_MANAGER="dnf"
     elif [ ! -z "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="dnf"
+        PACKAGE_MANAGER="yum"
     elif [ ! -z "$(command -v zypper)" ]; then
         PACKAGE_MANAGER="zypper"
     fi
@@ -109,33 +128,76 @@ if [ ! "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ] && [ "$INSTALL_REQUI
         echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
         echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
     else
-        sudo "$PACKAGE_MANAGER" install wget
+        echo "$(info) Installing required packages"
 
-        echo "$(info) Installing AzCopy"
+        if [ -z "$(command -v sshpass)" ]; then
 
-        CURRENT_DIRECTORY="$PWD"
-        wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
-        # unzipping the downloaded archive
-        tar -xvf downloadazcopy-v10-linux
-        # changing directory to fetch the azcopy executable
-        cd azcopy_linux*/
-        # Add azcopy to /usr/bin directory
-        sudo cp azcopy /usr/bin/
-        # Return to original directory
-        cd "$CURRENT_DIRECTORY"
-        # Remove the downloaded files
-        rm azcopy_linux* -r
-        rm downloadazcopy-v10-linux
+            echo "$(info) Installing sshpass"
+            sudo "$PACKAGE_MANAGER" install -y sshpass
+        fi
 
-        echo "$(info) Installed AzCopy "
+        if [ -z "$(command -v wget)" ]; then
+            echo "$(info) Installing wget"
+            sudo "$PACKAGE_MANAGER" install -y wget
+            echo "$(info) Installed wget"
+        fi
 
-        echo "$(info) Installing jq"
-        sudo "$PACKAGE_MANAGER" install jq
-        echo "$(info) Installed jq"
+        INSTALL_AZCOPY="true"
+        if [ ! -z "$(command -v azcopy)" ]; then
+            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
+            requiredVersion="10.5.1"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+                # Current installed azcopy version is higher than required, no need to re-install
+                INSTALL_AZCOPY="false"
+            fi
+        fi
 
-        echo "$(info) Installing curl"
-        sudo "$PACKAGE_MANAGER" install curl
-        echo "$(info) Installed curl"
+        if [ "$INSTALL_AZCOPY" == "true" ]; then
+
+            echo "$(info) Installing AzCopy"
+
+            CURRENT_DIRECTORY="$PWD"
+            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
+            # unzipping the downloaded archive
+            tar -xvf downloadazcopy-v10-linux
+            # changing directory to fetch the azcopy executable
+            cd azcopy_linux*/
+            # Add azcopy to /usr/bin directory
+            sudo cp azcopy /usr/bin/
+            # Return to original directory
+            cd "$CURRENT_DIRECTORY"
+            # Remove the downloaded files
+            rm azcopy_linux* -r
+            rm downloadazcopy-v10-linux
+
+            echo "$(info) Installed AzCopy "
+        fi
+
+        if [ -z "$(command -v jq)" ]; then
+
+            echo "$(info) Installing jq"
+            sudo "$PACKAGE_MANAGER" install -y jq
+            echo "$(info) Installed jq"
+        fi
+
+        if [ -z "$(command -v curl)" ]; then
+
+            echo "$(info) Installing curl"
+            sudo "$PACKAGE_MANAGER" install -y curl
+            echo "$(info) Installed curl"
+        fi
+
+        if [ -z "$(command -v timeout)" ]; then
+            echo "$(info) Installing timeout"
+            sudo "$PACKAGE_MANAGER" install -y timeout
+            echo "$(info) Installed timeout"
+        fi
+
+        if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
+            echo "$(info) Installing azure-cli-iot-ext extension"
+            az extension add --name azure-cli-iot-ext
+        fi
     fi
 fi
 
@@ -143,24 +205,33 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Checking if the required variables are configured"
 printf "%60s\n" " " | tr ' ' '-'
 
-# Checking the existence and values of mandatory variables
-
 # Setting default values for variable check stage
 ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="true"
 ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
-# Pass the name of the variable and it's value to the checkValue function
-checkValue "TENANT_ID" "$TENANT_ID"
-checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
-checkValue "RESOURCE_GROUP" "$RESOURCE_GROUP"
-checkValue "LOCATION" "$LOCATION"
-checkValue "USE_EXISTING_RESOURCE_GROUP" "$USE_EXISTING_RESOURCE_GROUP"
+# Checking the existence and values of mandatory variables
 
-IS_NOT_EMPTY=$(checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE" "RETURN_VARIABLE_STATUS")
-if [ "$IS_NOT_EMPTY" == "1" ] && [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    checkValue "SP_APP_ID" "$SP_APP_ID"
-    checkValue "SP_APP_PWD" "$SP_APP_PWD"
+# Pass the name of the variable and it's value to the checkValue function
+checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
+checkValue "RESOURCE_GROUP_DEVICE" "$RESOURCE_GROUP_DEVICE"
+checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
+checkValue "LOCATION" "$LOCATION"
+checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
+checkValue "INSTALL_REQUIRED_PACKAGES" "$INSTALL_REQUIRED_PACKAGES"
+
+checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
+checkValue "DEVICE_NAME" "$DEVICE_NAME"
+
+# Skip the variable checks for login variable if current environment is CloudShell
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
+    # Pass the name of the variable and it's value to the checkValue function
+    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
+    checkValue "TENANT_ID" "$TENANT_ID"
+    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
+        checkValue "SP_APP_ID" "$SP_APP_ID"
+        checkValue "SP_APP_PWD" "$SP_APP_PWD"
+    fi
 fi
 
 if [ -z "$DISK_NAME" ]; then
@@ -217,9 +288,12 @@ VHD_URI="https://georgembbox.blob.core.windows.net/brainbox/brainbox-dev-1.0.MM5
 #	RDP: Create an inbound security rule in NSG with priority 1000 for RDP port (3389)
 NSG_RULE="NONE"
 
-if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+    echo "Using existing CloudShell login for Azure CLI"
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
-    az login --tenant "$TENANT_ID" --output "none"
+    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -232,32 +306,52 @@ echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
 az account set --subscription "$SUBSCRIPTION_ID"
 echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
-if [ "$(az group exists --name "$RESOURCE_GROUP")" == false ]; then
-    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP\""
-    az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+# Create a new resource group for VM if it does not exist already.
+# If it already exists then check value for USE_EXISTING_RESOURCES
+# and based on that either throw error or use the existing RG
+if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_DEVICE\""
+    az group create --name "$RESOURCE_GROUP_DEVICE" --location "$LOCATION" --output "none"
     echo "$(info) Successfully created resource group"
 else
-    if [ "$USE_EXISTING_RESOURCE_GROUP" == "true" ]; then
-        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP\""
+    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_DEVICE\" for VM"
     else
-        echo "$(error) Resource Group \"$RESOURCE_GROUP\" already exists"
+        echo "$(error) Resource Group \"$RESOURCE_GROUP_DEVICE\" already exists"
         exitWithError
     fi
 fi
+
+# Create a new resource group for other resources if it does not exist already.
+# If it already exists then check value for USE_EXISTING_RESOURCES
+# and based on that either throw error or use the existing RG
+if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_IOT\""
+    az group create --name "$RESOURCE_GROUP_IOT" --location "$LOCATION" --output "none"
+    echo "$(info) Successfully created resource group \"$RESOURCE_GROUP_IOT\""
+else
+    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+    else
+        echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" already exists"
+        exitWithError
+    fi
+fi
+
 
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Managed disk \"$DISK_NAME\" setup"
 printf "%60s\n" " " | tr ' ' '-'
 
 # Check if disk already exists
-EXISTING_DISK=$(az disk list --resource-group "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$DISK_NAME'].{Name:name}" --output tsv)
+EXISTING_DISK=$(az disk list --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$DISK_NAME'].{Name:name}" --output tsv)
 if [ -z "$EXISTING_DISK" ]; then
     echo "$(info) Creating empty managed disk \"$DISK_NAME\""
     # The upload size bytes must be same as size of the VHD file
-    az disk create -n "$DISK_NAME" -g "$RESOURCE_GROUP" -l "$LOCATION" --for-upload --upload-size-bytes 68719477248 --sku "$STORAGE_TYPE" --os-type "Linux" --hyper-v-generation "V2" --output "none"
+    az disk create -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" -l "$LOCATION" --for-upload --upload-size-bytes 68719477248 --sku "$STORAGE_TYPE" --os-type "Linux" --hyper-v-generation "V2" --output "none"
     echo "$(info) Created empty managed disk \"$DISK_NAME\""
 else
-    echo "$(error) Managed Disk \"$DISK_NAME\" already exists in resource group \"$RESOURCE_GROUP\""
+    echo "$(error) Managed Disk \"$DISK_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
     exitWithError
 fi
 
@@ -265,12 +359,12 @@ fi
 # will use this token to allow azcopy to copy the private Mariner OS vhd file to another subscription. After the copy
 # operation has completed, we revoke access to the disk in our environment to conclude the disk setup operation.
 echo "$(info) Fetching the SAS Token for temporary access to managed disk"
-SAS_URI=$(az disk grant-access -n "$DISK_NAME" -g "$RESOURCE_GROUP" --access-level Write --duration-in-seconds 86400)
+SAS_URI=$(az disk grant-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --access-level Write --duration-in-seconds 86400)
 TOKEN=$(echo "$SAS_URI" | jq -r '.accessSas')
 echo "$(info) Retrieved the SAS Token"
 
 echo "$(info) Copying vhd file from source to destination"
-# Run azcopy if current envrionment is CloudShell else run sudo azcopy.
+# Run azcopy if current environment is CloudShell else run sudo azcopy.
 # azcopy needs to run as superuser in non Cloud Shell environment to be able to create plans
 if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
@@ -280,7 +374,7 @@ fi
 echo "$(info) Copy is complete"
 
 echo "$(info) Revoking SAS token access for the managed disk"
-az disk revoke-access -n "$DISK_NAME" -g "$RESOURCE_GROUP" --output "none"
+az disk revoke-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --output "none"
 echo "$(info) SAS REVOKED"
 
 echo "$(info) Managed disk setup is complete"
@@ -289,29 +383,109 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Virtual machine \"$VM_NAME\" setup"
 printf "%60s\n" " " | tr ' ' '-'
 
-EXISTING_VM=$(az vm list --resource-group "$RESOURCE_GROUP" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$VM_NAME'].{Name:name}" --output tsv)
+EXISTING_VM=$(az vm list --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$VM_NAME'].{Name:name}" --output tsv)
 if [ -z "$EXISTING_VM" ]; then
     echo "$(info) Creating virtual machine \"$VM_NAME\""
-    az vm create --name "$VM_NAME" --resource-group "$RESOURCE_GROUP" --attach-os-disk "$DISK_NAME" --os-type "linux" --location "$LOCATION" --nsg-rule "$NSG_RULE" --nsg "$NSG_NAME" --size "$VM_SIZE" --output "none"
+    az vm create --name "$VM_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --attach-os-disk "$DISK_NAME" --os-type "linux" --location "$LOCATION" --nsg-rule "$NSG_RULE" --nsg "$NSG_NAME" --size "$VM_SIZE" --output "none"
     echo "$(info) Created virtual machine \"$VM_NAME\""
 else
-    echo "$(error) Virtual machine \"$VM_NAME\" already exists in resource group \"$RESOURCE_GROUP\""
+    echo "$(error) Virtual machine \"$VM_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
     exitWithError
 fi
-
 
 CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
 
 echo "$(info) Adding current machine IP address \"$CURRENT_IP_ADDRESS\" in Network Security Group firewall"
 
 # Create a NSG Rule to allow SSH for current machine
-az network nsg rule create --name "AllowSSH" --nsg-name "$NSG_NAME" --priority 100 --resource-group "$RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+az network nsg rule create --name "AllowSSH" --nsg-name "$NSG_NAME" --priority 100 --resource-group "$RESOURCE_GROUP_DEVICE" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
 
 echo "$(info) Added current machine IP address \"$CURRENT_IP_ADDRESS\" in Network Security Group firewall"
 
-EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP" --name "$VM_NAME" --query "publicIps" --output tsv)
+# Writing the Edge Device IP address value to variables file
+EDGE_DEVICE_PUBLIC_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
+sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"'"$EDGE_DEVICE_PUBLIC_IP"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+
+EDGE_DEVICE_USERNAME="root"
+EDGE_DEVICE_PASSWORD="p@ssw0rd"
 
 echo "The following are the details for the VM"
-echo "IP Address: \"$EDGE_DEVICE_IP\""
-echo "Username: \"root\""
-echo "Password: \"p@ssw0rd\""
+echo "IP Address: \"$EDGE_DEVICE_PUBLIC_IP\""
+echo "Username: \"$EDGE_DEVICE_USERNAME\""
+echo "Password: \"$EDGE_DEVICE_PASSWORD\""
+
+
+printf "\n%60s\n" " " | tr ' ' '-'
+echo "Configuring IoT Hub"
+printf "%60s\n" " " | tr ' ' '-'
+
+# Generating a random number. This will be used in case a user provided name is not unique.
+RANDOM_SUFFIX="${RANDOM:0:3}"
+
+# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
+# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
+# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub
+# else create a new IoT Hub by appending a random number to the user provided name
+EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
+
+if [ -z "$EXISTING_IOTHUB" ]; then
+    echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
+    az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_IOT" --output "none"
+    echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
+else
+    # Check if IoT Hub exists in current resource group. If it doesn't exist in current resource group. Create a new one based on value of USE_EXISTING_RESOURCES
+    EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
+    if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_IOTHUB" ]; then
+        echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
+    else
+        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+            echo "$(info) \"$IOTHUB_NAME\" already exists in current subscription but it does not exist in resource group \"$RESOURCE_GROUP_IOT\""
+        else
+            echo "$(info) \"$IOTHUB_NAME\" already exists"
+        fi
+        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to \"$IOTHUB_NAME\""
+        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
+        # Writing the updated value back to variables file
+        sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"'"$IOTHUB_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+
+        echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
+        az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_IOT" --output "none"
+        echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
+    fi
+fi
+
+# This step creates a new edge device in the IoT Hub account or will use an existing edge device
+# if the USE_EXISTING_RESOURCES configuration variable is set to true.
+printf "\n%60s\n" " " | tr ' ' '-'
+echo "Configuring Edge Device in IoT Hub"
+printf "%60s\n" " " | tr ' ' '-'
+
+# Check if a Edge Device with given name already exists in IoT Hub. Create a new one if it doesn't exist already.
+EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
+if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
+    echo "$(info) Creating an Edge device \"$DEVICE_NAME\" in IoT Hub \"$IOTHUB_NAME\""
+    az iot hub device-identity create --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME" --edge-enabled --output "none"
+    echo "$(info) Created \"$DEVICE_NAME\" device in IoT Hub \"$IOTHUB_NAME\""
+else
+    echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
+fi
+
+# The following steps retrieves the connection string for the edge device an uses it to onboard
+# the device using sshpass. This step may fail if the edge device's network firewall
+# does not allow ssh access. Please make sure the edge device is on the local area
+# network and is accepting ssh requests.
+echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
+EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity show-connection-string --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
+
+echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
+CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
+# Replace placeholder connection string with actual value for Edge device
+# Using sshpass and ssh to update the value on Edge device
+Command="sudo sed -i -e '/device_connection_string:/ s#\"[^\"][^\"]*\"#\"$EDGE_DEVICE_CONNECTION_STRING\"#' $CONFIG_FILE_PATH"
+sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
+echo "$(info) Config.yaml update is complete"
+
+echo "$(info) Restarting IoT Edge service"
+# Restart the service on Edge device
+sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_PUBLIC_IP" -o StrictHostKeyChecking=no "sudo systemctl restart iotedge"
+echo "$(info) IoT Edge service restart is complete"

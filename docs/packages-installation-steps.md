@@ -4,12 +4,12 @@
 The following installation steps use apt package manager and are tested on Ubuntu 18.04 LTS.  
 If your machine uses a different package manager, please update the commands to use that package manager instead of apt.
 
-1. Install jq, sshpass, curl, python-pip packages using your package manager.
+1. Install jq, sshpass, curl, python-pip timeout wget packages using your package manager.
 	
 	The following commands use apt package manager in Ubuntu. 
 	```sh
 	 sudo apt update
-	 sudo apt install -y curl jq sshpass python-pip
+	 sudo apt install -y curl jq sshpass python-pip timeout wget
 	 ```
 
 1. Install Docker and restart your machine for it to take effect

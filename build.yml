@@ -1,0 +1,157 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run UnifiedEdges, deploy, and more:
+# https://aka.ms/yaml
+
+# repository is the ID of external repository
+# type: git specifies, it's present in azure repository in same project
+# ref is used to refer to which particular branch
+resources:
+ repositories:
+   - repository: EdgeScenario
+     type: git
+     name: UnifiedEdgeScenarios
+     ref: master
+
+# specific branch build with batching
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: A
+  jobs:
+  - job: 'Download_and_bundle'
+    # Can replace 'EdgeScenario' to 'self' if pipeline is in master branch:
+    # Currently set to self, as the changes are not yet merged to master and we need the latest artifact for the release pipeline
+    steps:
+    - checkout: self
+      path: s/UnifiedEdge
+    - download: none
+
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'specific'
+        project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
+        definition: '14'
+        buildVersionToDownload: 'latest'
+        artifactName: 'ues_app'
+        targetPath: '$(Pipeline.Workspace)'
+    
+    - task: CopyFiles@2
+      displayName: 'Copy App Files to a combined folder'
+      inputs:
+        SourceFolder: '$(Pipeline.Workspace)'
+        Contents: people-detection-app.zip
+        TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
+
+
+    # Copy all the required files for deployment to a folder
+    - task: CopyFiles@2
+      displayName: 'Copy Files to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
+        Contents: |
+          README.md 
+          people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
+          people_detection/simple/RtcvDeployment/deployment.camera.template.json
+          people_detection/simple/RtcvDeployment/prod.env
+          mariner-vm-setup.sh
+          setup.sh
+          variables.template
+          frontend-setup.sh
+          smoketest.sh
+        TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
+        flattenFolders: true
+
+    - task: CopyFiles@2
+      displayName: 'Copy CameraStream module to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
+        Contents: |
+          people_detection/simple/RtcvDeployment/modules/CameraStream/module.json
+        TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/CameraStream'
+        flattenFolders: true
+
+    - task: CopyFiles@2
+      displayName: 'Copy Detector module to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
+        Contents: |
+          people_detection/simple/RtcvDeployment/modules/Detector/module.json
+        TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/Detector'
+        flattenFolders: true
+
+    - task: CopyFiles@2
+      displayName: 'Copy docs to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
+        Contents: |
+          docs/*
+        TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
+
+    - task: Bash@3
+      displayName: 'ShellCheck validation'
+      inputs:
+        targetType: 'inline'
+        script: |
+          
+          IS_SHELLCHECK_INSTALLED=$(apt list --installed | grep -c -w shellcheck)
+          if [ "$IS_SHELLCHECK_INSTALLED" -eq 0 ]; then
+              echo "Installing shellcheck"
+              sudo apt-get install shellcheck
+              echo "Installed shellcheck"
+          fi
+          
+          # Change directory location to combined folder
+          cd '/home/vsts/work/1/s/UnifiedEdge/combined'
+          
+          # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
+          # We are checking the the result returned by shellcheck.
+          SHELL_CHECK_RESULT_SETUP=$(shellcheck ./setup.sh -x)
+          SHELL_CHECK_RESULT_FRONTEND=$(shellcheck ./frontend-setup.sh -x)
+          SHELL_CHECK_RESULT_MARINER=$(shellcheck ./mariner-vm-setup.sh -x)
+          SHELL_CHECK_RESULT_SMOKETEST=$(shellcheck ./smoketest.sh -x)
+          if [ -z "$SHELL_CHECK_RESULT_SETUP" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_MARINER" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
+              echo "Pass: There are no warnings from shellcheck"
+          else
+              if [ ! -z "$SHELL_CHECK_RESULT_SETUP" ]; then
+              echo "The following are the warnings for setup script"
+              echo "$SHELL_CHECK_RESULT_SETUP"
+              fi
+              if [ ! -z "$SHELL_CHECK_RESULT_FRONTEND" ]; then
+              echo "The following are the warnings for frontend-setup script"
+              echo "$SHELL_CHECK_RESULT_FRONTEND"
+              fi
+              if [ ! -z "$SHELL_CHECK_RESULT_MARINER" ]; then
+              echo "The following are the warnings for mariner-vm-setup script"
+              echo "$SHELL_CHECK_RESULT_MARINER"
+              fi
+              if [ ! -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
+              echo "The following are the warnings for smoketest script"
+              echo "$SHELL_CHECK_RESULT_SMOKETEST"
+              fi
+              echo "Task failed"
+              exit 1
+          fi
+      
+    # Creating the deployment bundle zip from combined folder
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '/home/vsts/work/1/s/UnifiedEdge/combined'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/deployment-bundle.zip'
+        replaceExistingArchive: true
+
+    # Publishing the pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/deployment-bundle.zip'
+        artifact: 'deployment-bundle'
+        publishLocation: 'pipeline'

@@ -1,264 +1,384 @@
 # This pipeline automates the deployment and setup for required resources for Person Tracking App
 
 
-trigger:
-- master
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Build Person Tracking App
+    trigger:
+      branches: 
+        include:
+        - master
 
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
+variables:
+  buildSuffix: '$(Build.BuildNumber)'
 
-# This step runs shellcheck tool.
-# Shellcheck is a code analysis tool for bash scripts.
-- task: Bash@3
-  displayName: 'Run shellcheck'
-  inputs:
-    targetType: 'inline'
-    script: |
-      IS_SHELLCHECK_INSTALLED=$(apt list --installed | grep -c -w shellcheck)
-      if [ "$IS_SHELLCHECK_INSTALLED" -eq 0 ]; then
-          echo "Installing shellcheck"
-          sudo apt-get install shellcheck
-          echo "Installed shellcheck"
-      fi
-            
-      # We're changing the working directory so we can use the other files by their names instead of full path
-      if [ -v WORKING_DIRECTORY ] && [ ! -z "WORKING_DIRECTORY" ]; then
-          echo "changing directory"
-          cd "$WORKING_DIRECTORY"
-          echo "Changed directory to \"$WORKING_DIRECTORY\""
-      fi
-            
-      # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
-      # We are checking the the result returned by shellcheck.
-      SHELL_CHECK_RESULT=$(shellcheck ./setup.sh -x)
-      if [ -z "$SHELL_CHECK_RESULT" ]; then
-          echo "Pass: There are no warnings from shellcheck"
-      else
-          echo "The following are the Warnings"
-          echo "$SHELL_CHECK_RESULT"
-          echo "Task failed"
-          exit 1
-      fi
+stages:
+- stage: 'Deploy'
+  jobs:
+  - job: 'Deploy'
+    displayName: 'Deploy Person Tracking App to a test environment'
+    steps:
+    - checkout: none
+    - download: none
 
-# This step updates the values in variable.template file using the pipeline variables
-# This is required as the setup.sh script uses variables.template file for variables. If this step is not run, the values from committed variables.template file will be used instead of the pipeline variables
-- task: Bash@3
-  enabled: true
-  displayName: 'Update values in variable.template file using pipeline variables'
-  env:
-    SP_APP_PWD: $(SP_APP_PWD)
-    EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
-  inputs:
-    targetType: 'inline'
-    script: |
-      # Write your commands here
-      
-      echo "Updating values in variables script"
-      
-      # The following steps check the existence of the variable in the file
-      # and replace the value with in the file with the pipeline variable value using sed
-      [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v RESOURCE_GROUP ] && sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"$RESOURCE_GROUP\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v DEVICE_NAME ] && sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"$DEVICE_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v AZURE_MONITOR_SP_NAME ] && sed -i 's#^\(AZURE_MONITOR_SP_NAME[ ]*=\).*#\1\"$AZURE_MONITOR_SP_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EDGE_DEVICE_IP ] && sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EDGE_DEVICE_USERNAME ] && sed -i 's#^\(EDGE_DEVICE_USERNAME[ ]*=\).*#\1\"$EDGE_DEVICE_USERNAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EDGE_DEVICE_PASSWORD ] && sed -i 's#^\(EDGE_DEVICE_PASSWORD[ ]*=\).*#\1\"$EDGE_DEVICE_PASSWORD\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v MANIFEST_TEMPLATE_NAME ] && sed -i 's#^\(MANIFEST_TEMPLATE_NAME[ ]*=\).*#\1\"$MANIFEST_TEMPLATE_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v MANIFEST_ENVIRONMENT_VARIABLES_FILENAME ] && sed -i 's#^\(MANIFEST_ENVIRONMENT_VARIABLES_FILENAME[ ]*=\).*#\1\"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v PRE_GENERATED_MANIFEST_FILENAME ] && sed -i 's#^\(PRE_GENERATED_MANIFEST_FILENAME[ ]*=\).*#\1\"$PRE_GENERATED_MANIFEST_FILENAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v PUSH_RESULTS_TO_ADLS ] && sed -i 's#^\(PUSH_RESULTS_TO_ADLS[ ]*=\).*#\1\"$PUSH_RESULTS_TO_ADLS\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v BLOBCONTAINER_NAME ] && sed -i 's#^\(BLOBCONTAINER_NAME[ ]*=\).*#\1\"$BLOBCONTAINER_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v ADLS_ENDPOINT_NAME ] && sed -i 's#^\(ADLS_ENDPOINT_NAME[ ]*=\).*#\1\"$ADLS_ENDPOINT_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v IOTHUB_ADLS_ROUTENAME ] && sed -i 's#^\(IOTHUB_ADLS_ROUTENAME[ ]*=\).*#\1\"$IOTHUB_ADLS_ROUTENAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v DEPLOYMENT_NAME ] && sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"$DEPLOYMENT_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v LOG_FILE ] && sed -i 's#^\(LOG_FILE[ ]*=\).*#\1\"$LOG_FILE\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v PUSH_RESULTS_TO_EVENT_HUB ] && sed -i 's#^\(PUSH_RESULTS_TO_EVENT_HUB[ ]*=\).*#\1\"$PUSH_RESULTS_TO_EVENT_HUB\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EVENTHUB_NAMESPACE ] && sed -i 's#^\(EVENTHUB_NAMESPACE[ ]*=\).*#\1\"$EVENTHUB_NAMESPACE\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EVENTHUB_NAME ] && sed -i 's#^\(EVENTHUB_NAME[ ]*=\).*#\1\"$EVENTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EVENTHUB_ENDPOINT_NAME ] && sed -i 's#^\(EVENTHUB_ENDPOINT_NAME[ ]*=\).*#\1\"$EVENTHUB_ENDPOINT_NAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EVENTHUB_ROUTENAME ] && sed -i 's#^\(EVENTHUB_ROUTENAME[ ]*=\).*#\1\"$EVENTHUB_ROUTENAME\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v CREATE_AZURE_MONITOR ] && sed -i 's#^\(CREATE_AZURE_MONITOR[ ]*=\).*#\1\"$CREATE_AZURE_MONITOR\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v USE_INTERACTIVE_LOGIN_FOR_AZURE ] && sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"$USE_INTERACTIVE_LOGIN_FOR_AZURE\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE ] && sed -i 's#^\(IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE[ ]*=\).*#\1\"$IS_THE_SCRIPT_RUNNING_FROM_EDGE_DEVICE\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v EVENTHUB_ROUTING_CONDITION ] && sed -i 's#^\(EVENTHUB_ROUTING_CONDITION[ ]*=\).*#\1\"$EVENTHUB_ROUTING_CONDITION\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v ADLS_ROUTING_CONDITION ] && sed -i 's#^\(ADLS_ROUTING_CONDITION[ ]*=\).*#\1\"$ADLS_ROUTING_CONDITION\"#g' "$VARIABLES_FILE_PATH"
-      
-      [ -v USE_EXISTING_IOT_HUB ] && sed -i 's#^\(USE_EXISTING_IOT_HUB[ ]*=\).*#\1\"$USE_EXISTING_IOT_HUB\"#g' "$VARIABLES_FILE_PATH"
-      
-      echo "Updates are complete"
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete existing resource groups'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging to Azure"
+                          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
+          else
+              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+              az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
+          fi
+
+          if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
+          else
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
+              az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
+          fi
+
+    - task: DownloadPipelineArtifact@2
+      enabled: true
+      displayName: 'Download artifacts from Build Pipeline'
+      inputs:
+        buildType: 'specific'
+        project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
+        definition: '16'
+        buildVersionToDownload: 'latest'
+        targetPath: '$(System.DefaultWorkingDirectory)'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Unzip deployment bundle file from artifacts'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any errors
+          set -e
+          
+          DEPLOYMENT_BUNDLE_NAME="deployment-bundle.zip"
+          
+          if [ ! -f  "$DEPLOYMENT_BUNDLE_NAME" ]; then
+          echo "The artifact does not contain \"$DEPLOYMENT_BUNDLE_NAME\" file"
+          fi
+          
+          echo "Extracting file from deployment bundle zip"
+          # Extract files to current directory
+          unzip "$DEPLOYMENT_BUNDLE_NAME" -d .
+          
+          #TODO: Add steps to ensure the zip contains the required files
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Update values in variable.template file using pipeline variables'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the inline script on any errors
+          set -e
+          
+          VARIABLES_FILE_PATH="variables.template"
+          
+          echo "Updating variables in variables.template file"
+          
+          # The following steps check the existence of the variable in the file
+          # and replace the value with in the file with the pipeline variable value using sed
+          
+          [ -v USE_INTERACTIVE_LOGIN_FOR_AZURE ] && sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"$USE_INTERACTIVE_LOGIN_FOR_AZURE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
+
+          [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v DISK_NAME ] && sed -i 's#^\(DISK_NAME[ ]*=\).*#\1\"$DISK_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v STORAGE_TYPE ] && sed -i 's#^\(STORAGE_TYPE[ ]*=\).*#\1\"$STORAGE_TYPE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v VM_NAME ] && sed -i 's#^\(VM_NAME[ ]*=\).*#\1\"$VM_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v VM_SIZE ] && sed -i 's#^\(VM_SIZE[ ]*=\).*#\1\"$VM_SIZE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v INSTALL_REQUIRED_PACKAGES ] && sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"$INSTALL_REQUIRED_PACKAGES\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v APP_SERVICE_PLAN_NAME ] && sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"$APP_SERVICE_PLAN_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v APP_SERVICE_PLAN_SKU ] && sed -i 's#^\(APP_SERVICE_PLAN_SKU[ ]*=\).*#\1\"$APP_SERVICE_PLAN_SKU\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v WEBAPP_NAME ] && sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"$WEBAPP_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v PASSWORD_FOR_WEBSITE_LOGIN ] && sed -i 's#^\(PASSWORD_FOR_WEBSITE_LOGIN[ ]*=\).*#\1\"$PASSWORD_FOR_WEBSITE_LOGIN\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v DEVICE_NAME ] && sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"$DEVICE_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v EDGE_DEVICE_IP ] && sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v EDGE_DEVICE_USERNAME ] && sed -i 's#^\(EDGE_DEVICE_USERNAME[ ]*=\).*#\1\"$EDGE_DEVICE_USERNAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v EDGE_DEVICE_PASSWORD ] && sed -i 's#^\(EDGE_DEVICE_PASSWORD[ ]*=\).*#\1\"$EDGE_DEVICE_PASSWORD\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v EDGE_DEVICE_ARCHITECTURE ] && sed -i 's#^\(EDGE_DEVICE_ARCHITECTURE[ ]*=\).*#\1\"$EDGE_DEVICE_ARCHITECTURE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v MANIFEST_TEMPLATE_NAME ] && sed -i 's#^\(MANIFEST_TEMPLATE_NAME[ ]*=\).*#\1\"$MANIFEST_TEMPLATE_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v MANIFEST_ENVIRONMENT_VARIABLES_FILENAME ] && sed -i 's#^\(MANIFEST_ENVIRONMENT_VARIABLES_FILENAME[ ]*=\).*#\1\"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v DEPLOYMENT_NAME ] && sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"$DEPLOYMENT_NAME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v CUSTOM_VIDEO_SOURCE ] && sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"$CUSTOM_VIDEO_SOURCE\"#g' "$VARIABLES_FILE_PATH"
+          
+          echo "Updates are complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run mariner-setup-vm.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the inline script on any erros
+          set -e
+          
+          echo "Adding executable bit to mariner-vm-setup.sh"
+          
+          chmod +x mariner-vm-setup.sh
+          
+          echo "Running mariner-vm-sh script"
+          
+          source "./mariner-vm-setup.sh"
+          
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run setup.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the inline script on any error
+          set -e
+
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
+          VARIABLES_FILE_PATH="variables.template"
+          # Update the IP parameter in variables.template file
+          sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+          
+          
+          echo "Adding executable bit to setup.sh"
+          
+          
+          chmod +x setup.sh
+          
+          echo "Running setup script"
+
+          source "./setup.sh"
+
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run frontend-setup.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the script on any error
+          set -e
+
+          cd deployment-bundle
+          
+          echo "Adding executable bit to frontend-setup.sh"
+          
+          chmod +x frontend-setup.sh
+          
+          echo "Running frontend-setup script"
+          
+          source "./frontend-setup.sh"
+          
+          echo "Task is complete"
 
 
-# This step installs the required packages on the container, updates firewall to allow container to access Edge device and runs the setup.sh script
-- task: Bash@3
-  enabled: true
-  displayName: 'Setup current container and run setup.sh script'
-  env:
-    SP_APP_PWD: $(SP_APP_PWD)
-    EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
-  inputs:
-    targetType: 'inline'
-    script: |
-      echo "Starting script"
-      
-      # We're changing the working directory so we can use the other files by their names instead of full path
-      if [ -v "WORKING_DIRECTORY" ] && [ ! -z "$WORKING_DIRECTORY" ]; then
-          echo "Changing directory to \"$WORKING_DIRECTORY\""
-          cd "$WORKING_DIRECTORY"
-          echo "Changed directory"
-      fi
-      
-      # Install required packages if they are not already installed
-      # The following packages will be installed
-      # 1. sshpass 
-      # 2. jq
-      # 3. curl
-      # 4. python-pip
-      # 5. iotedgedev
-      IS_SSHPASS_INSTALLED=$(apt list --installed | grep -c -w sshpass)
-      if [ "$IS_SSHPASS_INSTALLED" -eq 0 ]; then 
-          echo "Installing sshpass"
-          sudo apt-get install sshpass 
-          echo "Installed sshpass"
-      fi
-      IS_JQ_INSTALLED=$(apt list --installed | grep -c -w jq)
-      if [ "$IS_JQ_INSTALLED" -eq 0 ]; then 
-          echo "Installing jq"
-          sudo apt-get install jq 
-          echo "Installed jq"
-      fi
-      IS_CURL_INSTALLED=$(apt list --installed | grep -c -w curl)
-      if [ "$IS_CURL_INSTALLED" -eq 0 ]; then 
-          echo "Installing curl"
-          sudo apt-get install curl 
-          echo "Installed curl"
-      fi
-      
-      IS_PIP_INSTALLED=$(apt list --installed | grep -c -w python-pip)
-      if [ "$IS_PIP_INSTALLED" -eq 0 ]; then 
-          echo "Installing pip"
-          sudo apt-get install python-pip
-          echo "Installed pip"
-      fi
-      IS_IOTEDGEDEV_INSTALLED=$(pip list --format=columns | grep -c -w iotedgedev)
-      if [ "$IS_IOTEDGEDEV_INSTALLED" -eq 0 ]; then
-          echo "Installing iotedgedev"
-          sudo pip install iotedgedev
-          echo "Installed iotedgedev"
-      fi
-      
-      # Install azure-cli-iot-ext extention in azure cli
-      if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-        echo "Installing azure-cli-iot-ext extension"
-        az extension add --name azure-cli-iot-ext
-        echo "Installed azure-cli-iot-ext extension"
-      fi
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run smoke test'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any error
+          set -e
+          
+          echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
+          sleep 15m
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
+          VARIABLES_FILE_PATH="variables.template"
+          # Update the IP parameter in variables.template file
+          sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+          echo "Adding executable bit to smoketest.sh"
+          
+          chmod +x smoketest.sh
+          
+          echo "Running smoketest script"
+          
+          source "./smoketest.sh"
+          
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
-      # We are declaring WasIPRuleUpdated variable to track whether the Network Security Group rule in Edge Device has been updated
-      WasIPRuleUpdated="0"
-      # Update NSG Incoming IP rule for Edge Device if IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED is set to true
-      # This will be required if the Edge device is in a NSG and the SSH port is blocked
-      if [ "$IS_EDGE_DEVICE_IN_AZURE_NSG_AND_SSH_PORT_IS_BLOCKED" == "true" ]; then
-      # Login to Azure with service principal
-      az login --service-principal --username $SP_APP_ID --password $SP_APP_PWD --tenant $TENANT_ID
-        # Get value of the sourceAddressPrefix of the NSG rule
-        # This will be empty if the NSG rule is configured to use IP addresses
-      	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
-      
-      # We are checking if the NSG rule is configured to use IP addresses 
-      	if [ -z $sourceAddressPrefix ]; then
-        # Get current IP address list from NSG Rule and also get the current container IP
-      		CurrentIPArray=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefixes" --output "tsv")
-      		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
-      		
-          # Check if the container IP is already present in current list
-          # If it is not present, add it in the NSG rule
-      		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
-      			echo "IP is already added in network security rule"
-      		else
-      			echo "Updating IP rule to add current IP"
-      			UpdatedIPArray=$CurrentIPArray" "$ContainerIPAddress
-      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
-      			echo "Update is complete"
-      			WasIPRuleUpdated="1"
-      		fi
-      		
-      	else
-      		echo "[WARNING]: IP Address type is not enabled in the NSG rule, we are not adding IP address explicitly"
-      	fi
-      fi
-      
-      echo "Adding executable bit to setup.sh"
-      # Making setup.sh file executable
-      chmod +x setup.sh
-      
-      echo "Running the script"
-      
-      source "./setup.sh"
-      
-      # Remove the current container IP from NSG rule if it was added during current
-      if [ "$WasIPRuleUpdated" == "1" ]; then
-      	# Get value of the sourceAddressPrefix of the NSG rule
-        # This will be empty if the NSG rule is configured to use IP addresses
-      	sourceAddressPrefix=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefix" --output "tsv")
-      
-      
-      	if [ -z $sourceAddressPrefix ]; then
-      		CurrentIPArray=$(az network nsg rule show --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --query "sourceAddressPrefixes" --output "tsv")
-      		ContainerIPAddress=$(curl -s https://ip4.seeip.org/)
-      		
-      		if ( echo $CurrentIPArray | grep -c -w $ContainerIPAddress ); then
-            # Remove the current IP address from existing list to create a new list
-      			UpdatedIPArray=${CurrentIPArray/$ContainerIPAddress/""}
-            # Update the NSG rule with the new list
-      			az network nsg rule update --name "$NSG_SSH_RULE_NAME" --nsg-name "$NSG_NAME" --resource-group "$RESOURCE_GROUP_EDGE_DEVICE" --source-address-prefixes $UpdatedIPArray --output "none"
-      		fi
-      		
-      	else
-      		echo "[WARNING]: IP Address type is not enabled in the NSG rule, we can not update the IP address explicitly"
-      	fi
-      fi
-      
-      
-      echo "Task is complete"
+- stage: Release
+  jobs:
+  - deployment: 'Release'
+    displayName: 'Release bundle zip to storage account'
+    environment: 'ApproveOverallRelease'
+    strategy:
+      runOnce:
+        deploy:
+          steps: 
+          - checkout: none
+          - download: none
+
+          - task: DownloadPipelineArtifact@2
+            enabled: true
+            displayName: 'Download artifacts from Build Pipeline'
+            inputs:
+              buildType: 'specific'
+              project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
+              definition: '16'
+              buildVersionToDownload: 'latest'
+              targetPath: '$(System.DefaultWorkingDirectory)'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Upload the deployment bundle zip to release storage account'
+            env:
+              RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Logging into Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$CREATE_NEW_CONTAINER" == "true" ];then
+                  echo "Creating container \"RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME\" in storage account"
+                  
+                  az storage container create \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                
+                  az storage container set-permission \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --public-access blob
+                fi
+                
+                echo "Uploading deployment bundle zip to storage account"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle.zip \
+                  --name "deployment-bundle-$(buildSuffix).zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle.zip \
+                  --name deployment-bundle-latest.zip
+              workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Delete the resource group'
+            env:
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Exit the script on any error
+                set -e
+                
+                echo "Logging to Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
+                
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                
+                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
+                
+                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
