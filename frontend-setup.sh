@@ -140,12 +140,12 @@ fi
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
     # Check if there are any required variables which are not defined
     if [ "${#ARRAY_NOT_DEFINED_VARIABLES[@]}" -gt 0 ]; then
-        echo "$(error) The following variables must be defined in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
+        echo "$(error) The following variables must be defined in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" variable file"
         printf '%s\n' "${ARRAY_NOT_DEFINED_VARIABLES[@]}"
     fi
     # Check if there are any required variables which are empty
     if [ "${#ARRAY_VARIABLES_WITHOUT_VALUES[@]}" -gt 0 ]; then
-        echo "$(error) The following variables must have a value in the variables files in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" or \"$FRONTEND_VARIABLES_TEMPLATE_FILENAME\" variable files"
+        echo "$(error) The following variables must have a value in the variables files in either \"$SETUP_VARIABLES_TEMPLATE_FILENAME\" variable file"
         printf '%s\n' "${ARRAY_VARIABLES_WITHOUT_VALUES[@]}"
     fi
     exitWithError
@@ -213,7 +213,7 @@ else
         echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
         APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_SUFFIX}
         # Writing the updated value back to variables file
-        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+        sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
         echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
         az appservice plan create --name "$APP_SERVICE_PLAN_NAME" --sku "$APP_SERVICE_PLAN_SKU" --location "$LOCATION" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
         echo "$(info) Created App Service Plan \"$APP_SERVICE_PLAN_NAME\""
@@ -244,7 +244,7 @@ else
             echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
             WEBAPP_NAME=${WEBAPP_NAME}-${RANDOM_SUFFIX}
             # Writing the updated value back to variables file
-            sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$FRONTEND_VARIABLES_TEMPLATE_FILENAME"
+            sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating Web App \"$WEBAPP_NAME\""
             az webapp create --name "$WEBAPP_NAME" --plan "$APP_SERVICE_PLAN_NAME" --resource-group "$RESOURCE_GROUP_IOT" --output "none"
             echo "$(info) Created Web app \"$WEBAPP_NAME\""

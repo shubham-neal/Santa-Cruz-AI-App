@@ -12,17 +12,26 @@ resources:
       branches: 
         include:
         - master
-
+        
+        
 pool:
   vmImage: 'ubuntu-latest'
 
+
 variables:
-  buildSuffix: '$(Build.BuildNumber)'
+  buildSuffix: '$(Build.BuildNumber)' 
+  branch: '$(Build.SourceBranchName)'
+  ${{ if eq(variables['branch'], 'master') }}:
+    Variable_Group: 'Release_Environment'
+  ${{ if ne(variables['branch'], 'master') }}:
+     Variable_Group: 'Test_Environment'
 
 stages:
 - stage: 'Deploy'
   jobs:
   - job: 'Deploy'
+    variables:
+     - group: ${{variables.Variable_Group}}
     displayName: 'Deploy Person Tracking App to a test environment'
     steps:
     - checkout: none
@@ -154,12 +163,6 @@ stages:
           
           [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v EDGE_DEVICE_IP ] && sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v EDGE_DEVICE_USERNAME ] && sed -i 's#^\(EDGE_DEVICE_USERNAME[ ]*=\).*#\1\"$EDGE_DEVICE_USERNAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v EDGE_DEVICE_PASSWORD ] && sed -i 's#^\(EDGE_DEVICE_PASSWORD[ ]*=\).*#\1\"$EDGE_DEVICE_PASSWORD\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v EDGE_DEVICE_ARCHITECTURE ] && sed -i 's#^\(EDGE_DEVICE_ARCHITECTURE[ ]*=\).*#\1\"$EDGE_DEVICE_ARCHITECTURE\"#g' "$VARIABLES_FILE_PATH"
@@ -177,7 +180,7 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Run mariner-setup-vm.sh script'
+      displayName: 'Run eye-vm-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
       inputs:
@@ -188,20 +191,20 @@ stages:
           # Exit the inline script on any erros
           set -e
           
-          echo "Adding executable bit to mariner-vm-setup.sh"
+          echo "Adding executable bit to eye-vm-setup.sh"
           
-          chmod +x mariner-vm-setup.sh
+          chmod +x eye-vm-setup.sh
           
-          echo "Running mariner-vm-sh script"
+          echo "Running eye-vm-sh script"
           
-          source "./mariner-vm-setup.sh"
+          source "./eye-vm-setup.sh"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
       enabled: true
-      displayName: 'Run setup.sh script'
+      displayName: 'Run deploy-iot.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
         EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
@@ -217,17 +220,17 @@ stages:
           EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
           VARIABLES_FILE_PATH="variables.template"
           # Update the IP parameter in variables.template file
-          sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
           
           
           echo "Adding executable bit to setup.sh"
           
           
-          chmod +x setup.sh
+          chmod +x deploy-iot.sh
           
-          echo "Running setup script"
+          echo "Running deploy-iot script"
 
-          source "./setup.sh"
+          source "./deploy-iot.sh"
 
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
@@ -277,7 +280,7 @@ stages:
           EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
           VARIABLES_FILE_PATH="variables.template"
           # Update the IP parameter in variables.template file
-          sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
+          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
           echo "Adding executable bit to smoketest.sh"
           
           chmod +x smoketest.sh
@@ -294,6 +297,8 @@ stages:
   - deployment: 'Release'
     displayName: 'Release bundle zip to storage account'
     environment: 'ApproveOverallRelease'
+    variables:
+      - group: ${{variables.Variable_Group}}
     strategy:
       runOnce:
         deploy:

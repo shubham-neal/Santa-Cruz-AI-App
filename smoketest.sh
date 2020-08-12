@@ -76,9 +76,9 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
     fi
   fi
 
-  if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-    echo "[INFO] Installing azure-cli-iot-ext extension"
-    az extension add --name azure-cli-iot-ext
+  if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+    echo "[INFO] Installing azure-iot extension"
+    az extension add --name azure-iot
   fi
 
   # jq and timeout are pre-installed in the cloud shell
@@ -121,9 +121,9 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
       echo "$(info) Installed timeout"
     fi
 
-    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-      echo "[INFO] Installing azure-cli-iot-ext extension"
-      az extension add --name azure-cli-iot-ext
+    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+      echo "[INFO] Installing azure-iot extension"
+      az extension add --name azure-iot
     fi
 
     echo "[INFO] Package Installation step is complete"
@@ -159,27 +159,15 @@ if [ "$RUN_VM_CHECKS" == "true" ]; then
     DISK_NAME="mariner"
   fi
 
-  if [ -z "$STORAGE_TYPE" ]; then
-    # Value is empty for STORAGE_TYPE;
-    # Assign Default value
-    STORAGE_TYPE="Premium_LRS"
-  fi
-
   if [ -z "$VM_NAME" ]; then
     # Value is empty for VM_NAME;
     # Assign Default value
     VM_NAME="marinervm"
   fi
 
-  if [ -z "$VM_SIZE" ]; then
-    # Value is empty for VM_SIZE;
-    # Assign Default value
-    VM_SIZE="Standard_DS2_v2"
-  fi
-
   # Check for Resource Group of VM, if it exists with the same name provided in variable template then pass the check else throw error
   if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == "false" ]; then
-    printError "Failed: Resource Group for VM\"$RESOURCE_GROUP_DEVICE\" is not present. "
+    printError "Failed: Resource Group for VM \"$RESOURCE_GROUP_DEVICE\" is not present. "
 
   else
     echo "Passed: Resource Group for VM \"$RESOURCE_GROUP_DEVICE\" is present"
@@ -307,7 +295,7 @@ else
 fi
 
 # Retrieve the deployment details for applied deployments on IoT Hub
-DEPLOYMENT_STATUS=$(az iot edge deployment show-metric -m appliedCount --config-id "$DEPLOYMENT_NAME" --hub-name "$IOTHUB_NAME" --metric-type system --query "result" -o tsv)
+DEPLOYMENT_STATUS=$(az iot edge deployment show-metric -m appliedCount --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IOTHUB_NAME" --metric-type system --query "result" -o tsv)
 
 # Check if the current applied deployment is the one variables.template file, if it is pass the test else throw error
 if [ "$DEPLOYMENT_STATUS" == "$DEVICE_NAME" ]; then
@@ -319,15 +307,18 @@ else
 fi
 
 # Check the status of IoT Edge Service
+EDGE_DEVICE_PUBLIC_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
+EDGE_DEVICE_USERNAME="root"
+EDGE_DEVICE_PASSWORD="p@ssw0rd"
 # Use sshpass to run the check on a remote device
 RUNNING_STATUS_COMMAND="sudo systemctl --type=service --state=running | grep -i \"iotedge\" "
 INSTALLATION_STATUS_COMMAND="sudo systemctl --type=service | grep -i \"iotedge\" "
 
 # Check if status of iotedge service is running on Edge Device
-RUNNING_STATUS=$(sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "$RUNNING_STATUS_COMMAND")
+RUNNING_STATUS=$(sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_PUBLIC_IP" -o StrictHostKeyChecking=no "$RUNNING_STATUS_COMMAND")
 
 # Check if iotedge service is installed on Edge Device
-INSTALLATION_STATUS=$(sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_IP" -o StrictHostKeyChecking=no "$INSTALLATION_STATUS_COMMAND")
+INSTALLATION_STATUS=$(sshpass -p "$EDGE_DEVICE_PASSWORD" ssh "$EDGE_DEVICE_USERNAME"@"$EDGE_DEVICE_PUBLIC_IP" -o StrictHostKeyChecking=no "$INSTALLATION_STATUS_COMMAND")
 
 if [ -n "$RUNNING_STATUS" ]; then
   echo "Passed: IoT Edge Service is installed and running on Edge Device"

@@ -36,25 +36,23 @@ Two deployment scenarios are supported.
 
 
     Step 2: Create Mariner VM, IoT Hub and Edge Device   
-    - Run [mariner-vm-setup.sh](mariner-vm-setup.sh) script
+    - Run [eye-vm-setup.sh](eye-vm-setup.sh) script
 
     ```sh
-    chmod +x mariner-vm-setup.sh
-    sudo ./mariner-vm-setup.sh
+    chmod +x eye-vm-setup.sh
+    sudo ./eye-vm-setup.sh
     ```
 
     Step 3: Setup IoT Hub and Edge Device   
-    - Run [setup.sh](setup.sh) script
+    - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x setup.sh
-    sudo ./setup.sh
+    chmod +x deploy-iot.sh
+    sudo ./deploy-iot.sh
     ```
 
 
     Step 4: Setup a Front End app to visualize the results
-    - Add values in [variables.template](variables.template) file for frontend variables.
-      You can refer to the [Configuring Variable Template Files](#configuring-variable-template-files) section to see how to specify values for the variables.
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
@@ -76,16 +74,15 @@ Two deployment scenarios are supported.
 
     
     Step 2: Setup the IoT Hub and Edge Device     
-    - Run [setup.sh](setup.sh) script
+    - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x setup.sh
-    sudo ./setup.sh
+    chmod +x deploy-iot.sh
+    sudo ./deploy-iot.sh
     ```
 
 
-    Step 3: Setup a Front End app to visualize the results
-    - Add values in [variables.template](variables.template) file for frontend variables. You can refer to [Configuring Variable Template Files](#configuring-variable-template-files) section to see how to specify values for the variables. 
+    Step 3: Setup a Front End app to visualize the results 
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
@@ -97,46 +94,86 @@ Two deployment scenarios are supported.
 ### Configuring Variable Template Files
   
 Refer to the following list for variables in the variables.template file.
-  
+
+Section 1: General configuration which applies to all components
+
 |Name | Required? |Description  |
 |---|---|---|
-|USE_INTERACTIVE_LOGIN_FOR_AZURE| Optional |If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.|
 |TENANT_ID| Optional |Provide tenant id of your organization here. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.   |
-|SP_APP_ID| Optional |ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
-|SP_APP_PWD| Optional |Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
 |SUBSCRIPTION_ID| Required |Provide subscription id here   |
-|RESOURCE_GROUP_DEVICE| Required |Name of a resource group which will contain mariner VM.    |
-|RESOURCE_GROUP_IOT| Required |Name of a resource group which will contain IoT Hub, Storage Account and Web App.    |
 |LOCATION| Required |Azure Data Centre location for the resource group and resources. |
-|USE_EXISTING_RESOURCES| Required |If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
-|INSTALL_REQUIRED_PACKAGES| Required |Whether or not to install required packaged dependencies. This is useful if you are not running the setup from Azure Cloud Shell. Set to "true" to install the dependencies or "false" to skip installation. |
-|DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is mariner         |
-|STORAGE_TYPE | Optional | Underlying storage SKU. Default value is Premium_LRS  |
-|VM_NAME  | Optional |  Name of the VM that will be created. Default value is marinervm |
-|VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS2_v2  |
-|EDGE_DEVICE_IP| Required |IP of the Edge device.  |
-|EDGE_DEVICE_USERNAME| Required |Username of an account on Edge device, this account should have access to modify files on Edge device.    |
-|EDGE_DEVICE_PASSWORD| Required |Password for the account on Edge device|
 |DETECTOR_MODULE_RUNTIME| Required |Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
 |EDGE_DEVICE_ARCHITECTURE| Required |Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
+
+
+Section 2: Virtualized Eye VM in the public cloud
+
+|Name | Required? |Description  |
+|---|---|---|
+|RESOURCE_GROUP_DEVICE| Required |Name of a resource group which will contain mariner VM.    |
+|DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is mariner         |
+|VM_NAME  | Optional |  Name of the VM that will be created. Default value is marinervm |
+
+
+Section 3: IoT Hub + Storage configuration to route and host the AI output
+
+|Name | Required? |Description  |
+|---|---|---|
+|RESOURCE_GROUP_IOT| Required |Name of a resource group which will contain IoT Hub, Storage Account and Web App.    |
 |IOTHUB_NAME| Required |Name of the IoT Hub   |
 |DEVICE_NAME| Required |Name of the IoT Edge device on IoT Hub   |
 |STORAGE_ACCOUNT_NAME| Required |Storage account name for ADLS. |
+
+
+Section 4: Vizualization UX application
+
+|Name | Required? |Description  |
+|---|---|---|
+|APP_SERVICE_PLAN_NAME| Required | App Service Plan name for the front end application|
+|WEBAPP_NAME| Required |Name of the Azure Web App for front end application|
+|PASSWORD_FOR_WEBSITE_LOGIN| Required | Password for the Azure Web App|
+
+
+
+### Default configurations
+
+Section 1: General configurations 
+
+|Name | Required? |Description  |
+|---|---|---|
+|USE_INTERACTIVE_LOGIN_FOR_AZURE| Optional |If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.|
+|SP_APP_ID| Optional |ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
+|SP_APP_PWD| Optional |Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
+|USE_EXISTING_RESOURCES| Required |If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
+|INSTALL_REQUIRED_PACKAGES| Required |Whether or not to install required packaged dependencies. This is useful if you are not running the setup from Azure Cloud Shell. Set to "true" to install the dependencies or "false" to skip installation. |
+
+Section 2: Virtualized Eye VM
+
+|Name | Required? |Description  |
+|---|---|---|
+|STORAGE_TYPE | Optional | Underlying storage SKU. Default value is Premium_LRS  |
+|VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS2_v2  |
+
+Section 3: IoT Hub + Storage configuration to route and host the AI output
+
+|Name | Required? |Description  |
+|---|---|---|
 |MANIFEST_TEMPLATE_NAME| Required |Name of the template manifest file   |
 |MANIFEST_ENVIRONMENT_VARIABLES_FILENAME| Required |Name of the environment variable file containing values/secret   |
 |DEPLOYMENT_NAME| Required |Name of the deployment on the Edge device in IoT Hub. Please note that this should be unique for each deployment|
 |CUSTOM_VIDEO_SOURCE| Optional |Custom video that user can provide for the Edge device   |
-|APP_SERVICE_PLAN_NAME| Required | App Service Plan name for the front end application|
+
+Section 4: Vizualization UX application
+
+|Name | Required? |Description  |
+|---|---|---|
 |APP_SERVICE_PLAN_SKU| Required | Sku for the App Service Plan of the front end application|
-|WEBAPP_NAME| Required |Name of the Azure Web App for front end application|
-|PASSWORD_FOR_WEBSITE_LOGIN| Required | Password for the Azure Web App|
 
 
 ### Resource Naming Rules in Azure
 
 The following are the resource naming rules for Azure resources which are used in the script. Follow these rules while specifying values in variable files. 
   
-
 |Entity |Type |Length |Casing |Valid Characters |
 |---|---|---|---|---|
 |RESOURCE_GROUP_DEVICE |Resource Group |1-90 |No casing restriction |Alphanumeric, underscore, and hyphens |
