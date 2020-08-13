@@ -7,7 +7,6 @@ This document serves to walk through the end-user deployment and onboarding expe
 - The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Ubuntu 18.04 LTS.
 - The user or service principal running the scripts should have access to create resources in the given subscription in Azure
 - User running the script should have access to create directories and files on the machine
-- Set values in the [variables.template](variables.template) file before running the script
 
 ## Install Package Dependencies
 
@@ -39,7 +38,6 @@ Two deployment scenarios are supported.
     - Run [eye-vm-setup.sh](eye-vm-setup.sh) script
 
     ```sh
-    chmod +x eye-vm-setup.sh
     sudo ./eye-vm-setup.sh
     ```
 
@@ -47,7 +45,6 @@ Two deployment scenarios are supported.
     - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x deploy-iot.sh
     sudo ./deploy-iot.sh
     ```
 
@@ -56,7 +53,6 @@ Two deployment scenarios are supported.
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
-    chmod +x frontend-setup.sh
     sudo ./frontend-setup.sh
     ```
 
@@ -77,7 +73,6 @@ Two deployment scenarios are supported.
     - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x deploy-iot.sh
     sudo ./deploy-iot.sh
     ```
 
@@ -86,7 +81,6 @@ Two deployment scenarios are supported.
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
-    chmod +x frontend-setup.sh
     sudo ./frontend-setup.sh
     ```
 

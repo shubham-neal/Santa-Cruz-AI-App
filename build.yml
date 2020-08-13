@@ -101,6 +101,9 @@ stages:
         targetType: 'inline'
         script: |
           
+          # Exit the script on any error
+          set -e
+          
           IS_SHELLCHECK_INSTALLED=$(apt list --installed | grep -c -w shellcheck)
           if [ "$IS_SHELLCHECK_INSTALLED" -eq 0 ]; then
               echo "Installing shellcheck"
@@ -113,24 +116,24 @@ stages:
           
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the the result returned by shellcheck.
-          SHELL_CHECK_RESULT_SETUP=$(shellcheck ./setup.sh -x)
+          SHELL_CHECK_RESULT_DEPLOY_IOT=$(shellcheck ./deploy-iot.sh -x)
           SHELL_CHECK_RESULT_FRONTEND=$(shellcheck ./frontend-setup.sh -x)
-          SHELL_CHECK_RESULT_MARINER=$(shellcheck ./mariner-vm-setup.sh -x)
+          SHELL_CHECK_RESULT_EYE_VM=$(shellcheck ./eye-vm-setup.sh -x)
           SHELL_CHECK_RESULT_SMOKETEST=$(shellcheck ./smoketest.sh -x)
-          if [ -z "$SHELL_CHECK_RESULT_SETUP" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_MARINER" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
+          if [ -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_EYE_VM" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
               echo "Pass: There are no warnings from shellcheck"
           else
-              if [ ! -z "$SHELL_CHECK_RESULT_SETUP" ]; then
-              echo "The following are the warnings for setup script"
-              echo "$SHELL_CHECK_RESULT_SETUP"
+              if [ ! -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ]; then
+              echo "The following are the warnings for deploy-iot script"
+              echo "$SHELL_CHECK_RESULT_DEPLOY_IOT"
               fi
               if [ ! -z "$SHELL_CHECK_RESULT_FRONTEND" ]; then
               echo "The following are the warnings for frontend-setup script"
               echo "$SHELL_CHECK_RESULT_FRONTEND"
               fi
-              if [ ! -z "$SHELL_CHECK_RESULT_MARINER" ]; then
-              echo "The following are the warnings for mariner-vm-setup script"
-              echo "$SHELL_CHECK_RESULT_MARINER"
+              if [ ! -z "$SHELL_CHECK_RESULT_EYE_VM" ]; then
+              echo "The following are the warnings for eye-vm-setup script"
+              echo "$SHELL_CHECK_RESULT_EYE_VM"
               fi
               if [ ! -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
               echo "The following are the warnings for smoketest script"

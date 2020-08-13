@@ -9,11 +9,8 @@ resources:
     project: UnifiedEdgeScenarios
     source: Build Person Tracking App
     trigger:
-      branches: 
-        include:
-        - master
-        
-        
+      enabled: true
+
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -191,10 +188,6 @@ stages:
           # Exit the inline script on any erros
           set -e
           
-          echo "Adding executable bit to eye-vm-setup.sh"
-          
-          chmod +x eye-vm-setup.sh
-          
           echo "Running eye-vm-sh script"
           
           source "./eye-vm-setup.sh"
@@ -214,19 +207,7 @@ stages:
           echo "Starting task"
           
           # Exit the inline script on any error
-          set -e
-
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
-          VARIABLES_FILE_PATH="variables.template"
-          # Update the IP parameter in variables.template file
-          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-          
-          
-          echo "Adding executable bit to setup.sh"
-          
-          
-          chmod +x deploy-iot.sh
+          set -e          
           
           echo "Running deploy-iot script"
 
@@ -251,10 +232,6 @@ stages:
 
           cd deployment-bundle
           
-          echo "Adding executable bit to frontend-setup.sh"
-          
-          chmod +x frontend-setup.sh
-          
           echo "Running frontend-setup script"
           
           source "./frontend-setup.sh"
@@ -276,14 +253,6 @@ stages:
           
           echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
           sleep 15m
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
-          VARIABLES_FILE_PATH="variables.template"
-          # Update the IP parameter in variables.template file
-          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-          echo "Adding executable bit to smoketest.sh"
-          
-          chmod +x smoketest.sh
           
           echo "Running smoketest script"
           
