@@ -130,16 +130,25 @@ def spin_camera_loop(messenger):
 
       # send to blob storage and retrieve the timestamp by which we will identify the video
       curtimename = None
+      perf = None
       if camera_config["blob"] is not None:
+          start_upload = time.time()
           curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
+          total_upload = time.time() - start_upload
+          perf = {"upload", total_upload}
 
       detections = []
+      
       if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-        detections = infer(cam['detector'], img, frame_id, curtimename)
-        
+        res = infer(cam['detector'], img, frame_id, curtimename)
+        detections = res["detections"]
+        perf = {**perf, **res["perf"]}
+        logging.info(f"perf: {perf}")
+
       # message the image capture upstream
       if curtimename is not None:
         messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
+        messenger.send_perf(camId, curtimename, frame_id, perf)
         logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
   # shutdown current video captures
@@ -158,7 +167,7 @@ def infer(detector, img, frame_id, img_name):
   resp.raise_for_status()
   result = resp.json()
 
-  return result["detections"]
+  return result
 
 
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):

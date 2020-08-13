@@ -1,7 +1,7 @@
 import os
-import io
 import cv2
 import logging
+import time
 from ssd_object_detection import Detector
 #from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
@@ -78,13 +78,25 @@ def detect_in_frame_lva():
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
   # we are sending a json object
+
+  start = time.time()
+
   data = request.get_json()
   frame = np.array(data['img']).astype('uint8')
+  
+  prep_time = time.time() - start
 
   results = {'frameId': data['frameId'], 'image_name': data['image_name']}
   detections = detector.detect(frame)
 
+  total_time = time.time() - start
+  detection_time = total_time - prep_time 
+
+  perf = {"imgprep": prep_time, "detection": detection_time}
+
   results["detections"] = detections
+  results["perf"] = perf
+  
   logging.info(f"detected objects: {json.dumps(results, indent=1)}")
   return jsonify(results)
 
