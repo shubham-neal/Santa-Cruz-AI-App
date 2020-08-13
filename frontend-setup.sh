@@ -273,10 +273,11 @@ az webapp config connection-string set --connection-string-type Custom --name "$
 
 # Turn on web sockets
 az webapp config set --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --web-sockets-enabled true --output "none"
-
 echo "$(info) Web App settings have been configured"
 
 echo "$(info) Deploying Web App using \"$WEBAPP_DEPLOYMENT_ZIP\" zip file"
 # Step to deploy the app to azure
+az webapp stop --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME"
 az webapp deployment source config-zip --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --src "$WEBAPP_DEPLOYMENT_ZIP" --output "none"
+az webapp start --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME"
 echo "$(info) Deployment is complete"
