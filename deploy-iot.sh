@@ -19,6 +19,9 @@ exitWithError() {
     exit 1
 }
 
+# Generating a random number. This will be used in case a user provided name is not unique.
+RANDOM_SUFFIX="${RANDOM:0:3}"
+
 ##############################################################################
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
@@ -168,9 +171,9 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
         fi
     fi
 
-    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-        echo "$(info) Installing azure-cli-iot-ext extension"
-        az extension add --name azure-cli-iot-ext
+    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+        echo "$(info) Installing azure-iot extension"
+        az extension add --name azure-iot
     fi
 
     # jq and pip packages are pre-installed in the cloud shell
@@ -229,9 +232,9 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
             echo "$(info) Installed timeout"
         fi
 
-        if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-cli-iot-ext extension"
-            az extension add --name azure-cli-iot-ext
+        if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+            echo "$(info) Installing azure-iot extension"
+            az extension add --name azure-iot
         fi
 
         echo "$(info) Package Installation step is complete"

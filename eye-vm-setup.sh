@@ -105,9 +105,9 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 
     fi
 
-    if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-        echo "$(info) Installing azure-cli-iot-ext extension"
-        az extension add --name azure-cli-iot-ext
+    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+        echo "$(info) Installing azure-iot extension"
+        az extension add --name azure-iot
     fi
 
     # azcopy, jq and timeout are pre-installed on cloud shell.
@@ -194,9 +194,9 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
             echo "$(info) Installed timeout"
         fi
 
-        if [[ $(az extension list --query "[?name=='azure-cli-iot-ext'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-cli-iot-ext extension"
-            az extension add --name azure-cli-iot-ext
+        if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+            echo "$(info) Installing azure-iot extension"
+            az extension add --name azure-iot
         fi
     fi
 fi
@@ -279,7 +279,7 @@ fi
 echo "$(info) The required variables are defined and have a non-empty value"
 
 # VHD_URI is the direct link for VHD file in storage account. The VHD file must be in the current subscription
-VHD_URI="https://georgembbox.blob.core.windows.net/brainbox/brainbox-dev-1.0.MM5.20200603.2120.v0.0.3.vhd?sp=r&st=2020-07-24T21:41:00Z&se=2021-01-01T08:00:00Z&spr=https&sv=2019-12-12&sr=b&sig=E%2Fe2SO2W25SZhxtCwUzUIj00B60k6iuzuWazWUy%2FyKA%3D"
+VHD_URI="https://unifiededgescenarios.blob.core.windows.net/aedvhd/aedvhd-dev-1.0.MM5.20200603.2120.v0.0.4.vhd?sp=r&st=2020-08-11T08:03:43Z&se=2021-08-11T16:03:43Z&spr=https&sv=2019-12-12&sr=b&sig=CpNJL5iwIheSovRvWAKQXWxrapIus8PqqkFmNDHtmlA%3D"
 
 # Whether to create a rule in NSG for SSH or RDP.
 # The following are the allowed values:
@@ -404,7 +404,7 @@ echo "$(info) Added current machine IP address \"$CURRENT_IP_ADDRESS\" in Networ
 
 # Writing the Edge Device IP address value to variables file
 EDGE_DEVICE_PUBLIC_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
-sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"'"$EDGE_DEVICE_PUBLIC_IP"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+#sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"'"$EDGE_DEVICE_PUBLIC_IP"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
 EDGE_DEVICE_USERNAME="root"
 EDGE_DEVICE_PASSWORD="p@ssw0rd"

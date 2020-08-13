@@ -61,8 +61,8 @@ stages:
           people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
           people_detection/simple/RtcvDeployment/deployment.camera.template.json
           people_detection/simple/RtcvDeployment/prod.env
-          mariner-vm-setup.sh
-          setup.sh
+          eye-vm-setup.sh
+          deploy-iot.sh
           variables.template
           frontend-setup.sh
           smoketest.sh
