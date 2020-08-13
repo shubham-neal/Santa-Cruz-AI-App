@@ -39,6 +39,22 @@
               }
             }
           },
+          "openvino": {
+            "settings": {
+              "image": "marketplace.azurecr.io/intel_corporation/open_vino",
+              "createOptions": {
+                "Cmd": [
+                  "/ams_wrapper/start_ams.py",
+                  "--ams_port=4000",
+                  "--ovms_port=9000"
+                ]
+              }
+            },
+            "type": "docker",
+            "version": "1.0",
+            "status": "running",
+            "restartPolicy": "always"
+          },
           "detector": {
             "version": "1.0",
             "type": "docker",
