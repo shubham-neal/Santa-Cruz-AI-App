@@ -135,14 +135,18 @@ def spin_camera_loop(messenger):
           start_upload = time.time()
           curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
           total_upload = time.time() - start_upload
-          perf = {"upload", total_upload}
+          perf = {"upload": total_upload}
 
       detections = []
       
       if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
+        start_inf = time.time()
         res = infer(cam['detector'], img, frame_id, curtimename)
+        total_inf = time.time() - start_inf
+
         detections = res["detections"]
         perf = {**perf, **res["perf"]}
+        perf["imgencode"] = total_inf - perf["imgprep"] - perf["detection"]
         logging.info(f"perf: {perf}")
 
       # message the image capture upstream
@@ -158,12 +162,10 @@ def spin_camera_loop(messenger):
 def infer(detector, img, frame_id, img_name):
 
   im = imutils.resize(img, width=400)
-
   data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
   headers = {'Content-Type': "application/json"}
-  start = time.time()
   resp = requests.post(detector, data, headers=headers)
-  proc_time = time.time() - start
+  
   resp.raise_for_status()
   result = resp.json()
 
