@@ -322,22 +322,27 @@ else
     fi
 fi
 
+# Check if the RESOURCE_GROUP_DEVICE name is same as RESOURCE_GROUP_IOT
+# If it is same then use the existing resource group.
 # Create a new resource group for other resources if it does not exist already.
 # If it already exists then check value for USE_EXISTING_RESOURCES
 # and based on that either throw error or use the existing RG
-if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
-    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_IOT\""
-    az group create --name "$RESOURCE_GROUP_IOT" --location "$LOCATION" --output "none"
-    echo "$(info) Successfully created resource group \"$RESOURCE_GROUP_IOT\""
-else
-    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+    echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+else    
+    if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+        echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_IOT\""
+        az group create --name "$RESOURCE_GROUP_IOT" --location "$LOCATION" --output "none"
+        echo "$(info) Successfully created resource group \"$RESOURCE_GROUP_IOT\""
     else
-        echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" already exists"
-        exitWithError
+        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+            echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+        else
+            echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" already exists"
+            exitWithError
+        fi
     fi
 fi
-
 
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Managed disk \"$DISK_NAME\" setup"

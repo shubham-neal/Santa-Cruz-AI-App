@@ -17,10 +17,9 @@ pool:
 
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
-  branch: '$(Build.SourceBranchName)'
-  ${{ if eq(variables['branch'], 'master') }}:
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
-  ${{ if ne(variables['branch'], 'master') }}:
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
      Variable_Group: 'Test_Environment'
 
 stages:
@@ -46,25 +45,35 @@ stages:
                           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
-              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
-              az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
-          fi
-
-          if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
-              az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
-          fi
+          if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+              else
+                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+              fi  
+          else    
+            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
+            fi
+          
+            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
+                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
+            fi
+          fi  
 
     - task: DownloadPipelineArtifact@2
       enabled: true
@@ -345,14 +354,22 @@ stages:
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
-                echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
-                
-                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
-                
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
-                
-                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
-                
-                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
-                
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
+                if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE\""
+
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                else
+                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
+                fi  
