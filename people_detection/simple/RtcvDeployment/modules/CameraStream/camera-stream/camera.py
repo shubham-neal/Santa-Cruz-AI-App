@@ -11,6 +11,7 @@ from streamer.videostream import VideoStream
 import imutils
 
 from messaging.iotmessenger import IoTInferenceMessenger
+from multiprocessing.shared_memory import SharedMemory
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -159,12 +160,17 @@ def spin_camera_loop(messenger):
   for key, cam in intervals_per_cam.items():
     cam['video'].stop()
 
-def infer(detector, img, frame_id, img_name):
+def infer(detector, img, frame_id, img_name, shared_memory = None):
 
-  im = imutils.resize(img, width=400)
-  data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
+  im = imutils.resize(img, width=300)
+  if shared_memory is not None:
+    np.ndarray(im.shape, dtype = im.dtype, buffer = shared_memory.buf)
+    data = json.dumps({"frameId": frame_id, "image_name": img_name)
+  else:  
+    data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
+  
   headers = {'Content-Type': "application/json"}
-  resp = requests.post(detector, data, headers=headers)
+  resp = requests.post(detector, data, headers=headers, params = {"shared": shared_memory is not None})
   
   resp.raise_for_status()
   result = resp.json()

@@ -8,12 +8,18 @@ from videostream import VideoStream
 import numpy as np
 import json
 from common import display
+from shared_memory import SharedMemoryManager
 
 from flask import Flask, jsonify, request
 # for HTTP/1.1 support
 from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
+
+# 50 MB of shared memory for image storage
+shm_size = 50 * 1024 * 1024 * 1024
+image_file_handle = "image.jpg"
+shared_manager = SharedMemoryManager(image_file_handle, shm_size)
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -82,13 +88,21 @@ def detect_in_frame():
   start = time.time()
 
   data = request.get_json()
-  frame = np.array(data['img']).astype('uint8')
   
   prep_time = time.time() - start
+  shared_file = request.args.get("shared")
+  shared_size = request.args.get("size")
 
-  results = {'frameId': data['frameId'], 'image_name': data['image_name']}
+  if  shared_file is None:
+    frame = np.array(data['img']).astype('uint8')
+    results = {'frameId': data['frameId'], 'image_name': data['image_name']}
+
+  else:
+    shared_size = int(shared_size)
+    frame_bytes = shared_manager.ReadBytes(0, shared_size)
+    frame = cv2.imdecode(frame_bytes, cv2.IMREAD_COLOR)
+
   detections = detector.detect(frame)
-
   total_time = time.time() - start
   detection_time = total_time - prep_time 
 
