@@ -58,6 +58,12 @@ def start_app():
     # set protocol to 1.1 so we keep the connection open
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
+    if debug:
+      import ptvsd
+      ptvsd.enable_attach(('0.0.0.0', 56781))
+      ptvsd.wait_for_attach()
+      ptvsd.break_into_debugger()
+
     app.run(debug=False, host="detector", port=5010)
 
 @app.route("/lva", methods=["POST"])
@@ -79,12 +85,6 @@ def detect_in_frame():
   
   global shared_manager
   # we are sending a json object
-  if debug:
-    import ptvsd
-    ptvsd.enable_attach(('0.0.0.0', 56781))
-    ptvsd.wait_for_attach()
-    ptvsd.break_into_debugger()
-
   start = time.time()
 
   data = request.get_json()
@@ -93,19 +93,19 @@ def detect_in_frame():
   shared_file = request.args.get("shared")
   shared_size = request.args.get("size")
   
+  results = {'frameId': data['frameId'], 'image_name': data['image_name']}
+
   if  shared_file is None:
     frame = np.array(data['img']).astype('uint8')
-    results = {'frameId': data['frameId'], 'image_name': data['image_name']}
-
   else:
     # by now camerastream has already initialzed shared memory
     if shared_manager is None:
       shared_manager = SharedMemoryManager(image_file_handle, shm_size)
-    h, w, c = tuple(map(shared_size.split(','), int))
+    h, w, c = tuple(map(int, shared_size.split(',')))
     im_size = h * w * c
 
     frame_bytes = shared_manager.ReadBytes(0, im_size)
-    frame = np.frombuffer(frame_bytes, dtype=np.uint8, count=shared_size).reshape((h, w, c))
+    frame = np.frombuffer(frame_bytes, dtype=np.uint8, count=im_size).reshape((h, w, c))
 
   detections = detector.detect(frame)
   total_time = time.time() - start
@@ -121,7 +121,7 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = True
+  debug = False
   local = False
 
   if local:
