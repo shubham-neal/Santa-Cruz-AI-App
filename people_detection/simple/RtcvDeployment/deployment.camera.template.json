@@ -48,13 +48,21 @@
               "image": "${MODULES.Detector}",
               "createOptions": {
                 "ExposedPorts": {
-                  "5010/tcp": {}
+                  "5010/tcp": {},
+                  "56781/tcp": {}
                 },
                 "HostConfig": {
                   "IpcMode": "host",
                   "Binds": [
                     "/var/tmp/video:/tmp/video"
                   ],
+                  "PortBindings": {
+                    "56780/tcp": [
+                      {
+                        "HostPort": "56781"
+                      }
+                    ]
+                  },
                   "Runtime": "$RUNTIME",
                   "ShmSize": 536870912
                 }
