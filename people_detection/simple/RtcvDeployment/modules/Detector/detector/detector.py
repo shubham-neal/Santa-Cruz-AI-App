@@ -19,7 +19,7 @@ app = Flask(__name__)
 # 50 MB of shared memory for image storage
 shm_size = 50 * 1024 * 1024
 image_file_handle = "image"
-shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+shared_manager = None 
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -83,6 +83,8 @@ def detect_in_frame_lva():
 
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
+  
+  global shared_manager
   # we are sending a json object
 
   start = time.time()
@@ -98,6 +100,9 @@ def detect_in_frame():
     results = {'frameId': data['frameId'], 'image_name': data['image_name']}
 
   else:
+    # by now camerastream has already initialzed shared memory
+    if shared_manager is None:
+      shared_manager = SharedMemoryManager(image_file_handle, shm_size)
     h, w, c = tuple(map(shared_size.split(','), int))
     im_size = h * w * c
 

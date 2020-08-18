@@ -23,7 +23,7 @@
                   "56780/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "shareable",
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/var/tmp/video:/tmp/video"
@@ -52,7 +52,7 @@
                   "56781/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "container:camerastream",
                   "Binds": [
                     "/var/tmp/video:/tmp/video"
                   ],
