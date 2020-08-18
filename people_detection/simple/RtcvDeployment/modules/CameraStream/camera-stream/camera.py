@@ -194,8 +194,8 @@ def infer(detector, img, frame_id, img_name, shared_file = None):
       result = resp.json()
 
       return result
-    except ConnectionError:
-        time.sleep(3)  
+    except:
+        time.sleep(3)
   
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
   messenger.send_upload(cam, len(scores), curtimename, proc_time)
