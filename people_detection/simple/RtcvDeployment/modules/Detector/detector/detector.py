@@ -55,12 +55,6 @@ def main_debug(displaying):
 
 def start_app():
 
-    if debug:
-      import ptvsd
-      ptvsd.enable_attach(('0.0.0.0', 56781))
-      ptvsd.wait_for_attach()
-      ptvsd.break_into_debugger()
-
     # set protocol to 1.1 so we keep the connection open
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
@@ -68,7 +62,6 @@ def start_app():
 
 @app.route("/lva", methods=["POST"])
 def detect_in_frame_lva():
-  
 
   imbytes = request.get_data()
   narr = np.frombuffer(imbytes, dtype='uint8')
@@ -86,6 +79,11 @@ def detect_in_frame():
   
   global shared_manager
   # we are sending a json object
+  if debug:
+    import ptvsd
+    ptvsd.enable_attach(('0.0.0.0', 56781))
+    ptvsd.wait_for_attach()
+    ptvsd.break_into_debugger()
 
   start = time.time()
 
@@ -123,9 +121,10 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = False
+  debug = True
+  local = False
 
-  if debug:
+  if local:
     main_debug(True)
   else:
     start_app()  

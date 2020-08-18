@@ -62,7 +62,9 @@ def module_twin_callback(client):
 def main():
   global camera_config, shared_memory
 
-  fd = os.open(f'/dev/shm/{shared_memory_name}', os.O_CREAT | os.O_TRUNC | os.O_RDWR)
+  fd = open(f'/dev/shm/{shared_memory_name}', 'wb+')
+  fd.write(bytearray(shared_memory_size))
+
   shared_memory = mmap.mmap(fd.fileno(), shared_memory_size, mmap.MAP_SHARED, mmap.PROT_WRITE)
 
   messenger = IoTInferenceMessenger()
@@ -168,7 +170,7 @@ def spin_camera_loop(messenger, shared_mem_file):
 
 def infer(detector, img, frame_id, img_name, shared_file = None):
 
-  im = imutils.resize(img, width=300)
+  im = imutils.resize(img, width=400)
   if shared_file is not None:
     shared_file.seek(0)
     shared_file.write(im.tobytes())
@@ -182,16 +184,19 @@ def infer(detector, img, frame_id, img_name, shared_file = None):
   
   if shared_file is not None:
     parameters["shared"] = shared_memory_name
-    parameters["size"] = im.shape[0] * im.shape[1] * im.shape[2]
+    parameters["size"] = f'{im.shape[0]},{im.shape[1]},{im.shape[2]}'
 
-  resp = requests.post(detector, data, headers=headers, params = parameters)
+  # wait for the detector to start
+  for _ in range(10):
+    try:
+      resp = requests.post(detector, data, headers=headers, params = parameters)
+      resp.raise_for_status()
+      result = resp.json()
+
+      return result
+    except ConnectionError:
+        time.sleep(3)  
   
-  resp.raise_for_status()
-  result = resp.json()
-
-  return result
-
-
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
   messenger.send_upload(cam, len(scores), curtimename, proc_time)
   time.sleep(0.01)
@@ -224,7 +229,7 @@ def send_img_to_blob(blob_service_client, img, camId):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = True
+    debug = False
 
     if debug:
 
