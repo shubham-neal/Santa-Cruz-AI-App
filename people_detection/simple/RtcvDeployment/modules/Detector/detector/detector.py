@@ -17,8 +17,8 @@ from werkzeug.serving import WSGIRequestHandler
 app = Flask(__name__)
 
 # 50 MB of shared memory for image storage
-shm_size = 50 * 1024 * 1024 * 1024
-image_file_handle = "image.jpg"
+shm_size = 50 * 1024 * 1024
+image_file_handle = "image"
 shared_manager = SharedMemoryManager(image_file_handle, shm_size)
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
@@ -92,15 +92,17 @@ def detect_in_frame():
   prep_time = time.time() - start
   shared_file = request.args.get("shared")
   shared_size = request.args.get("size")
-
+  
   if  shared_file is None:
     frame = np.array(data['img']).astype('uint8')
     results = {'frameId': data['frameId'], 'image_name': data['image_name']}
 
   else:
-    shared_size = int(shared_size)
-    frame_bytes = shared_manager.ReadBytes(0, shared_size)
-    frame = cv2.imdecode(frame_bytes, cv2.IMREAD_COLOR)
+    h, w, c = tuple(map(shared_size.split(','), int))
+    im_size = h * w * c
+
+    frame_bytes = shared_manager.ReadBytes(0, im_size)
+    frame = np.frombuffer(frame_bytes, dtype=np.uint8, count=shared_size).reshape((h, w, c))
 
   detections = detector.detect(frame)
   total_time = time.time() - start

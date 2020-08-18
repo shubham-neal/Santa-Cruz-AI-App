@@ -9,9 +9,9 @@ import requests
 import threading
 from streamer.videostream import VideoStream
 import imutils
+import mmap
 
 from messaging.iotmessenger import IoTInferenceMessenger
-from multiprocessing.shared_memory import SharedMemory
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -19,6 +19,9 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 camera_config = None
 received_twin_patch = False
 twin_patch = None
+shared_memory = None
+shared_memory_name='image'
+shared_memory_size = 50 * 1024 * 1024
 
 def parse_twin(data):
   global camera_config, received_twin_patch
@@ -57,7 +60,10 @@ def module_twin_callback(client):
     received_twin_patch = True
 
 def main():
-  global camera_config
+  global camera_config, shared_memory
+
+  fd = os.open(f'/dev/shm/{shared_memory_name}', os.O_CREAT | os.O_TRUNC | os.O_RDWR)
+  shared_memory = mmap.mmap(fd.fileno(), shared_memory_size, mmap.MAP_SHARED, mmap.PROT_WRITE)
 
   messenger = IoTInferenceMessenger()
   client = messenger.client
@@ -80,10 +86,10 @@ def main():
   logging.info("Created camera configuration from twin")
 
   while True:
-    spin_camera_loop(messenger)
+    spin_camera_loop(messenger, fd)
     parse_twin(twin_patch)
 
-def spin_camera_loop(messenger):
+def spin_camera_loop(messenger, shared_mem_file):
   
   intervals_per_cam = dict()
 
@@ -142,7 +148,7 @@ def spin_camera_loop(messenger):
       
       if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
         start_inf = time.time()
-        res = infer(cam['detector'], img, frame_id, curtimename)
+        res = infer(cam['detector'], img, frame_id, curtimename, shared_mem_file)
         total_inf = time.time() - start_inf
 
         detections = res["detections"]
@@ -160,17 +166,25 @@ def spin_camera_loop(messenger):
   for key, cam in intervals_per_cam.items():
     cam['video'].stop()
 
-def infer(detector, img, frame_id, img_name, shared_memory = None):
+def infer(detector, img, frame_id, img_name, shared_file = None):
 
   im = imutils.resize(img, width=300)
-  if shared_memory is not None:
-    np.ndarray(im.shape, dtype = im.dtype, buffer = shared_memory.buf)
-    data = json.dumps({"frameId": frame_id, "image_name": img_name)
+  if shared_file is not None:
+    shared_file.seek(0)
+    shared_file.write(im.tobytes())
+
+    data = json.dumps({"frameId": frame_id, "image_name": img_name})
   else:  
     data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
   
   headers = {'Content-Type': "application/json"}
-  resp = requests.post(detector, data, headers=headers, params = {"shared": shared_memory is not None})
+  parameters = dict()
+  
+  if shared_file is not None:
+    parameters["shared"] = shared_memory_name
+    parameters["size"] = im.shape[0] * im.shape[1] * im.shape[2]
+
+  resp = requests.post(detector, data, headers=headers, params = parameters)
   
   resp.raise_for_status()
   result = resp.json()
@@ -210,7 +224,7 @@ def send_img_to_blob(blob_service_client, img, camId):
 
 if __name__ == "__main__":
     # remote debugging (running in the container will listen on port 5678)
-    debug = False
+    debug = True
 
     if debug:
 

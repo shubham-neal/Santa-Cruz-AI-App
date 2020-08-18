@@ -7,7 +7,7 @@ FROM nvcr.io/nvidia/cuda:10.2-devel-ubuntu18.04
 # ENV PATH /opt/conda/bin:$PATH
 
 # update the OS
-RUN apt upgrade && add-apt-repository ppa:deadsnakes/ppa && apt update && apt-get install -y  \
+RUN apt-get upgrade && apt-get update && apt-get install -y  \
         build-essential \
         unzip \
         pkg-config \
@@ -27,7 +27,7 @@ RUN apt upgrade && add-apt-repository ppa:deadsnakes/ppa && apt update && apt-ge
         wget \
         protobuf-compiler \
         cmake \
-        python3.8-dev \
+        python3-dev \
    && rm -rf /var/lib/apt/lists/*
 
 # cuDNN
@@ -50,7 +50,7 @@ COPY requirements.txt /tmp/
 
 # add python requirements
 RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python3.8 get-pip.py
+RUN python3 get-pip.py
 RUN pip install -r /tmp/requirements.txt
 
 # build opencv
