@@ -9,4 +9,4 @@ COPY ./detector /detector
 RUN /bin/bash -c "chmod +x ./detector/run_detector.sh"
 
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD  ["./detector/${IMAGE_BASE}_run_detector.sh detector.py"]
+CMD  ["./detector/run_detector.sh detector.py"]
