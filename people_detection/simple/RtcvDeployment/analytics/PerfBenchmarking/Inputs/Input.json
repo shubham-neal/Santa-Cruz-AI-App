@@ -1,0 +1,30 @@
+﻿{
+  "Sample": "{\"cameraId\": \"Office/cam001\", \"image_name\": \"2020-08-14T00:01:49.686741Z\", \"frameId\": 1, \"detections\": [{\"bbox\": [0.3574960231781006, 0.39711475372314453, 0.46004676818847656, 0.7425638437271118], \"class\": 15, \"confidence\": 0.8729391098022461, \"label\": \"person\"}, {\"bbox\": [0.46508529782295227, 0.31642448902130127, 0.5835468173027039, 0.6993039846420288], \"class\": 15, \"confidence\": 0.7822278141975403, \"label\": \"person\"}, {\"bbox\": [0.221009761095047, 0.44136595726013184, 0.35761597752571106, 0.8377341032028198], \"class\": 15, \"confidence\": 0.6410542726516724, \"label\": \"person\"}]}",
+  "EventHubProperties": {
+    "ConsumerGroupName": null,
+    "EventHubName": "uploadhub",
+    "ServiceBusNamespace": "unifiededge",
+    "SharedAccessPolicyKey": null,
+    "SharedAccessPolicyName": "RootManageSharedAccessKey"
+  },
+  "BlobStorageProperties": null,
+  "IoTHubProperties": null,
+  "BlobReferenceProperties": null,
+  "SqlReferenceInputInfo": null,
+  "InputPartionKey": null,
+  "DataSourceCredentialDomain": "d3599c19-1573-4dc8-b1fe-872ebe49879d.StreamAnalyticsCredential",
+  "Name": "perfdata",
+  "Type": "Data Stream",
+  "DataSourceType": "Event Hub",
+  "Serialization": {
+    "Encoding": "UTF8",
+    "Type": "Json",
+    "FieldDelimiter": null,
+    "Format": null,
+    "SerializationDllPath": null,
+    "SerializationClassName": null,
+    "SerializationDllPathInLocal": null
+  },
+  "CompresssionType": "None",
+  "ScriptType": "Input"
+}

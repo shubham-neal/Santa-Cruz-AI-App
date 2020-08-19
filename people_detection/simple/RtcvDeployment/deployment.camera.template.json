@@ -23,7 +23,7 @@
                   "56780/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "shareable",
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/var/tmp/video:/tmp/video"
@@ -48,13 +48,21 @@
               "image": "${MODULES.Detector}",
               "createOptions": {
                 "ExposedPorts": {
-                  "5010/tcp": {}
+                  "5010/tcp": {},
+                  "56781/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "container:camerastream",
                   "Binds": [
                     "/var/tmp/video:/tmp/video"
                   ],
+                  "PortBindings": {
+                    "56781/tcp": [
+                      {
+                        "HostPort": "56781"
+                      }
+                    ]
+                  },
                   "Runtime": "$RUNTIME",
                   "ShmSize": 536870912
                 }

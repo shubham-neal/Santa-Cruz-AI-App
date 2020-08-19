@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace CrossingLines
+namespace PerfBenchmarking
 {
     public class Class1
     {

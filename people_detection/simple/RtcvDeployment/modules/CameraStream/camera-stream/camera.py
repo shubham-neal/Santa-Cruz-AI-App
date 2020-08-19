@@ -9,6 +9,7 @@ import requests
 import threading
 from streamer.videostream import VideoStream
 import imutils
+import mmap
 
 from messaging.iotmessenger import IoTInferenceMessenger
 
@@ -18,6 +19,9 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
 camera_config = None
 received_twin_patch = False
 twin_patch = None
+shared_memory = None
+shared_memory_name='image'
+shared_memory_size = 50 * 1024 * 1024
 
 def parse_twin(data):
   global camera_config, received_twin_patch
@@ -56,7 +60,12 @@ def module_twin_callback(client):
     received_twin_patch = True
 
 def main():
-  global camera_config
+  global camera_config, shared_memory
+
+  fd = open(f'/dev/shm/{shared_memory_name}', 'wb+')
+  fd.write(bytearray(shared_memory_size))
+
+  shared_memory = mmap.mmap(fd.fileno(), shared_memory_size, mmap.MAP_SHARED, mmap.PROT_WRITE)
 
   messenger = IoTInferenceMessenger()
   client = messenger.client
@@ -79,10 +88,10 @@ def main():
   logging.info("Created camera configuration from twin")
 
   while True:
-    spin_camera_loop(messenger)
+    spin_camera_loop(messenger, fd)
     parse_twin(twin_patch)
 
-def spin_camera_loop(messenger):
+def spin_camera_loop(messenger, shared_mem_file):
   
   intervals_per_cam = dict()
 
@@ -130,37 +139,64 @@ def spin_camera_loop(messenger):
 
       # send to blob storage and retrieve the timestamp by which we will identify the video
       curtimename = None
+      perf = None
       if camera_config["blob"] is not None:
+          start_upload = time.time()
           curtimename, _ = send_img_to_blob(blob_service_client, img, camId)
+          total_upload = time.time() - start_upload
+          perf = {"upload": total_upload}
 
       detections = []
+      
       if cam['detector'] is not None and cam['inference'] is not None and cam['inference']:
-        detections = infer(cam['detector'], img, frame_id, curtimename)
-        
+        start_inf = time.time()
+        res = infer(cam['detector'], img, frame_id, curtimename, shared_mem_file)
+        total_inf = time.time() - start_inf
+
+        detections = res["detections"]
+        perf = {**perf, **res["perf"]}
+        perf["imgencode"] = total_inf - perf["imgprep"] - perf["detection"]
+        logging.info(f"perf: {perf}")
+
       # message the image capture upstream
       if curtimename is not None:
         messenger.send_image_and_detection(camId, curtimename, frame_id, detections)
+        messenger.send_perf(camId, curtimename, frame_id, perf)
         logging.info(f"Notified of image upload: {cam['rtsp']} to {cam['space']}")
 
   # shutdown current video captures
   for key, cam in intervals_per_cam.items():
     cam['video'].stop()
 
-def infer(detector, img, frame_id, img_name):
+def infer(detector, img, frame_id, img_name, shared_file = None):
 
   im = imutils.resize(img, width=400)
+  if shared_file is not None:
+    shared_file.seek(0)
+    shared_file.write(im.tobytes())
 
-  data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
+    data = json.dumps({"frameId": frame_id, "image_name": img_name})
+  else:  
+    data = json.dumps({"frameId": frame_id, "image_name": img_name, "img": im.tolist()})
+  
   headers = {'Content-Type': "application/json"}
-  start = time.time()
-  resp = requests.post(detector, data, headers=headers)
-  proc_time = time.time() - start
-  resp.raise_for_status()
-  result = resp.json()
+  parameters = dict()
+  
+  if shared_file is not None:
+    parameters["shared"] = shared_memory_name
+    parameters["size"] = f'{im.shape[0]},{im.shape[1]},{im.shape[2]}'
 
-  return result["detections"]
+  # wait for the detector to start
+  for _ in range(10):
+    try:
+      resp = requests.post(detector, data, headers=headers, params = parameters)
+      resp.raise_for_status()
+      result = resp.json()
 
-
+      return result
+    except:
+        time.sleep(3)
+  
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
   messenger.send_upload(cam, len(scores), curtimename, proc_time)
   time.sleep(0.01)

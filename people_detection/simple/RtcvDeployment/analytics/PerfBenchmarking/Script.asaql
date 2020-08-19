@@ -1,0 +1,35 @@
+﻿with perf as 
+(
+    select events.perf.upload as upload,
+        events.perf.detection as detection,
+        events.perf.imgprep as imgprep,
+        events.perf.imgencode as imgencode,
+         events.cameraId as name, 
+         events.image_name as image_name, 
+         events.frameId as frameId
+         
+
+    from perfdata as events
+),
+agg as 
+(
+SELECT
+    avg(upload) as avg_upload,
+    avg(detection) as avg_detection,
+    avg(imgprep) as avg_imgprep,
+    avg(imgencode) as avg_imgencode,
+    count(*) as total_processed
+FROM
+    perf
+GROUP BY tumblingwindow(minute, 1)
+)
+
+select System.Timestamp() AS time,
+    avg_upload,
+    avg_detection,
+    avg_imgencode,
+    avg_imgprep as avg_imgdecode,
+    (avg_imgprep + avg_upload + avg_detection + avg_imgencode) as avg_time,
+     total_processed
+into perfstore
+from agg

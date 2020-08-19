@@ -1,19 +1,25 @@
 import os
-import io
 import cv2
 import logging
+import time
 from ssd_object_detection import Detector
 #from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
 import numpy as np
 import json
 from common import display
+from shared_memory import SharedMemoryManager
 
 from flask import Flask, jsonify, request
 # for HTTP/1.1 support
 from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
+
+# 50 MB of shared memory for image storage
+shm_size = 50 * 1024 * 1024
+image_file_handle = "image"
+shared_manager = None 
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -49,20 +55,19 @@ def main_debug(displaying):
 
 def start_app():
 
+    # set protocol to 1.1 so we keep the connection open
+    WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
     if debug:
       import ptvsd
       ptvsd.enable_attach(('0.0.0.0', 56781))
       ptvsd.wait_for_attach()
       ptvsd.break_into_debugger()
 
-    # set protocol to 1.1 so we keep the connection open
-    WSGIRequestHandler.protocol_version = "HTTP/1.1"
-
     app.run(debug=False, host="detector", port=5010)
 
 @app.route("/lva", methods=["POST"])
 def detect_in_frame_lva():
-  
 
   imbytes = request.get_data()
   narr = np.frombuffer(imbytes, dtype='uint8')
@@ -77,22 +82,49 @@ def detect_in_frame_lva():
 
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
+  
+  global shared_manager
   # we are sending a json object
-  data = request.get_json()
-  frame = np.array(data['img']).astype('uint8')
+  start = time.time()
 
+  data = request.get_json()
+  
+  prep_time = time.time() - start
+  shared_file = request.args.get("shared")
+  shared_size = request.args.get("size")
+  
   results = {'frameId': data['frameId'], 'image_name': data['image_name']}
+
+  if  shared_file is None:
+    frame = np.array(data['img']).astype('uint8')
+  else:
+    # by now camerastream has already initialzed shared memory
+    if shared_manager is None:
+      shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+    h, w, c = tuple(map(int, shared_size.split(',')))
+    im_size = h * w * c
+
+    frame_bytes = shared_manager.ReadBytes(0, im_size)
+    frame = np.frombuffer(frame_bytes, dtype=np.uint8, count=im_size).reshape((h, w, c))
+
   detections = detector.detect(frame)
+  total_time = time.time() - start
+  detection_time = total_time - prep_time 
+
+  perf = {"imgprep": prep_time, "detection": detection_time}
 
   results["detections"] = detections
+  results["perf"] = perf
+  
   logging.info(f"detected objects: {json.dumps(results, indent=1)}")
   return jsonify(results)
 
 if __name__== "__main__":
 
   debug = False
+  local = False
 
-  if debug:
+  if local:
     main_debug(True)
   else:
     start_app()  
