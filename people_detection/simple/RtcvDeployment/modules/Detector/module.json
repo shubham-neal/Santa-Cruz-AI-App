@@ -6,11 +6,11 @@
         "tag": {
             "version": "${CAMERA_CONTAINER_IMAGE_TAG}",
             "platforms": {
-                "amd64": "./opencv-detector.amd64.dockerfile",
-                "arm64v8": "./opencv-detector.arm64v8.dockerfile"
+                "amd64": "./detector.amd64.dockerfile",
+                "arm64v8": "./detector.arm64v8.dockerfile"
             }
         },
-        "buildOptions": ["--build-arg ACR_NAME=${ACR_NAME}"],
+        "buildOptions": ["--build-arg ACR_NAME=${ACR_NAME} IMAGE_BASE=${IMAGE_BASE}"],
         "contextPath": "./"
     },
     "language": "python"
