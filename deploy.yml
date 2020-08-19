@@ -20,7 +20,7 @@ variables:
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment'
+     Variable_Group: 'Test_Environment2'
 
 stages:
 - stage: 'Deploy'
@@ -135,39 +135,15 @@ stages:
           
           [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
 
           [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DISK_NAME ] && sed -i 's#^\(DISK_NAME[ ]*=\).*#\1\"$DISK_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v STORAGE_TYPE ] && sed -i 's#^\(STORAGE_TYPE[ ]*=\).*#\1\"$STORAGE_TYPE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v VM_NAME ] && sed -i 's#^\(VM_NAME[ ]*=\).*#\1\"$VM_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v VM_SIZE ] && sed -i 's#^\(VM_SIZE[ ]*=\).*#\1\"$VM_SIZE\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v INSTALL_REQUIRED_PACKAGES ] && sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"$INSTALL_REQUIRED_PACKAGES\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v APP_SERVICE_PLAN_NAME ] && sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"$APP_SERVICE_PLAN_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v APP_SERVICE_PLAN_SKU ] && sed -i 's#^\(APP_SERVICE_PLAN_SKU[ ]*=\).*#\1\"$APP_SERVICE_PLAN_SKU\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v WEBAPP_NAME ] && sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"$WEBAPP_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v PASSWORD_FOR_WEBSITE_LOGIN ] && sed -i 's#^\(PASSWORD_FOR_WEBSITE_LOGIN[ ]*=\).*#\1\"$PASSWORD_FOR_WEBSITE_LOGIN\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DEVICE_NAME ] && sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"$DEVICE_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
           
@@ -357,19 +333,19 @@ stages:
                 if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
                   echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE\""
 
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
                   
                   echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
                 else
                   echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
                   
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
                   
                   echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
                   
                   echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
                   
-                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
+                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --yes --no-wait
                   
                   echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
                 fi  

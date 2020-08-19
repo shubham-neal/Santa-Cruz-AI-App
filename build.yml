@@ -101,9 +101,6 @@ stages:
         targetType: 'inline'
         script: |
           
-          # Exit the script on any error
-          set -e
-          
           IS_SHELLCHECK_INSTALLED=$(apt list --installed | grep -c -w shellcheck)
           if [ "$IS_SHELLCHECK_INSTALLED" -eq 0 ]; then
               echo "Installing shellcheck"
