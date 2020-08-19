@@ -2,7 +2,7 @@
     "$schema-version": "0.0.1",
     "description": "",
     "image": {
-        "repository": "${ACR_NAME}/opencv_base",
+        "repository": "${ACR_NAME}/openvino_base",
         "tag": {
             "version": "latest",
             "platforms": {

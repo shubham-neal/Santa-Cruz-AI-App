@@ -1,5 +1,7 @@
 FROM openvino/ubuntu18_runtime:2020.4 
 
+USER root
+
 # Install Git and clone OMZ (OpenVINO Model Zoo)
 RUN apt-get update -y && \ 
     apt-get install -y --no-install-recommends git && \
