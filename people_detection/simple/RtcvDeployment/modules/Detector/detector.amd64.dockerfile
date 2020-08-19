@@ -6,7 +6,7 @@ FROM  ${ACR_NAME}/${IMAGE_BASE}_base:latest-amd64
 RUN pip3 install Flask
 
 COPY ./detector /detector
-RUN /bin/bash -c "chmod +x ./detector/run_detector.sh"
+RUN /bin/bash -c "chmod +x /detector/run_detector.sh"
 
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD  ["./detector/run_detector.sh detector.py"]
+CMD  ["/detector/run_detector.sh detector.py"]
