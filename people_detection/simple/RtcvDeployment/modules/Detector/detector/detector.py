@@ -20,12 +20,10 @@ app = Flask(__name__)
 shm_size = 50 * 1024 * 1024
 image_file_handle = "image"
 shared_manager = None 
+detector = None
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
-
-detector = Detector(use_gpu=True, people_only=True)
-#detector = OpenVinoDetector(device_name="CPU")
 
 def main_debug(displaying):
   video_file = os.path.join(os.path.dirname(__file__), "video/staircase.mp4")
@@ -53,6 +51,22 @@ def main_debug(displaying):
   
   cv2.destroyAllWindows()
 
+def get_detector_shared_manager(detector_type, device="CPU")
+  global detector, shared_manager
+
+  if shared_manager is None:
+    shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+
+  if detector is None:
+    if detector_type == "opencv":
+      detector = Detector(use_gpu=True, people_only=True)
+    elif detector_type == "openvino":
+      detector = OpenVinoDetector(device_name=device)
+    else:
+      raise ValueError("Unknown detector type")
+
+  return shared_manager, detector
+
 def start_app():
 
     # set protocol to 1.1 so we keep the connection open
@@ -68,6 +82,8 @@ def start_app():
 
 @app.route("/lva", methods=["POST"])
 def detect_in_frame_lva():
+  
+  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
 
   imbytes = request.get_data()
   narr = np.frombuffer(imbytes, dtype='uint8')
@@ -83,7 +99,8 @@ def detect_in_frame_lva():
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
   
-  global shared_manager
+  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
+
   # we are sending a json object
   start = time.time()
 
@@ -99,8 +116,6 @@ def detect_in_frame():
     frame = np.array(data['img']).astype('uint8')
   else:
     # by now camerastream has already initialzed shared memory
-    if shared_manager is None:
-      shared_manager = SharedMemoryManager(image_file_handle, shm_size)
     h, w, c = tuple(map(int, shared_size.split(',')))
     im_size = h * w * c
 
