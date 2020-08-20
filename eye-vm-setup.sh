@@ -28,6 +28,10 @@ exitWithError() {
     exit 1
 }
 
+
+# Generating a random number. This will be used in case a user provided name is not unique.
+RANDOM_SUFFIX="${RANDOM:0:3}"
+
 ##############################################################################
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
@@ -72,6 +76,13 @@ fi
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
+
+if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
+    INSTALL_REQUIRED_PACKAGES="true"  
+    # Writing the updated value back to variables file
+    sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"'"$INSTALL_REQUIRED_PACKAGES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"  
+fi
+
 IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
 
 # Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
@@ -114,13 +125,13 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 
 elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
-    if [ ! -z "$(command -v apt)" ]; then
+    if [ -n "$(command -v apt)" ]; then
         PACKAGE_MANAGER="apt"
-    elif [ ! -z "$(command -v dnf)" ]; then
+    elif [ -n "$(command -v dnf)" ]; then
         PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v yum)" ]; then
+    elif [ -n "$(command -v yum)" ]; then
         PACKAGE_MANAGER="yum"
-    elif [ ! -z "$(command -v zypper)" ]; then
+    elif [ -n "$(command -v zypper)" ]; then
         PACKAGE_MANAGER="zypper"
     fi
 
@@ -143,7 +154,7 @@ elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
         fi
 
         INSTALL_AZCOPY="true"
-        if [ ! -z "$(command -v azcopy)" ]; then
+        if [ -n "$(command -v azcopy)" ]; then
             currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
             requiredVersion="10.5.1"
             # Sort the current version and required version to get the lowest of the two and then then compare it with required version
@@ -213,49 +224,88 @@ ARRAY_NOT_DEFINED_VARIABLES=()
 # Checking the existence and values of mandatory variables
 
 # Pass the name of the variable and it's value to the checkValue function
-checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP_DEVICE" "$RESOURCE_GROUP_DEVICE"
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
-checkValue "LOCATION" "$LOCATION"
-checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
-checkValue "INSTALL_REQUIRED_PACKAGES" "$INSTALL_REQUIRED_PACKAGES"
 
-checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
-checkValue "DEVICE_NAME" "$DEVICE_NAME"
+
+if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
+    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$USE_EXISTING_RESOURCES" ]; then
+    USE_EXISTING_RESOURCES="false"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
 
 # Skip the variable checks for login variable if current environment is CloudShell
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
     # Pass the name of the variable and it's value to the checkValue function
-    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
-    checkValue "TENANT_ID" "$TENANT_ID"
     if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
         checkValue "SP_APP_ID" "$SP_APP_ID"
         checkValue "SP_APP_PWD" "$SP_APP_PWD"
+        checkValue "TENANT_ID" "$TENANT_ID"
     fi
+fi
+
+
+if [ -z "$LOCATION" ]; then
+    # Value is empty for LOCATION
+    # Assign Default value
+    LOCATION="WEST US 2"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(LOCATION[ ]*=\).*#\1\"'"$LOCATION"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$IOTHUB_NAME" ]; then
+    # Value is empty for IOTHUB_NAME
+    # Assign Default value and appending random suffix to it
+    IOTHUB_NAME="azureeyeiothub"${RANDOM_SUFFIX}
+    # Writing the updated value back to variables file
+    sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"'"$IOTHUB_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$DEVICE_NAME" ]; then
+    # Value is empty for DEVICE_NAME
+    # Assign Default value and appending random suffix to it
+    DEVICE_NAME="azureeye"${RANDOM_SUFFIX}
+    # Writing the updated value back to variables file
+    sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"'"$DEVICE_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 if [ -z "$DISK_NAME" ]; then
     # Value is empty for DISK_NAME;
     # Assign Default value
     DISK_NAME="mariner"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(DISK_NAME[ ]*=\).*#\1\"'"$DISK_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 if [ -z "$STORAGE_TYPE" ]; then
     # Value is empty for STORAGE_TYPE;
     # Assign Default value
     STORAGE_TYPE="Premium_LRS"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(STORAGE_TYPE[ ]*=\).*#\1\"'"$STORAGE_TYPE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 if [ -z "$VM_NAME" ]; then
     # Value is empty for VM_NAME;
     # Assign Default value
     VM_NAME="marinervm"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(VM_NAME[ ]*=\).*#\1\"'"$VM_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 if [ -z "$VM_SIZE" ]; then
     # Value is empty for VM_SIZE;
     # Assign Default value
     VM_SIZE="Standard_DS2_v2"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(VM_SIZE[ ]*=\).*#\1\"'"$VM_SIZE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 # Generate NSG name by appending -nsg to VM name
@@ -290,16 +340,32 @@ NSG_RULE="NONE"
 
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
     echo "Using existing CloudShell login for Azure CLI"
-elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
+elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "false" ]; then
     echo "$(info) Attempting login"
     # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
+    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
     # Using service principal as it will not require user interaction
     az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
     echo "$(info) Login successful"
+fi
+
+# Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
+if [ -z "$SUBSCRIPTION_ID" ]; then
+    # Value is empty for SUBSCRIPTION_ID
+    # Assign Default value to current subscription
+    subscriptions=$(az account list)
+    
+    SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
+    
+    if [ ${#subscriptions[*]} -gt 0 ]; then
+        echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
+    fi
+
+    # Writing the updated value back to variables file
+    sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
@@ -322,22 +388,27 @@ else
     fi
 fi
 
+# Check if the RESOURCE_GROUP_DEVICE name is same as RESOURCE_GROUP_IOT
+# If it is same then use the existing resource group.
 # Create a new resource group for other resources if it does not exist already.
 # If it already exists then check value for USE_EXISTING_RESOURCES
 # and based on that either throw error or use the existing RG
-if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
-    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_IOT\""
-    az group create --name "$RESOURCE_GROUP_IOT" --location "$LOCATION" --output "none"
-    echo "$(info) Successfully created resource group \"$RESOURCE_GROUP_IOT\""
-else
-    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+    echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+else    
+    if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+        echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_IOT\""
+        az group create --name "$RESOURCE_GROUP_IOT" --location "$LOCATION" --output "none"
+        echo "$(info) Successfully created resource group \"$RESOURCE_GROUP_IOT\""
     else
-        echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" already exists"
-        exitWithError
+        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+            echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_IOT\" for IoT Hub"
+        else
+            echo "$(error) Resource Group \"$RESOURCE_GROUP_IOT\" already exists"
+            exitWithError
+        fi
     fi
 fi
-
 
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Managed disk \"$DISK_NAME\" setup"
@@ -419,9 +490,6 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Configuring IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
 
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
 # We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
 # It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
 # if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub
@@ -435,7 +503,7 @@ if [ -z "$EXISTING_IOTHUB" ]; then
 else
     # Check if IoT Hub exists in current resource group. If it doesn't exist in current resource group. Create a new one based on value of USE_EXISTING_RESOURCES
     EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-    if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_IOTHUB" ]; then
+    if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ -n "$EXISTING_IOTHUB" ]; then
         echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
     else
         if [ "$USE_EXISTING_RESOURCES" == "true" ]; then

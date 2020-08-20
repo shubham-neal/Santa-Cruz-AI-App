@@ -1,13 +1,13 @@
 ﻿{
   "EventHubProperties": null,
   "BlobStorageProperties": {
-    "Container": "aggregated-detections",
+    "Container": "perf",
     "DateFormat": "yyyy/MM/dd",
     "PathPattern": "",
     "StorageAccounts": [
       {
         "AccountKey": null,
-        "AccountName": "adlsunifiededgedev001"
+        "AccountName": "storageperfmetricsvm"
       }
     ],
     "TimeFormat": "HH",
@@ -21,8 +21,8 @@
   "PowellBIProperties": null,
   "AzureDataLakeStoreProperties": null,
   "AzureFunctionProperties": null,
-  "DataSourceCredentialDomain": "3649d5e8-2e00-4bc8-a07b-74d6b5db6c7c.StreamAnalyticsCredential",
-  "Name": "detectionStatsOutput",
+  "DataSourceCredentialDomain": "69f67dc8-7f4d-460d-860c-84784281451e.StreamAnalyticsCredential",
+  "Name": "perfstore",
   "DataSourceType": "Blob Storage",
   "Serialization": {
     "Encoding": "UTF8",

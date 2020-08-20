@@ -7,7 +7,6 @@ This document serves to walk through the end-user deployment and onboarding expe
 - The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Ubuntu 18.04 LTS.
 - The user or service principal running the scripts should have access to create resources in the given subscription in Azure
 - User running the script should have access to create directories and files on the machine
-- Set values in the [variables.template](variables.template) file before running the script
 
 ## Install Package Dependencies
 
@@ -39,7 +38,6 @@ Two deployment scenarios are supported.
     - Run [eye-vm-setup.sh](eye-vm-setup.sh) script
 
     ```sh
-    chmod +x eye-vm-setup.sh
     sudo ./eye-vm-setup.sh
     ```
 
@@ -47,7 +45,6 @@ Two deployment scenarios are supported.
     - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x deploy-iot.sh
     sudo ./deploy-iot.sh
     ```
 
@@ -56,7 +53,6 @@ Two deployment scenarios are supported.
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
-    chmod +x frontend-setup.sh
     sudo ./frontend-setup.sh
     ```
 
@@ -77,7 +73,6 @@ Two deployment scenarios are supported.
     - Run [deploy-iot.sh](deploy-iot.sh) script
 
     ```sh
-    chmod +x deploy-iot.sh
     sudo ./deploy-iot.sh
     ```
 
@@ -86,7 +81,6 @@ Two deployment scenarios are supported.
     - Run [frontend-setup.sh](frontend-setup.sh) script
 
     ```sh
-    chmod +x frontend-setup.sh
     sudo ./frontend-setup.sh
     ```
 
@@ -100,8 +94,8 @@ Section 1: General configuration which applies to all components
 |Name | Required? |Description  |
 |---|---|---|
 |TENANT_ID| Optional |Provide tenant id of your organization here. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.   |
-|SUBSCRIPTION_ID| Required |Provide subscription id here   |
-|LOCATION| Required |Azure Data Centre location for the resource group and resources. |
+|SUBSCRIPTION_ID| Optional |Provide subscription id here. If Empty, Script will use first subscription id from the list of subscriptions which user has access. |
+|LOCATION| Optional |Azure Data Centre location for the resource group and resources. Default value is 'west us 2' |
 |DETECTOR_MODULE_RUNTIME| Required |Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
 |EDGE_DEVICE_ARCHITECTURE| Required |Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
 
@@ -111,8 +105,8 @@ Section 2: Virtualized Eye VM in the public cloud
 |Name | Required? |Description  |
 |---|---|---|
 |RESOURCE_GROUP_DEVICE| Required |Name of a resource group which will contain mariner VM.    |
-|DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is mariner         |
-|VM_NAME  | Optional |  Name of the VM that will be created. Default value is marinervm |
+|DISK_NAME   | Optional |  Name for the managed disk that will be created. Default value is 'mariner'         |
+|VM_NAME  | Optional |  Name of the VM that will be created. Default value is 'marinervm' |
 
 
 Section 3: IoT Hub + Storage configuration to route and host the AI output
@@ -120,17 +114,17 @@ Section 3: IoT Hub + Storage configuration to route and host the AI output
 |Name | Required? |Description  |
 |---|---|---|
 |RESOURCE_GROUP_IOT| Required |Name of a resource group which will contain IoT Hub, Storage Account and Web App.    |
-|IOTHUB_NAME| Required |Name of the IoT Hub   |
-|DEVICE_NAME| Required |Name of the IoT Edge device on IoT Hub   |
-|STORAGE_ACCOUNT_NAME| Required |Storage account name for ADLS. |
+|IOTHUB_NAME| Optional |Name of the IoT Hub   |
+|DEVICE_NAME| Optional |Name of the IoT Edge device on IoT Hub   |
+|STORAGE_ACCOUNT_NAME| Optional |Storage account name for ADLS. |
 
 
 Section 4: Vizualization UX application
 
 |Name | Required? |Description  |
 |---|---|---|
-|APP_SERVICE_PLAN_NAME| Required | App Service Plan name for the front end application|
-|WEBAPP_NAME| Required |Name of the Azure Web App for front end application|
+|APP_SERVICE_PLAN_NAME| Optional | App Service Plan name for the front end application|
+|WEBAPP_NAME| Optional |Name of the Azure Web App for front end application|
 |PASSWORD_FOR_WEBSITE_LOGIN| Required | Password for the Azure Web App|
 
 
@@ -151,8 +145,8 @@ Section 2: Virtualized Eye VM
 
 |Name | Required? |Description  |
 |---|---|---|
-|STORAGE_TYPE | Optional | Underlying storage SKU. Default value is Premium_LRS  |
-|VM_SIZE  | Optional |  The VM size to be created. Default value is Standard_DS2_v2  |
+|STORAGE_TYPE | Optional | Underlying storage SKU. Default value is 'Premium_LRS'  |
+|VM_SIZE  | Optional |  The VM size to be created. Default value is 'Standard_DS2_v2'  |
 
 Section 3: IoT Hub + Storage configuration to route and host the AI output
 

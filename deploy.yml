@@ -9,22 +9,18 @@ resources:
     project: UnifiedEdgeScenarios
     source: Build Person Tracking App
     trigger:
-      branches: 
-        include:
-        - master
-        
-        
+      enabled: true
+
 pool:
   vmImage: 'ubuntu-latest'
 
 
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
-  branch: '$(Build.SourceBranchName)'
-  ${{ if eq(variables['branch'], 'master') }}:
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
-  ${{ if ne(variables['branch'], 'master') }}:
-     Variable_Group: 'Test_Environment'
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+     Variable_Group: 'Test_Environment2'
 
 stages:
 - stage: 'Deploy'
@@ -49,25 +45,35 @@ stages:
                           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
-              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
-              az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
-          fi
-
-          if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
-              az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
-          fi
+          if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+              else
+                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+              fi  
+          else    
+            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
+            fi
+          
+            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
+                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
+            fi
+          fi  
 
     - task: DownloadPipelineArtifact@2
       enabled: true
@@ -129,39 +135,15 @@ stages:
           
           [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v SUBSCRIPTION_ID ] && sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"$SUBSCRIPTION_ID\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
 
           [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v LOCATION ] && sed -i 's#^\(LOCATION[ ]*=\).*#\1\"$LOCATION\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DISK_NAME ] && sed -i 's#^\(DISK_NAME[ ]*=\).*#\1\"$DISK_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v STORAGE_TYPE ] && sed -i 's#^\(STORAGE_TYPE[ ]*=\).*#\1\"$STORAGE_TYPE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v VM_NAME ] && sed -i 's#^\(VM_NAME[ ]*=\).*#\1\"$VM_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v VM_SIZE ] && sed -i 's#^\(VM_SIZE[ ]*=\).*#\1\"$VM_SIZE\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v INSTALL_REQUIRED_PACKAGES ] && sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"$INSTALL_REQUIRED_PACKAGES\"#g' "$VARIABLES_FILE_PATH"
           
-          [ -v APP_SERVICE_PLAN_NAME ] && sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"$APP_SERVICE_PLAN_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v APP_SERVICE_PLAN_SKU ] && sed -i 's#^\(APP_SERVICE_PLAN_SKU[ ]*=\).*#\1\"$APP_SERVICE_PLAN_SKU\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v WEBAPP_NAME ] && sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"$WEBAPP_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
           [ -v PASSWORD_FOR_WEBSITE_LOGIN ] && sed -i 's#^\(PASSWORD_FOR_WEBSITE_LOGIN[ ]*=\).*#\1\"$PASSWORD_FOR_WEBSITE_LOGIN\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v IOTHUB_NAME ] && sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"$IOTHUB_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DEVICE_NAME ] && sed -i 's#^\(DEVICE_NAME[ ]*=\).*#\1\"$DEVICE_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v STORAGE_ACCOUNT_NAME ] && sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"$STORAGE_ACCOUNT_NAME\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
           
@@ -191,10 +173,6 @@ stages:
           # Exit the inline script on any erros
           set -e
           
-          echo "Adding executable bit to eye-vm-setup.sh"
-          
-          chmod +x eye-vm-setup.sh
-          
           echo "Running eye-vm-sh script"
           
           source "./eye-vm-setup.sh"
@@ -214,19 +192,7 @@ stages:
           echo "Starting task"
           
           # Exit the inline script on any error
-          set -e
-
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
-          VARIABLES_FILE_PATH="variables.template"
-          # Update the IP parameter in variables.template file
-          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-          
-          
-          echo "Adding executable bit to setup.sh"
-          
-          
-          chmod +x deploy-iot.sh
+          set -e          
           
           echo "Running deploy-iot script"
 
@@ -251,10 +217,6 @@ stages:
 
           cd deployment-bundle
           
-          echo "Adding executable bit to frontend-setup.sh"
-          
-          chmod +x frontend-setup.sh
-          
           echo "Running frontend-setup script"
           
           source "./frontend-setup.sh"
@@ -276,14 +238,6 @@ stages:
           
           echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
           sleep 15m
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          EDGE_DEVICE_IP=$(az vm show --show-details --resource-group "$RESOURCE_GROUP_DEVICE" --name "$VM_NAME" --query "publicIps" --output tsv)
-          VARIABLES_FILE_PATH="variables.template"
-          # Update the IP parameter in variables.template file
-          #sed -i 's#^\(EDGE_DEVICE_IP[ ]*=\).*#\1\"$EDGE_DEVICE_IP\"#g' "$VARIABLES_FILE_PATH"
-          echo "Adding executable bit to smoketest.sh"
-          
-          chmod +x smoketest.sh
           
           echo "Running smoketest script"
           
@@ -376,14 +330,22 @@ stages:
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
-                echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
-                
-                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
-                
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
-                
-                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
-                
-                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes --no-wait
-                
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
+                if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE\""
+
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                else
+                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
+                fi  

@@ -70,6 +70,12 @@ fi
 # Read variable values from SETUP_VARIABLES_TEMPLATE_FILENAME file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
+if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
+    INSTALL_REQUIRED_PACKAGES="true"  
+    # Writing the updated value back to variables file
+    sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"'"$INSTALL_REQUIRED_PACKAGES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"  
+fi
+
 # Checking the existence and values of mandatory variables
 
 # Setting default values for variable check stage
@@ -86,13 +92,13 @@ fi
 # timeout is pre-installed on CloudShell. Skip the installation step if current environment is CloudShell or Install Required Packages is not set to true
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
-    if [ ! -z "$(command -v apt)" ]; then
+    if [ -n "$(command -v apt)" ]; then
         PACKAGE_MANAGER="apt"
-    elif [ ! -z "$(command -v dnf)" ]; then
+    elif [ -n "$(command -v dnf)" ]; then
         PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v yum)" ]; then
+    elif [ -n "$(command -v yum)" ]; then
         PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v zypper)" ]; then
+    elif [ -n "$(command -v zypper)" ]; then
         PACKAGE_MANAGER="zypper"
     fi
 
@@ -113,28 +119,56 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ] && [ "$INSTALL_REQUIRED_PA
 fi
 
 # Pass the name of the variable and it's value to the checkValue function
-checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
-checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
-
-checkValue "APP_SERVICE_PLAN_NAME" "$APP_SERVICE_PLAN_NAME"
-checkValue "APP_SERVICE_PLAN_SKU" "$APP_SERVICE_PLAN_SKU"
-checkValue "WEBAPP_NAME" "$WEBAPP_NAME"
 checkValue "PASSWORD_FOR_WEBSITE_LOGIN" "$PASSWORD_FOR_WEBSITE_LOGIN"
+
+if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
+    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$USE_EXISTING_RESOURCES" ]; then
+    USE_EXISTING_RESOURCES="false"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
 
 # Skip the variable checks for login variable if current environment is CloudShell
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
     # Pass the name of the variable and it's value to the checkValue function
-    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
-    checkValue "TENANT_ID" "$TENANT_ID"
     if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
         checkValue "SP_APP_ID" "$SP_APP_ID"
         checkValue "SP_APP_PWD" "$SP_APP_PWD"
+        checkValue "TENANT_ID" "$TENANT_ID"
     fi
 fi
+
+if [ -z "$APP_SERVICE_PLAN_SKU" ]; then
+    # Value is empty for APP_SERVICE_PLAN_SKU
+    # Assign Default value
+    APP_SERVICE_PLAN_SKU="S1"
+fi
+
+if [ -z "$APP_SERVICE_PLAN_NAME" ]; then
+    # Value is empty for APP_SERVICE_PLAN_NAME
+    # Assign Default value
+    APP_SERVICE_PLAN_NAME="azureeye-appplan"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$WEBAPP_NAME" ]; then
+    # Value is empty for WEBAPP_NAME
+    # Assign Default value and appending random suffix to it
+    WEBAPP_NAME="azureeye-webapp"-${RANDOM_SUFFIX}
+    # Writing the updated value back to variables file
+    sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
 
 # Check if all the variables are set up correctly
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
@@ -163,7 +197,7 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
     # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
+    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -176,6 +210,22 @@ fi
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Connecting to Azure Subscription"
 printf "%60s\n" " " | tr ' ' '-'
+
+# Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
+if [ -z "$SUBSCRIPTION_ID" ]; then
+    # Value is empty for SUBSCRIPTION_ID
+    # Assign Default value to current subscription
+    subscriptions=$(az account list)
+    
+    SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
+    
+    if [ ${#subscriptions[*]} -gt 0 ]; then
+        echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
+    fi
+
+    # Writing the updated value back to variables file
+    sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
 
 echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
 az account set --subscription "$SUBSCRIPTION_ID"
@@ -221,7 +271,7 @@ else
 fi
 
 # Check if the user provided webapp name is valid and available in Azure
-NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'${WEBAPP_NAME}'","type":"Microsoft.Web/sites"}')
+NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/"$SUBSCRIPTION_ID"/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'${WEBAPP_NAME}'","type":"Microsoft.Web/sites"}')
 IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
@@ -237,7 +287,7 @@ else
         exitWithError
     else
         EXISTING_WEB_APP=$(az webapp list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$WEBAPP_NAME'].{Name:name}" --output tsv)
-        if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTING_WEB_APP" ]; then
+        if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ -n "$EXISTING_WEB_APP" ]; then
             echo "$(info) Using existing Web App \"$WEBAPP_NAME\""
         else
             echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
@@ -273,10 +323,11 @@ az webapp config connection-string set --connection-string-type Custom --name "$
 
 # Turn on web sockets
 az webapp config set --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --web-sockets-enabled true --output "none"
-
 echo "$(info) Web App settings have been configured"
 
 echo "$(info) Deploying Web App using \"$WEBAPP_DEPLOYMENT_ZIP\" zip file"
 # Step to deploy the app to azure
+az webapp stop --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME"
 az webapp deployment source config-zip --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME" --src "$WEBAPP_DEPLOYMENT_ZIP" --output "none"
+az webapp start --resource-group "$RESOURCE_GROUP_IOT" --name "$WEBAPP_NAME"
 echo "$(info) Deployment is complete"

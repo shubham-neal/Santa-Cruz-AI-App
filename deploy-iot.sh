@@ -82,35 +82,75 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
     IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
 fi
 
-checkValue "SUBSCRIPTION_ID" "$SUBSCRIPTION_ID"
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
-checkValue "USE_EXISTING_RESOURCES" "$USE_EXISTING_RESOURCES"
-checkValue "INSTALL_REQUIRED_PACKAGES" "$INSTALL_REQUIRED_PACKAGES"
 
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "DEVICE_NAME" "$DEVICE_NAME"
-
-checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
 
 #checkValue "CREATE_AZURE_MONITOR" "$CREATE_AZURE_MONITOR"
 
 checkValue "DETECTOR_MODULE_RUNTIME" "$DETECTOR_MODULE_RUNTIME"
 checkValue "EDGE_DEVICE_ARCHITECTURE" "$EDGE_DEVICE_ARCHITECTURE"
 
-checkValue "MANIFEST_TEMPLATE_NAME" "$MANIFEST_TEMPLATE_NAME"
-checkValue "MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-checkValue "DEPLOYMENT_NAME" "$DEPLOYMENT_NAME"
+if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
+    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$USE_EXISTING_RESOURCES" ]; then
+    USE_EXISTING_RESOURCES="false"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
+    INSTALL_REQUIRED_PACKAGES="true"  
+    # Writing the updated value back to variables file
+    sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"'"$INSTALL_REQUIRED_PACKAGES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"  
+fi
 
 # Skip the variable checks for login variable if current environment is CloudShell
 if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
     # Pass the name of the variable and it's value to the checkValue function
-    checkValue "USE_INTERACTIVE_LOGIN_FOR_AZURE" "$USE_INTERACTIVE_LOGIN_FOR_AZURE"
-    checkValue "TENANT_ID" "$TENANT_ID"
     if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
         checkValue "SP_APP_ID" "$SP_APP_ID"
         checkValue "SP_APP_PWD" "$SP_APP_PWD"
+        checkValue "TENANT_ID" "$TENANT_ID"
     fi
+fi
+
+if [ -z "$STORAGE_ACCOUNT_NAME" ]; then
+    # Value is empty for STORAGE_ACCOUNT_NAME
+    # Assign Default value and appending random suffix to it
+    STORAGE_ACCOUNT_NAME="azureeyeadlsstorage"${RANDOM_SUFFIX}
+    # Writing the updated value back to variables file
+    sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"'"$STORAGE_ACCOUNT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$MANIFEST_TEMPLATE_NAME" ]; then
+    # Value is empty for MANIFEST_TEMPLATE_NAME;
+    # Assign Default value
+    MANIFEST_TEMPLATE_NAME="deployment.camera.template.json"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(MANIFEST_TEMPLATE_NAME[ ]*=\).*#\1\"'"$MANIFEST_TEMPLATE_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" ]; then
+    # Value is empty for MANIFEST_ENVIRONMENT_VARIABLES_FILENAME;
+    # Assign Default value
+    MANIFEST_ENVIRONMENT_VARIABLES_FILENAME="prod.env"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(MANIFEST_ENVIRONMENT_VARIABLES_FILENAME[ ]*=\).*#\1\"'"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$DEPLOYMENT_NAME" ]; then
+    # Value is empty for DEPLOYMENT_NAME;
+    # Assign Default value
+    DEPLOYMENT_NAME="eye-deployment"
+    # Writing the updated value back to variables file
+    sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"'"$DEPLOYMENT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 #if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
@@ -251,7 +291,7 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
     echo "$(info) Attempting login"
     # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
+    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
     echo "$(info) Login successful"
 else
     echo "$(info) Attempting login with Service Principal account"
@@ -264,6 +304,22 @@ fi
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Connecting to Azure Subscription"
 printf "%60s\n" " " | tr ' ' '-'
+
+# Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
+if [ -z "$SUBSCRIPTION_ID" ]; then
+    # Value is empty for SUBSCRIPTION_ID
+    # Assign Default value to current subscription
+    subscriptions=$(az account list)
+    
+    SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
+    
+    if [ ${#subscriptions[*]} -gt 0 ]; then
+        echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
+    fi
+
+    # Writing the updated value back to variables file
+    sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
 
 echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
 az account set --subscription "$SUBSCRIPTION_ID"

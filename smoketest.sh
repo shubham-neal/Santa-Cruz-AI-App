@@ -42,6 +42,14 @@ fi
 # Read variable values from variables.template file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
+if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
+  USE_INTERACTIVE_LOGIN_FOR_AZURE="true"
+fi
+
+if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
+  INSTALL_REQUIRED_PACKAGES="true" 
+fi
+
 # Set the variable value to decide, Whether to perform test for frontend app setup or not, Default is true.
 RUN_WEBAPP_CHECKS="true"
 # Set the variable value to decide, Whether to perform test for Mariner VM setup or not, Default is true.
@@ -135,13 +143,29 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
 elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
   echo "[INFO] Attempting login"
   # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-  timeout --foreground 3m az login --tenant "$TENANT_ID" --output "none" || (printError "Interactive login timed out" && exit 1)
+  timeout --foreground 3m az login --output "none" || (printError "Interactive login timed out" && exit 1)
   echo "[INFO] Login successful"
 else
   echo "[INFO] Attempting login with Service Principal account"
   # Using service principal as it will not require user interaction
   az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
   echo "[INFO] Login successful"
+fi
+
+# Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
+if [ -z "$SUBSCRIPTION_ID" ]; then
+    # Value is empty for SUBSCRIPTION_ID
+    # Assign Default value to current subscription
+    subscriptions=$(az account list)
+    
+    SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
+    
+    if [ ${#subscriptions[*]} -gt 0 ]; then
+        echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
+    fi
+
+    # Writing the updated value back to variables file
+    sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 echo "[INFO] Setting current subscription to $SUBSCRIPTION_ID"
@@ -152,18 +176,6 @@ echo "[INFO] Set current subscription to $SUBSCRIPTION_ID"
 
 # Checks for Mariner VM setup;
 if [ "$RUN_VM_CHECKS" == "true" ]; then
-
-  if [ -z "$DISK_NAME" ]; then
-    # Value is empty for DISK_NAME;
-    # Assign Default value
-    DISK_NAME="mariner"
-  fi
-
-  if [ -z "$VM_NAME" ]; then
-    # Value is empty for VM_NAME;
-    # Assign Default value
-    VM_NAME="marinervm"
-  fi
 
   # Check for Resource Group of VM, if it exists with the same name provided in variable template then pass the check else throw error
   if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == "false" ]; then
