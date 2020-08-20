@@ -187,7 +187,7 @@ def infer(detector, img, frame_id, img_name, shared_file = None):
     parameters["size"] = f'{im.shape[0]},{im.shape[1]},{im.shape[2]}'
 
   # wait for the detector to start
-  for _ in range(10):
+  for _ in range(24):
     try:
       resp = requests.post(detector, data, headers=headers, params = parameters)
       resp.raise_for_status()
@@ -195,7 +195,7 @@ def infer(detector, img, frame_id, img_name, shared_file = None):
 
       return result
     except:
-        time.sleep(3)
+        time.sleep(10)
   
 def report(messenger, cam, classes, scores, boxes, curtimename, proc_time):
   messenger.send_upload(cam, len(scores), curtimename, proc_time)
