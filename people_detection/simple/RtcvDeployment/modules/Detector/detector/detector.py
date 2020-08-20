@@ -50,7 +50,7 @@ def main_debug(displaying):
   cv2.destroyAllWindows()
 
 def get_detector_shared_manager(detector_type, device="CPU"):
-  
+
   try:
     shared_manager = SharedMemoryManager(image_file_handle, shm_size)
   except:
@@ -131,13 +131,13 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = False
-  local = False
+  debug = True
+  local = True
   
-  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
+  shared_manager, detector = get_detector_shared_manager("openvino", "CPU")
   
   if local:
-    main_debug(True)
+    main_debug(False)
   else:
     start_app()  
   
