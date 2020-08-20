@@ -64,3 +64,5 @@ RUN cd /opencv && mkdir build && cd build && \
 	-D BUILD_EXAMPLES=OFF ..
 
 RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig      
+
+WORKDIR /

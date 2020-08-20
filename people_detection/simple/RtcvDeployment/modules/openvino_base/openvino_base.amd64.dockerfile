@@ -15,3 +15,5 @@ COPY requirements.txt /tmp/
 # add python requirements
 RUN pip3 install -r /tmp/requirements.txt && \
         apt-get clean
+        
+WORKDIR /
