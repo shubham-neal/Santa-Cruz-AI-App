@@ -25,9 +25,9 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
                     level=logging.INFO)
 
 class OpenVinoDetector:
-  def __init__(self, device_name="CPU", threshold=0.5, people_only=False):
+  def __init__(self, device_name="CPU", threshold=0.5, people_only=False, precision='FP32'):
 
-    model_path = "net/openvino"
+    model_path = f"net/openvino/{precision}"
     model_name = os.path.join(model_path, "mobilenet-ssd.xml")
     model_weights = os.path.join(model_path, "mobilenet-ssd.bin")
 
