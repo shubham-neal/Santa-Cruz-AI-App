@@ -3,7 +3,7 @@ import cv2
 import logging
 import time
 from ssd_object_detection import Detector
-#from ssd_object_detection_openvino import OpenVinoDetector
+from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
 import numpy as np
 import json
@@ -19,8 +19,6 @@ app = Flask(__name__)
 # 50 MB of shared memory for image storage
 shm_size = 50 * 1024 * 1024
 image_file_handle = "image"
-shared_manager = None 
-detector = None
 
 logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt="%Y-%m-%d-%H-%M-%S",
                     level=logging.INFO)
@@ -51,19 +49,20 @@ def main_debug(displaying):
   
   cv2.destroyAllWindows()
 
-def get_detector_shared_manager(detector_type, device="CPU")
-  global detector, shared_manager
-
-  if shared_manager is None:
+def get_detector_shared_manager(detector_type, device="CPU"):
+  
+  try:
     shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+  except:
+    logging.error("Shared memory not found")
+    shared_manager = None
 
-  if detector is None:
-    if detector_type == "opencv":
-      detector = Detector(use_gpu=True, people_only=True)
-    elif detector_type == "openvino":
-      detector = OpenVinoDetector(device_name=device)
-    else:
-      raise ValueError("Unknown detector type")
+  if detector_type == "opencv":
+    detector = Detector(use_gpu=True, people_only=True)
+  elif detector_type == "openvino":
+    detector = OpenVinoDetector(device_name=device)
+  else:
+    raise ValueError("Unknown detector type")
 
   return shared_manager, detector
 
@@ -83,8 +82,6 @@ def start_app():
 @app.route("/lva", methods=["POST"])
 def detect_in_frame_lva():
   
-  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
-
   imbytes = request.get_data()
   narr = np.frombuffer(imbytes, dtype='uint8')
 
@@ -99,8 +96,6 @@ def detect_in_frame_lva():
 @app.route("/detect", methods=["POST"])
 def detect_in_frame():
   
-  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
-
   # we are sending a json object
   start = time.time()
 
@@ -138,7 +133,9 @@ if __name__== "__main__":
 
   debug = False
   local = False
-
+  
+  detector, shared_manager = get_detector_shared_manager("openvino", "CPU")
+  
   if local:
     main_debug(True)
   else:
