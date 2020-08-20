@@ -29,6 +29,12 @@ def main_debug(displaying):
   vid_stream = VideoStream(video_file, interval= 0.03)
   vid_stream.start()
 
+  if debug:
+    import ptvsd
+    ptvsd.enable_attach(('0.0.0.0', 56781))
+    ptvsd.wait_for_attach()
+    ptvsd.break_into_debugger()
+
   while True:
     _, frame = vid_stream.get_frame_with_id()
     detections = detector.detect(frame)
@@ -131,8 +137,8 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = True
-  local = True
+  debug = False
+  local = False
   
   shared_manager, detector = get_detector_shared_manager("openvino", "CPU")
   
