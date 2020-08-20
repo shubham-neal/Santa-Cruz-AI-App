@@ -27,4 +27,4 @@ def display(frame, detections):
   return frame
 
 def format_detections(startX, startY, endX, endY, label_idx, confidence):
-  return {"bbox": [startX, startY, endX, endY], "label": CLASSES[label_idx], "confidence": float(confidence), "class": label_idx }
+  return {"bbox": [float(startX), float(startY), float(endX), float(endY)], "label": CLASSES[label_idx], "confidence": float(confidence), "class": label_idx }
