@@ -36,7 +36,10 @@ class OpenVinoDetector:
     logging.info("Read SSD model")
 
     self.exec_net = ie.load_network(network=self.net, device_name=device_name)
-    logging.info("Loaded model to the device")
+    logging.info(f"Loaded model to {device_name}")
+
+    logging.info(f"Model precision: {precision}")
+    logging.info(f"Detection threshold: {threshold}")
 
     self.threshold = threshold
     self.class_idx = None
