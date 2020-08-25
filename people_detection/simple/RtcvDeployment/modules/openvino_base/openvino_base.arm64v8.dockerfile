@@ -63,7 +63,7 @@ RUN cd /opencv && mkdir build && cd build && \
 
 RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig      
 
-ENV OpenCV_DIR /usr/local/lib
+ENV OpenCV_DIR /opencv/build
 
 RUN apt-get update && apt-get install -y \
          git \
@@ -92,7 +92,13 @@ RUN cd /openvino && \
         -DENABLE_GNA=OFF \
         -DENABLE_SSE42=OFF \
         -DTHREADING=SEQ \
+        -DOpenCV_DIR=${OpenCV_DIR} \
         -DENABLE_SAMPLES=ON \
+        -DENABLE_PYTHON=ON \
+        -DENABLE_OPENCV=OFF \
+        -DPYTHON_EXECUTABLE=$(which python3) \
+        -DPYTHON_LIBRARY=/usr/lib/python3.6/config-3.6m-aarch64-linux-gnu/libpython3.6m.so \
+        -DPYTHON_INCLUDE_DIR=/usr/include/python3.6   \     
         .. && \
         make -j$(nproc) && make install    
 

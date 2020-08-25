@@ -10,3 +10,4 @@ Flask
 pyyaml 
 protobuf
 grpcio
+Cython
