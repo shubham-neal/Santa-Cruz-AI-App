@@ -1,11 +1,5 @@
 FROM arm64v8/ubuntu:18.04
 
-# ARG CONDA_VERSION=py37_4.8.2
-# ARG PYTHON_VERSION=3.7
-
-# ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-# ENV PATH /opt/conda/bin:$PATH
-
 # update the OS
 RUN apt-get upgrade && apt-get update && apt-get install -y  \
         build-essential \
@@ -28,13 +22,18 @@ RUN apt-get upgrade && apt-get update && apt-get install -y  \
         vim \
         wget \
         protobuf-compiler \
-        cmake \
         python3-dev \
    && rm -rf /var/lib/apt/lists/*
 
+RUN wget -O cmake-3.18.2.tar.gz https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2.tar.gz && \
+        tar -xvf cmake-3.18.2.tar.gz && \
+        cd cmake-3.18.2 && \
+        ./bootstrap && make -j${nproc} && make install && \
+        cd .. && rm cmake-3.18.2.tar.gz
+
 # download opencv
 RUN  wget -O opencv.zip https://github.com/opencv/opencv/archive/4.2.0.zip && unzip opencv.zip && mv opencv-4.2.0 opencv
-RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.2.0.zip && unzip opencv_contrib.zip && mv opencv_contrib-4.2.0 opencv_contrib
+# RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.2.0.zip && unzip opencv_contrib.zip && mv opencv_contrib-4.2.0 opencv_contrib
 
 # copy requirements
 COPY requirements.txt /tmp/
@@ -50,11 +49,10 @@ RUN cd /opencv && mkdir build && cd build && \
 	-D CMAKE_INSTALL_PREFIX=/usr/local \
 	-D INSTALL_PYTHON_EXAMPLES=OFF \
 	-D INSTALL_C_EXAMPLES=OFF \
-	-D OPENCV_ENABLE_NONFREE=ON \
+	-D OPENCV_ENABLE_NONFREE=OFF \
 	-D WITH_CUDA=OFF \
 	-D WITH_CUDNN=OFF \
 	-D OPENCV_DNN_CUDA=OFF \
-	-D OPENCV_EXTRA_MODULES_PATH=/opencv_contrib/modules \
 	-D HAVE_opencv_python3=ON \
         -D PYTHON_DEFAULT_EXECUTABLE=$(which python3) \
 	-D PYTHON_EXECUTABLE=$(which python3) \
@@ -64,5 +62,38 @@ RUN cd /opencv && mkdir build && cd build && \
 	-D BUILD_EXAMPLES=OFF ..
 
 RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig      
+
+ENV OpenCV_DIR /usr/local/lib
+
+RUN apt-get update && apt-get install -y \
+         git \
+        libboost-regex-dev \
+        libgtk2.0-dev \
+        automake \
+        libtool \
+        autoconf \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libglib2.0-dev \
+        libgstreamer1.0-0 \
+        gstreamer1.0-plugins-base \
+        libusb-1.0-0-dev \
+        libpng-dev
+
+RUN git clone https://github.com/openvinotoolkit/openvino.git && \ 
+        cd /openvino/inference-engine && \
+        git submodule update --init --recursive 
+
+RUN cd /openvino && \
+        mkdir build && cd build && \
+        cmake -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_MKL_DNN=OFF \
+        -DENABLE_CLDNN=ON \
+        -DENABLE_GNA=OFF \
+        -DENABLE_SSE42=OFF \
+        -DTHREADING=SEQ \
+        -DENABLE_SAMPLES=ON \
+        .. && \
+        make -j$(nproc) && make install    
 
 WORKDIR /
