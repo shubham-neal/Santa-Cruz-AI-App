@@ -100,6 +100,8 @@ RUN cd /openvino && \
         -DPYTHON_LIBRARY=/usr/lib/python3.6/config-3.6m-aarch64-linux-gnu/libpython3.6m.so \
         -DPYTHON_INCLUDE_DIR=/usr/include/python3.6   \     
         .. && \
-        make -j$(nproc) && make install    
+        make -j$(nproc) && make install && ldconfig
+
+ENV INTEL_OPENVINO_DIR /usr/local
 
 WORKDIR /
