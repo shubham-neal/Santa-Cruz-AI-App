@@ -106,18 +106,10 @@ ENV INTEL_OPENVINO_DIR /usr/local
 
 WORKDIR /
 
-# add USB Rules
-RUN cd /tmp && \
-        apt-get update && apt-get install -y udev && \
-        wget -O setup.tar.gz http://software.intel.com/content/dam/develop/external/us/en/documents/Setup%20Additional%20Files%20Package.tar.gz && \
-        tar xvzf setup.tar.gz && \
-        cp /tmp/97-myriad-usbboot.rules_.txt /etc/udev/rules.d/97-myriad-usbboot.rules && \
-        usermod -a -G users $(whoami)
-
 RUN cd /tmp/ && \
    wget https://github.com/libusb/libusb/archive/v1.0.22.zip && \
    unzip v1.0.22.zip && cd libusb-1.0.22 && \
    ./bootstrap.sh && \
    ./configure --disable-udev --enable-shared && \
-   make -j$(nproc) && make install && ldconfig \
+   make -j$(nproc) && make install && ldconfig && \
    rm -rf /tmp/*
