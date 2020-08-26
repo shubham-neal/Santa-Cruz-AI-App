@@ -1,0 +1,38 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    Variable_Group: 'Release_Environment'
+  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+     Variable_Group: 'Test_Environment2'
+
+stages:
+- stage: 'Deploy'
+  jobs:
+  - job: 'Deploy'
+    variables:
+     - group: ${{variables.Variable_Group}}
+    displayName: 'Deploy Person Tracking App to a test environment'
+    steps:
+    - checkout: self
+    
+    - task: AzureResourceManagerTemplateDeployment@3
+      inputs:
+        deploymentScope: 'Subscription'
+        azureResourceManagerConnection: 'ARM Template Deployment'
+        subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
+        location: 'East US'
+        templateLocation: 'URL of the file'
+        csmFileLink: 'https://unifiededgescenariostest.blob.core.windows.net/test/subscrption-level-2.json'
+        overrideParameters: '-rgName "rg-armtest" -rgLocation "eastus"'
+        deploymentMode: 'Incremental'
+
