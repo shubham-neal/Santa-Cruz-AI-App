@@ -105,3 +105,10 @@ RUN cd /openvino && \
 ENV INTEL_OPENVINO_DIR /usr/local
 
 WORKDIR /
+
+# add USB Rules
+RUN cd /tmp && \
+        apt-get update && apt-get install -y udev && \
+        wget -O setup.tar.gz http://software.intel.com/content/dam/develop/external/us/en/documents/Setup%20Additional%20Files%20Package.tar.gz && \
+        tar xvzf setup.tar.gz && \
+        cp /tmp/97-myriad-usbboot.rules_.txt /etc/udev/rules.d/97-myriad-usbboot.rules

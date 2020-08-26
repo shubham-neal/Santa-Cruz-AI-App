@@ -4,6 +4,11 @@ cd /detector
 ARGS=$@
 
 # check for openvino
-[[ ! -z "$INTEL_OPENVINO_DIR" ]] && source $INTEL_OPENVINO_DIR/bin/setupvars.sh
+if [[ ! -z "$INTEL_OPENVINO_DIR" ]]; then 
+    source $INTEL_OPENVINO_DIR/bin/setupvars.sh
+    udevadm control --reload-rules
+    udevadm trigger
+    ldconfig
+fi
 
 python3 $ARGS
