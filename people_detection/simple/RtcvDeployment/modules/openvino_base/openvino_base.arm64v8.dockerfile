@@ -77,8 +77,15 @@ RUN apt-get update && apt-get install -y \
         libglib2.0-dev \
         libgstreamer1.0-0 \
         gstreamer1.0-plugins-base \
-        libusb-1.0-0-dev \
         libpng-dev
+
+RUN cd /tmp/ && \
+   wget https://github.com/libusb/libusb/archive/v1.0.22.zip && \
+   unzip v1.0.22.zip && cd libusb-1.0.22 && \
+   ./bootstrap.sh && \
+   ./configure --disable-udev --enable-shared && \
+   make -j$(nproc) && make install && ldconfig && \
+   rm -rf /tmp/*
 
 RUN git clone https://github.com/openvinotoolkit/openvino.git && \ 
         cd /openvino/inference-engine && \
@@ -105,11 +112,3 @@ RUN cd /openvino && \
 ENV INTEL_OPENVINO_DIR /usr/local
 
 WORKDIR /
-
-RUN cd /tmp/ && \
-   wget https://github.com/libusb/libusb/archive/v1.0.22.zip && \
-   unzip v1.0.22.zip && cd libusb-1.0.22 && \
-   ./bootstrap.sh && \
-   ./configure --disable-udev --enable-shared && \
-   make -j$(nproc) && make install && ldconfig && \
-   rm -rf /tmp/*
