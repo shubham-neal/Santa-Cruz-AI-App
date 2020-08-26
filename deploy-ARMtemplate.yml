@@ -28,7 +28,7 @@ stages:
     - task: AzureResourceManagerTemplateDeployment@3
       inputs:
         deploymentScope: 'Subscription'
-        azureResourceManagerConnection: 'ARM Template Deployment'
+        azureResourceManagerConnection: 'AED E2E Subscription'
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
         location: 'East US'
         templateLocation: 'URL of the file'
