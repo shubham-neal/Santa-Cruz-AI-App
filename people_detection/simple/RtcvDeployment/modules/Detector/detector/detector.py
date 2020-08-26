@@ -58,7 +58,8 @@ def get_detector_shared_manager(detector_type, device="CPU", precision="FP32"):
     shared_manager = SharedMemoryManager(image_file_handle, shm_size)
   except:
     logging.warn("Shared memory not present")
-
+    raise
+  
   if detector_type == "opencv":
     from ssd_object_detection import Detector
 

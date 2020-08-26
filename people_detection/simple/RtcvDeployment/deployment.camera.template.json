@@ -23,7 +23,7 @@
                   "56780/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "shareable",
                   "Binds": [
                     "/tmp/.X11-unix:/tmp/.X11-unix",
                     "/var/tmp/video:/tmp/video"
@@ -52,7 +52,7 @@
                   "56781/tcp": {}
                 },
                 "HostConfig": {
-                  "IpcMode": "host",
+                  "IpcMode": "container:camerastream",
                   "Privileged": true,
                   "Binds": [
                     "/var/tmp/video:/tmp/video",
@@ -140,7 +140,7 @@
     "camerastream": {
       "properties.desired": {
         "blob": "$CAMERA_BLOB_SAS",
-        "shared_memory": false,
+        "shared_memory": true,
         "cameras": {
           "cam001": {
             "space": "Office",
