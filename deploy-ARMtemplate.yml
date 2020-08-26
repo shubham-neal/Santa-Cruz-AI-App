@@ -3,17 +3,25 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger:
-- master
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Build Person Tracking App
+    trigger:
+      enabled: true
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  buildSuffix: '$(Build.BuildNumber)' 
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment2'
+     Variable_Group: 'Test_Environment'
 
 stages:
 - stage: 'Deploy'
@@ -21,11 +29,55 @@ stages:
   - job: 'Deploy'
     variables:
      - group: ${{variables.Variable_Group}}
-    displayName: 'Deploy Person Tracking App to a test environment'
+    displayName: 'Deploy ARM Template to a test environment'
     steps:
     - checkout: self
-    
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete existing resource groups'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging to Azure"
+                          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          if [ "$RESOURCE_GROUP_DEVICE_ARM" == "$RESOURCE_GROUP_IOT_ARM" ]; then
+              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE_ARM")" == false ]; then
+                echo "Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+              else
+                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE_ARM\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
+              fi  
+          else    
+            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE_ARM")" == false ]; then
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
+            fi
+          
+            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT_ARM")" == false ]; then
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT_ARM\""
+                az group delete --resource-group "$RESOURCE_GROUP_IOT_ARM" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT_ARM\""
+            fi
+          fi  
+
     - task: AzureResourceManagerTemplateDeployment@3
+      enabled: true
+      displayName: 'Validate and Deploy ARM Template'
       inputs:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
@@ -33,6 +85,99 @@ stages:
         location: 'East US'
         templateLocation: 'Linked artifact'
         csmFile: '/home/vsts/work/1/s/azuredeploy.json'
-        overrideParameters: '-rgName "rg-armtest" -rgLocation "eastus"'
+        overrideParameters: '-rgName "$(RESOURCE_GROUP_IOT_ARM)" -rgLocation "$(LOCATION)"'
         deploymentMode: 'Incremental'
 
+
+- stage: Release
+  jobs:
+  - deployment: 'Release'
+    displayName: 'Release ARM Template to storage account'
+    environment: 'ApproveARMRelease'
+    variables:
+      - group: ${{variables.Variable_Group}}
+    strategy:
+      runOnce:
+        deploy:
+          steps: 
+          - checkout: self
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Upload the ARM template to release storage account'
+            env:
+              RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Logging into Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$CREATE_NEW_CONTAINER" == "true" ];then
+                  echo "Creating container \"RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME\" in storage account"
+                  
+                  az storage container create \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                
+                  az storage container set-permission \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --public-access blob
+                fi
+                
+                echo "Uploading ARM template to storage account"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file azuredeploy.json \
+                  --name "azuredeploy-$(buildSuffix).json"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file azuredeploy.json \
+                  --name azuredeploy-latest.json
+              workingDirectory: '/home/vsts/work/1/s'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Delete the resource groups'
+            env:
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Exit the script on any error
+                set -e
+                
+                echo "Logging to Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$RESOURCE_GROUP_DEVICE_ARM" == "$RESOURCE_GROUP_IOT_ARM" ]; then
+                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
+
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
+                else
+                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
+                  
+                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_IOT_ARM" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT_ARM\""
+                fi  
