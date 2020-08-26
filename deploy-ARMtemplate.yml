@@ -31,8 +31,8 @@ stages:
         azureResourceManagerConnection: 'AED E2E Subscription'
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
         location: 'East US'
-        templateLocation: 'URL of the file'
-        csmFileLink: 'https://unifiededgescenariostest.blob.core.windows.net/test/subscrption-level-2.json'
+        templateLocation: 'Linked artifact'
+        csmFile: '/home/vsts/work/1/s/azuredeploy.json'
         overrideParameters: '-rgName "rg-armtest" -rgLocation "eastus"'
         deploymentMode: 'Incremental'
 
