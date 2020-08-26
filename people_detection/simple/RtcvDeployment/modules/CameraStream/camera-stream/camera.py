@@ -45,6 +45,7 @@ def parse_twin(data):
     
   camera_config["cameras"] = cams.copy()
   camera_config["blob"] = blob
+  camera_config["shared_memory"] = data["shared_memory"]  if  "shared_memory" in data else False
 
   logging.info(f"config set: {camera_config}")
   received_twin_patch = False
@@ -61,11 +62,9 @@ def module_twin_callback(client):
 
 def main():
   global camera_config, shared_memory
-
-  fd = open(f'/dev/shm/{shared_memory_name}', 'wb+')
-  fd.write(bytearray(shared_memory_size))
-
-  shared_memory = mmap.mmap(fd.fileno(), shared_memory_size, mmap.MAP_SHARED, mmap.PROT_WRITE)
+  
+  # Shared memory
+  fd = None
 
   messenger = IoTInferenceMessenger()
   client = messenger.client
@@ -87,6 +86,12 @@ def main():
 
   logging.info("Created camera configuration from twin")
 
+  if camera_config["shared_memory"]:
+    fd = open(f'/dev/shm/{shared_memory_name}', 'wb+')
+    fd.write(bytearray(shared_memory_size))
+    shared_memory = mmap.mmap(fd.fileno(), shared_memory_size, mmap.MAP_SHARED, mmap.PROT_WRITE)
+    logging.info("Using shared memory!")
+    
   while True:
     spin_camera_loop(messenger, fd)
     parse_twin(twin_patch)

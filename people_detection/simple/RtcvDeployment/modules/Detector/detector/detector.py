@@ -2,8 +2,6 @@ import os
 import cv2
 import logging
 import time
-from ssd_object_detection import Detector
-from ssd_object_detection_openvino import OpenVinoDetector
 from videostream import VideoStream
 import numpy as np
 import json
@@ -59,12 +57,15 @@ def get_detector_shared_manager(detector_type, device="CPU", precision="FP32"):
   try:
     shared_manager = SharedMemoryManager(image_file_handle, shm_size)
   except:
-    logging.error("Shared memory not yet present")
-    raise
+    logging.warn("Shared memory not present")
 
   if detector_type == "opencv":
+    from ssd_object_detection import Detector
+
     detector = Detector(use_gpu=True, people_only=True)
   elif detector_type == "openvino":
+    from ssd_object_detection_openvino import OpenVinoDetector
+
     detector = OpenVinoDetector(device_name=device)
   else:
     raise ValueError("Unknown detector type")
