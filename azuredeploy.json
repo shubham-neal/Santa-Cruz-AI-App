@@ -1,0 +1,106 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "rgName": {
+      "type": "string"
+    },
+    "rgLocation": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "storageName": "[concat(uniqueString(subscription().id, parameters('rgName')))]",
+    "diskname": "mariner"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('rgName')]",
+      "location": "[parameters('rgLocation')]",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-06-01",
+      "name": "storageDeployment",
+      "resourceGroup": "[parameters('rgName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": [
+            {
+              "type": "Microsoft.Compute/disks",
+              "apiVersion": "2019-07-01",
+              "name": "[variables('diskname')]",
+              "location": "eastus",
+              "sku": {
+                "name": "Premium_LRS",
+                "tier": "Premium"
+              },
+              "properties": {
+                "osType": "Linux",
+                "hyperVGeneration": "V2",
+                "creationData": {
+                  "createOption": "Upload",
+                  "uploadSizeBytes": 68719477248
+                },
+                "diskIOPSReadWrite": 240,
+                "diskMBpsReadWrite": 50,
+                "encryption": {
+                  "type": "EncryptionAtRestWithPlatformKey"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2019-10-01-preview",
+              "name": "deploymenscripttest",
+              "dependsOn": [
+                "[variables('diskname')]"
+              ],
+              "location": "westus2",
+              "kind": "AzureCLI",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "/subscriptions/7c9469c0-29ac-424a-85ab-d01f2cea1c38/resourceGroups/rg-devops-test-environment/providers/Microsoft.ManagedIdentity/userAssignedIdentities/Managed_Identity": {}
+                }
+              },
+              "properties": {
+                "forceUpdateTag": "1",
+                "azCliVersion": "2.9.1",
+                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/test/armscript.sh",
+                "supportingScriptUris": [],
+                "environmentVariables": [
+                  {
+                    "name": "RESOURCE_GROUP_DEVICE",
+                    "value": "[parameters('rgName')]"
+                  },
+                  {
+                    "name": "DISK_NAME",
+                    "value": "mariner"
+                  }
+                ],
+                "retentionInterval": "P1D",
+                "timeout": "PT15M",
+                "containerSettings": {},
+                "cleanupPreference": "OnSuccess"
+              }
+            }
+          ],
+          "outputs": {}
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
