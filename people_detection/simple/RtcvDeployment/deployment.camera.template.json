@@ -54,7 +54,8 @@
                 "HostConfig": {
                   "IpcMode": "container:camerastream",
                   "Binds": [
-                    "/var/tmp/video:/tmp/video"
+                    "/var/tmp/video:/tmp/video",
+                    "/dev:/dev"
                   ],
                   "PortBindings": {
                     "56781/tcp": [
