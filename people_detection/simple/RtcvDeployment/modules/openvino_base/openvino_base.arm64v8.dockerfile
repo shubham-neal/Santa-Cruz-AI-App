@@ -103,7 +103,8 @@ RUN /bin/mkdir -p '/usr/local/lib' && \
     /bin/mkdir -p '/usr/local/lib/pkgconfig'
 WORKDIR /opt/libusb-1.0.22/
 RUN /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
-    ldconfig
+    ldconfig && \
+    ln -fs /usr/local/lib/libusb-1.0.so.0.1.0 /lib/aarch64-linux-gnu/libusb-1.0.so.0
 
 WORKDIR /
 
