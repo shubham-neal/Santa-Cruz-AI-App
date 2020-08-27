@@ -54,6 +54,7 @@
                 "HostConfig": {
                   "IpcMode": "container:camerastream",
                   "Privileged": true,
+                  "DeviceCgroupRules": ["c 189:* rmw"],
                   "Binds": [
                     "/var/tmp/video:/tmp/video",
                     "/dev:/dev"

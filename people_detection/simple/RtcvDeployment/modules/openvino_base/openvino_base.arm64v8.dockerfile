@@ -79,18 +79,39 @@ RUN apt-get update && apt-get install -y \
         gstreamer1.0-plugins-base \
         libpng-dev
 
-RUN cd /tmp/ && \
-   wget https://github.com/libusb/libusb/archive/v1.0.22.zip && \
-   unzip v1.0.22.zip && cd libusb-1.0.22 && \
-   ./bootstrap.sh && \
-   ./configure --disable-udev --enable-shared && \
-   make -j$(nproc) && make install && ldconfig && \
-   rm -rf /tmp/*
+# libusb
+RUN usermod -aG users root
+WORKDIR /opt
+RUN curl -L https://github.com/libusb/libusb/archive/v1.0.22.zip --output v1.0.22.zip && \
+    unzip v1.0.22.zip
+
+WORKDIR /opt/libusb-1.0.22
+
+RUN ./bootstrap.sh && \
+    ./configure --disable-udev --enable-shared && \
+    make -j$(nproc)
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libusb-1.0-0-dev=2:1.0.21-2 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/libusb-1.0.22/libusb
+RUN /bin/mkdir -p '/usr/local/lib' && \
+    /bin/bash ../libtool --mode=install /usr/bin/install -c   libusb-1.0.la '/usr/local/lib' && \
+    /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
+    /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
+    /bin/mkdir -p '/usr/local/lib/pkgconfig'
+WORKDIR /opt/libusb-1.0.22/
+RUN /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
+    ldconfig
+
+WORKDIR /
 
 RUN git clone https://github.com/openvinotoolkit/openvino.git && \ 
         cd /openvino/inference-engine && \
         git submodule update --init --recursive 
 
+# openvino
 RUN cd /openvino && \
         mkdir build && cd build && \
         cmake -DCMAKE_BUILD_TYPE=Release \
