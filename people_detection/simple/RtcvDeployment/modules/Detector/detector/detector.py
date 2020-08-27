@@ -138,13 +138,16 @@ def detect_in_frame():
 
 if __name__== "__main__":
 
-  debug = False
-  local = False
-  
+  from cmdline.cmd_args import parse_detector_args
+  args = parse_detector_args()
+
+  debug = args.debug
+  local = args.test
+
   shared_manager, detector = get_detector_shared_manager("openvino", "MYRIAD", "FP16")
   
   if local:
-    main_debug(False)
+    main_debug(args.display)
   else:
     start_app()  
   
