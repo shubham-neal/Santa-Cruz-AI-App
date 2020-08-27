@@ -53,13 +53,14 @@ def main_debug(displaying):
   
   cv2.destroyAllWindows()
 
-def get_detector_shared_manager(detector_type, device="CPU", precision="FP32"):
+def get_detector_shared_manager(detector_type, device="CPU", precision="FP32", init_shared_mem=True):
   try:
-    shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+    if init_shared_mem:
+      shared_manager = SharedMemoryManager(image_file_handle, shm_size)
   except:
     logging.warn("Shared memory not present")
     raise
-  
+
   if detector_type == "opencv":
     from ssd_object_detection import Detector
 
@@ -144,8 +145,8 @@ if __name__== "__main__":
   debug = args.debug
   local = args.test
 
-  shared_manager, detector = get_detector_shared_manager("openvino", "MYRIAD", "FP16")
-  
+  shared_manager, detector = get_detector_shared_manager("openvino", "MYRIAD", "FP16", init_shared_mem=not local)
+
   if local:
     main_debug(args.display)
   else:
