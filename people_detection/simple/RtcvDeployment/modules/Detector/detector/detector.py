@@ -39,6 +39,7 @@ def main_debug(displaying):
     #logging.info(detections)
 
     if not displaying:
+      logging.info(detections)
       continue
 
     frame = display(frame, detections)
