@@ -134,3 +134,4 @@ RUN cd /openvino && \
 ENV INTEL_OPENVINO_DIR /usr/local
 
 WORKDIR /
+RUN cp /usr/local/lib/libusb-1.0.so.0.1.0 /lib/aarch64-linux-gnu/libusb-1.0.so.0

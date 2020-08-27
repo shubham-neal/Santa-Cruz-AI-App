@@ -57,6 +57,8 @@ def get_detector_shared_manager(detector_type, device="CPU", precision="FP32", i
   try:
     if init_shared_mem:
       shared_manager = SharedMemoryManager(image_file_handle, shm_size)
+    else:
+      shared_manager = None
   except:
     logging.warn("Shared memory not present")
     raise
