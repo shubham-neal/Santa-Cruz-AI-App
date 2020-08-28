@@ -148,7 +148,7 @@ if __name__== "__main__":
   debug = args.debug
   local = args.test
 
-  shared_manager, detector = get_detector_shared_manager("openvino", "MYRIAD", "FP16", init_shared_mem=not local)
+  shared_manager, detector = get_detector_shared_manager(args.detector, args.device, "FP16", init_shared_mem=not local)
 
   if local:
     main_debug(args.display)
