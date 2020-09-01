@@ -85,7 +85,7 @@ stages:
         location: 'East US'
         templateLocation: 'Linked artifact'
         csmFile: '/home/vsts/work/1/s/azuredeploy.json'
-        overrideParameters: '-rgName_iot "$(RESOURCE_GROUP_IOT_ARM)" -rgName_device "$(RESOURCE_GROUP_DEVICE_ARM)" -rgLocation "$(LOCATION)"'
+        overrideParameters: '-rgNameIot "$(RESOURCE_GROUP_IOT_ARM)" -rgNameDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -rgLocation "$(LOCATION)" -deviceArchitecture "X86" -moduleRuntime "CPU"'
         deploymentMode: 'Incremental'
 
 
