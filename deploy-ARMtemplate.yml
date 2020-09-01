@@ -85,7 +85,7 @@ stages:
         location: 'East US'
         templateLocation: 'Linked artifact'
         csmFile: '/home/vsts/work/1/s/azuredeploy.json'
-        overrideParameters: '-rgNameIot "$(RESOURCE_GROUP_IOT_ARM)" -rgNameDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -rgLocation "$(LOCATION)" -deviceArchitecture "X86" -moduleRuntime "CPU" -managedIdentity "/subscriptions/7c9469c0-29ac-424a-85ab-d01f2cea1c38/resourceGroups/rg-devops-test-environment/providers/Microsoft.ManagedIdentity/userAssignedIdentities/Managed_Identity"'
+        overrideParameters: '-rgNameIot "$(RESOURCE_GROUP_IOT_ARM)" -rgNameDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -rgLocation "$(LOCATION)" -deviceArchitecture "X86" -moduleRuntime "CPU" -rgNameIdentity "rg-devops-test-environment" identityName- "Managed_Identity"'
         deploymentMode: 'Incremental'
 
 
