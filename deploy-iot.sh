@@ -83,7 +83,6 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 fi
 
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
-checkValue "LOCATION" "$LOCATION"
 
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "DEVICE_NAME" "$DEVICE_NAME"
@@ -97,6 +96,12 @@ if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
     USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
     # Writing the updated value back to variables file
     sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
+if [ -z "$LOCATION" ]; then
+    LOCATION="West US 2"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(LOCATION[ ]*=\).*#\1\"'"$LOCATION"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
 if [ -z "$USE_EXISTING_RESOURCES" ]; then
