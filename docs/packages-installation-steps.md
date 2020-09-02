@@ -26,10 +26,10 @@ If your machine uses a different package manager, please update the commands to 
 	curl -L https://aka.ms/InstallAzureCli | bash
 	```
 
-1. Install Azure CLI IoT Extension
+1. Install Azure IoT Extension
 	
 	```
-	az extension add --name azure-cli-iot-ext
+	az extension add --name azure-iot
 	```
 
 1. Install iotedgedev utility
@@ -59,11 +59,4 @@ If your machine uses a different package manager, please update the commands to 
 
 	```
 	sudo cp ./azcopy_linux_amd64_*/azcopy /usr/bin/
-	```
-
-1. Install Node JS and npm
-
-	```
-	curl -sL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-	sudo apt-get install -y nodejs
 	```

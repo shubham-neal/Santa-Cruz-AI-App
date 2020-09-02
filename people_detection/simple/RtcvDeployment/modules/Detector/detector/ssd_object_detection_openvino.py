@@ -25,9 +25,9 @@ logging.basicConfig(format='%(asctime)s  %(levelname)-10s %(message)s', datefmt=
                     level=logging.INFO)
 
 class OpenVinoDetector:
-  def __init__(self, device_name="CPU", threshold=0.5, people_only=False):
+  def __init__(self, device_name="CPU", threshold=0.5, people_only=False, precision='FP32'):
 
-    model_path = "net/openvino"
+    model_path = f"net/openvino/{precision}"
     model_name = os.path.join(model_path, "mobilenet-ssd.xml")
     model_weights = os.path.join(model_path, "mobilenet-ssd.bin")
 
@@ -36,7 +36,10 @@ class OpenVinoDetector:
     logging.info("Read SSD model")
 
     self.exec_net = ie.load_network(network=self.net, device_name=device_name)
-    logging.info("Loaded model to the device")
+    logging.info(f"Loaded model to {device_name}")
+
+    logging.info(f"Model precision: {precision}")
+    logging.info(f"Detection threshold: {threshold}")
 
     self.threshold = threshold
     self.class_idx = None
