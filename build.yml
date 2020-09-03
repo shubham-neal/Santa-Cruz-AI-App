@@ -11,7 +11,7 @@ resources:
    - repository: EdgeScenario
      type: git
      name: UnifiedEdgeScenarios
-     ref: master
+     ref: users/kishan/CloudShellPipelineUpdate
 
 # specific branch build with batching
 trigger:
