@@ -24,7 +24,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-- stage: A
+- stage: PublishArtifacts
   jobs:
   - job: 'Download_and_bundle'
     # Can replace 'EdgeScenario' to 'self' if pipeline is in master branch:
