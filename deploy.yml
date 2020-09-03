@@ -20,7 +20,7 @@ variables:
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment2'
+     Variable_Group: 'Test_Environment'
 
 stages:
 - stage: 'Deploy'
@@ -161,7 +161,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Run eye-vm-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -181,7 +181,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Run deploy-iot.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -202,7 +202,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Run frontend-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -225,7 +225,7 @@ stages:
 
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Run smoke test'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
