@@ -389,7 +389,7 @@
                     "outputs": {}
                 }
             },
-			"condition": "[equals(parameters('useExistingEdgeDevice'),'Yes')]",
+			"condition": "[equals(parameters('useExistingEdgeDevice'),'No')]",
             "resourceGroup": "[parameters('rgNameDevice')]"
         },
         {
