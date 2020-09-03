@@ -44,8 +44,8 @@ RUN wget -O cmake-3.18.2.tar.gz https://github.com/Kitware/CMake/releases/downlo
         cd .. && rm cmake-3.18.2.tar.gz
 
 # download opencv
-RUN  wget -O opencv.zip https://github.com/opencv/opencv/archive/4.2.0.zip && unzip opencv.zip && mv opencv-4.2.0 opencv
-RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.2.0.zip && unzip opencv_contrib.zip && mv opencv_contrib-4.2.0 opencv_contrib
+RUN  wget -O opencv.zip https://github.com/opencv/opencv/archive/4.4.0.zip && unzip opencv.zip && mv opencv-4.2.0 opencv
+RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.4.0.zip && unzip opencv_contrib.zip && mv opencv_contrib-4.2.0 opencv_contrib
 
 # copy requirements
 COPY requirements.txt /tmp/
