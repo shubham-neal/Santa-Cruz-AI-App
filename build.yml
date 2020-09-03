@@ -61,6 +61,7 @@ stages:
           people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
           people_detection/simple/RtcvDeployment/deployment.camera.template.json
           people_detection/simple/RtcvDeployment/prod.env
+          cloudshell-deployment.sh
           eye-vm-setup.sh
           deploy-iot.sh
           variables.template
@@ -117,7 +118,8 @@ stages:
           SHELL_CHECK_RESULT_FRONTEND=$(shellcheck ./frontend-setup.sh -x)
           SHELL_CHECK_RESULT_EYE_VM=$(shellcheck ./eye-vm-setup.sh -x)
           SHELL_CHECK_RESULT_SMOKETEST=$(shellcheck ./smoketest.sh -x)
-          if [ -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_EYE_VM" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
+          SHELL_CHECK_RESULT_CLOUDSHELL=$(shellcheck ./cloudshell-deployment.sh -x)
+          if [ -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_EYE_VM" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ] && [ -z "$SHELL_CHECK_RESULT_CLOUDSHELL" ]; then
               echo "Pass: There are no warnings from shellcheck"
           else
               if [ ! -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ]; then
@@ -136,7 +138,11 @@ stages:
               echo "The following are the warnings for smoketest script"
               echo "$SHELL_CHECK_RESULT_SMOKETEST"
               fi
+              if [ ! -z "$SHELL_CHECK_RESULT_CLOUDSHELL" ]; then
               echo "Task failed"
+              echo "The following are the warnings for cloudshell-deployment script"
+              echo "$SHELL_CHECK_RESULT_CLOUDSHELL"
+              fi
               exit 1
           fi
       
