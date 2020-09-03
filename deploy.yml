@@ -161,7 +161,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: true
+      enabled: false
       displayName: 'Run eye-vm-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -181,7 +181,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: true
+      enabled: false
       displayName: 'Run deploy-iot.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -202,7 +202,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
     - task: Bash@3
-      enabled: true
+      enabled: false
       displayName: 'Run frontend-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -225,7 +225,7 @@ stages:
 
 
     - task: Bash@3
-      enabled: true
+      enabled: false
       displayName: 'Run smoke test'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -313,6 +313,23 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
                   --name deployment-bundle-latest.zip
+                
+                
+                unzip deployment-bundle.zip -d .
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment-$(buildSuffix).sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment.sh"
               workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
           - task: Bash@3
