@@ -98,8 +98,10 @@ RUN /bin/mkdir -p '/usr/local/lib' && \
     /bin/mkdir -p '/usr/local/lib/pkgconfig'
 WORKDIR /opt/libusb-1.0.22/
 RUN /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
-    ldconfig && \
-    ln -fs /usr/local/lib/libusb-1.0.so.0.1.0 /lib/aarch64-linux-gnu/libusb-1.0.so.0
+    ldconfig
+
+# make sure the libusb we built supercedes the system one
+RUN cp /usr/local/lib/libusb-1.0.so.0.1.0 /lib/aarch64-linux-gnu/libusb-1.0.so.0
 
 WORKDIR /
 
@@ -127,7 +129,3 @@ RUN cd /openvino && \
         make -j$(nproc) && make install && ldconfig
 
 ENV INTEL_OPENVINO_DIR /usr/local
-
-WORKDIR /
-# make sure the libusb we built supercedes the system one
-RUN cp /usr/local/lib/libusb-1.0.so.0.1.0 /lib/aarch64-linux-gnu/libusb-1.0.so.0
