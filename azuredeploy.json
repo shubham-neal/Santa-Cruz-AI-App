@@ -2,19 +2,19 @@
     "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "rgNameIot": {
+        "resourceGroupIot": {
             "type": "String",
 			"metadata": {
       				"description": "Enter the name of resource group to be created for Iot hub."
     }
         },
-        "rgNameDevice": {
+        "resourceGroupDevice": {
             "type": "String",
 			"metadata": {
       				"description": "Enter the name of resource group to be created for Edge device."
     }
         },
-        "rgLocation": {
+        "resourceGroupLocation": {
             "defaultValue": "East US",
             "type": "String"
         },
@@ -84,8 +84,8 @@
 		}
     },
     "variables": {
-        "webappName": "[concat('ues-eyeapp',substring(uniqueString(subscription().id,parameters('rgNameIot')),1,4))]",
-        "appServiceName": "[concat('ues-eyeasp',substring(uniqueString(subscription().id,parameters('rgNameIot')),1,4))]",
+        "webappName": "[concat('ues-eyeapp',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
+        "appServiceName": "[concat('ues-eyeasp',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "diskName": "mariner",
 		"deviceName" : "[if(equals(parameters('existingDeviceName'), ''), 'azureEyeEdgeDevice', parameters('existingDeviceName'))]",
         "networkSecurityGroupName": "default-NSG",
@@ -96,36 +96,36 @@
         "addressPrefix": "10.0.0.0/16",
         "subnetPrefix": "10.0.0.0/24",
         "publicIPAddressName": "myPublicIP",
-        "rgNameIot": "[if(equals(parameters('rgNameIot'), parameters('rgNameDevice')), 'storage', parameters('rgNameDevice'))]",
-        "rgNameDevice": "[parameters('rgNameIot')]",
-		"storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('rgNameIot')),1,4))]",
+        "resourceGroupIot": "[if(equals(parameters('resourceGroupIot'), parameters('resourceGroupDevice')), 'storage', parameters('resourceGroupDevice'))]",
+        "resourceGroupDevice": "[parameters('resourceGroupIot')]",
+		"storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
 		"iothublogic":"[if(equals(parameters('existingIotHubName'), ''), 'azureeyeiothub', parameters('existingIotHubName'))]",
-		"iotHubName": "[if(equals(parameters('existingIotHubName'),variables('iothublogic')),parameters('existingIotHubName'),concat(variables('iothublogic'),substring(uniqueString(subscription().id,parameters('rgNameIot')),1,4)))]",
-		"deploymentName" :"[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('rgNameIot')),1,4))]",
+		"iotHubName": "[if(equals(parameters('existingIotHubName'),variables('iothublogic')),parameters('existingIotHubName'),concat(variables('iothublogic'),substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4)))]",
+		"deploymentName" :"[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
 		"customVideoSource": ""
     },
     "resources": [
         {
             "type": "Microsoft.Resources/resourceGroups",
             "apiVersion": "2020-06-01",
-            "name": "[variables('rgNameDevice')]",
-            "location": "[parameters('rgLocation')]",
+            "name": "[variables('resourceGroupDevice')]",
+            "location": "[parameters('resourceGroupLocation')]",
             "properties": {}
         },
         {
             "type": "Microsoft.Resources/resourceGroups",
             "apiVersion": "2020-06-01",
-            "name": "[variables('rgNameIot')]",
-            "location": "[parameters('rgLocation')]",
+            "name": "[variables('resourceGroupIot')]",
+            "location": "[parameters('resourceGroupLocation')]",
             "properties": {},
-			"condition": "[not(equals(parameters('rgNameIot'),parameters('rgNameDevice')))]"
+			"condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
         },
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "diskVMDeployment",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgNameDevice'))]"
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupDevice'))]"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -139,7 +139,7 @@
                             "type": "Microsoft.Compute/disks",
                             "apiVersion": "2019-07-01",
                             "name": "[variables('diskName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "sku": {
                                 "name": "Premium_LRS",
                                 "tier": "Premium"
@@ -165,7 +165,7 @@
                             "dependsOn": [
                                 "[variables('diskName')]"
                             ],
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
                             "identity": {
                                 "type": "UserAssigned",
@@ -181,7 +181,7 @@
                                 "environmentVariables": [
                                     {
                                         "name": "RESOURCE_GROUP_DEVICE",
-                                        "value": "[parameters('rgNameDevice')]"
+                                        "value": "[parameters('resourceGroupDevice')]"
                                     },
                                     {
                                         "name": "DISK_NAME",
@@ -198,13 +198,13 @@
                             "type": "Microsoft.Network/networkSecurityGroups",
                             "apiVersion": "2019-08-01",
                             "name": "[variables('networkSecurityGroupName')]",
-                            "location": "[parameters('rgLocation')]"
+                            "location": "[parameters('resourceGroupLocation')]"
                         },
                         {
                             "type": "Microsoft.Network/publicIPAddresses",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('publicIPAddressName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "properties": {
                                 "publicIPAllocationMethod": "Dynamic"
                             }
@@ -213,7 +213,7 @@
                             "type": "Microsoft.Network/virtualNetworks",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('virtualNetworkName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
 							"dependsOn": [
                                 "[variables('networkSecurityGroupName')]"
                             ],
@@ -229,7 +229,7 @@
                                         "properties": {
                                             "addressPrefix": "[variables('addressPrefix')]",
                                             "networkSecurityGroup": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('rgNameDevice'),'/providers/Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
                                             }
                                         }
                                     }
@@ -240,7 +240,7 @@
                             "type": "Microsoft.Network/networkInterfaces",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('nicName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
 							"dependsOn": [
                                 "[variables('virtualNetworkName')]",
 								"[variables('publicIPAddressName')]"
@@ -252,10 +252,10 @@
                                         "properties": {
                                             "privateIPAllocationMethod": "Dynamic",
                                             "publicIPAddress": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('rgNameDevice'),'/providers/Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
                                             },
                                             "subnet": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('rgNameDevice'),'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('subnetName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('subnetName'))]"
                                             }
                                         }
                                     }
@@ -266,7 +266,7 @@
                             "type": "Microsoft.Compute/virtualMachines",
                             "apiVersion": "2019-07-01",
                             "name": "[variables('vmName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
 							"dependsOn": [
                                 "[variables('diskName')]",
 								"[variables('nicName')]",
@@ -284,7 +284,7 @@
                                         "caching": "ReadWrite",
                                         "managedDisk": {
                                             "storageAccountType": "Premium_LRS",
-                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('rgNameDevice'),'/providers/Microsoft.Compute/disks/', variables('diskName'))]"
+                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Compute/disks/', variables('diskName'))]"
                                         },
                                         "diskSizeGB": 64
                                     },
@@ -293,18 +293,41 @@
                                 "networkProfile": {
                                     "networkInterfaces": [
                                         {
-                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('rgNameDevice'),'/providers/Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/networkInterfaces/', variables('nicName'))]"
                                         }
                                     ]
                                 }
                             }
-                        },
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+			"condition": "[equals(parameters('useExistingEdgeDevice'),'No')]",
+            "resourceGroup": "[parameters('resourceGroupDevice')]"
+        },
+		{
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "IothubDeployment",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
+				"diskVMDeployment"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [						
 						{
                             "type": "Microsoft.Devices/IotHubs",
                             "apiVersion": "2020-04-01",
                             "name": "[variables('iotHubName')]",
 							"dependsOn": [],
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "sku": {
                                 "name": "S1",
                                 "tier": "Standard",
@@ -341,10 +364,9 @@
                             "apiVersion": "2019-10-01-preview",
                             "name": "configureEdgeDevice",
                             "dependsOn": [
-								"[variables('iotHubName')]",
-                                "[variables('vmName')]"
+								"[variables('iotHubName')]"
 							],
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
                             "identity": {
                                 "type": "UserAssigned",
@@ -360,7 +382,7 @@
                                 "environmentVariables": [
                                     {
                                         "name": "RESOURCE_GROUP_DEVICE",
-                                        "value": "[parameters('rgNameDevice')]"
+                                        "value": "[parameters('resourceGroupDevice')]"
                                     },
                                     {
                                         "name": "VM_NAME",
@@ -390,15 +412,16 @@
                 }
             },
 			"condition": "[equals(parameters('useExistingEdgeDevice'),'No')]",
-            "resourceGroup": "[parameters('rgNameDevice')]"
+            "resourceGroup": "[parameters('resourceGroupIot')]"
         },
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "resourcesDeployment",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgNameIot'))]",
-                "diskVMDeployment"
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
+                "diskVMDeployment",
+				"IothubDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -406,8 +429,8 @@
                     "scope": "inner"
                 },
                 "parameters": {
-                    "rgNameIot": {
-                        "value": "[parameters('rgNameIot')]"
+                    "resourceGroupIot": {
+                        "value": "[parameters('resourceGroupIot')]"
                     },
                     "StorageAccountName": {
                         "value": "[variables('storageAccountName')]"
@@ -415,8 +438,8 @@
 					"iotHubName": {
 						"value": "[variables('iotHubName')]"
 					},
-                    "rgLocation": {
-                        "value": "[parameters('rgLocation')]"
+                    "resourceGroupLocation": {
+                        "value": "[parameters('resourceGroupLocation')]"
                     },
                     "accountType": {
                         "value": "Standard_RAGRS"
@@ -461,7 +484,7 @@
                     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                     "contentVersion": "1.0.0.0",
                     "parameters": {
-                        "rgNameIot": {
+                        "resourceGroupIot": {
                             "type": "String"
                         },
                         "StorageAccountName": {
@@ -470,7 +493,7 @@
 						"iotHubName": {
                             "type": "string"
                         },
-                        "rgLocation": {
+                        "resourceGroupLocation": {
                             "type": "String"
                         },
                         "accountType": {
@@ -513,7 +536,7 @@
                             "type": "Microsoft.Storage/storageAccounts",
                             "apiVersion": "2019-06-01",
                             "name": "[parameters('StorageAccountName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "dependsOn": [],
                             "tags": {},
                             "sku": {
@@ -602,7 +625,7 @@
 								"[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
 								"[parameters('storageAccountName')]"
 							],
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
                             "identity": {
                                 "type": "UserAssigned",
@@ -635,7 +658,7 @@
                                     },
 									{
                                         "name": "RESOURCE_GROUP_IOT",
-                                        "value": "[parameters('rgNameIot')]"
+                                        "value": "[parameters('resourceGroupIot')]"
                                     },									
 									{
 										"name": "CUSTOM_VIDEO_SOURCE",
@@ -669,14 +692,14 @@
                     }
                 }
             },
-            "resourceGroup": "[parameters('rgNameIot')]"
+            "resourceGroup": "[parameters('resourceGroupIot')]"
         },
 		{
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "appServicePlanDeployment",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgNameIot'))]",
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
 				"resourcesDeployment"
             ],
             "properties": {
@@ -691,7 +714,7 @@
                             "type": "Microsoft.Web/serverfarms",
                             "apiVersion": "2018-02-01",
                             "name": "[variables('appServiceName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "sku": {
                                 "name": "S1",
                                 "tier": "Standard",
@@ -715,7 +738,7 @@
                             "type": "Microsoft.Web/sites",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('webappName')]",
-                            "location": "[parameters('rgLocation')]",
+                            "location": "[parameters('resourceGroupLocation')]",
                             "dependsOn": [
 								"[variables('appServiceName')]"
 							],
@@ -734,7 +757,7 @@
                                         "hostType": "Repository"
                                     }
                                 ],
-                                "serverFarmId": "[concat(subscription().id,'/resourceGroups/',parameters('rgNameIot'),'/providers/Microsoft.Web/serverfarms/', variables('appServiceName'))]",
+                                "serverFarmId": "[concat(subscription().id,'/resourceGroups/',parameters('resourceGroupIot'),'/providers/Microsoft.Web/serverfarms/', variables('appServiceName'))]",
                                 "reserved": false,
                                 "isXenon": false,
                                 "hyperV": false,
@@ -799,7 +822,7 @@
                                     "type": "Extensions",
                                     "apiVersion": "2018-11-01",
                                     "name": "MSDeploy",
-                                    "location": "[parameters('rgLocation')]",
+                                    "location": "[parameters('resourceGroupLocation')]",
                                     "dependsOn": [
                                         "[variables('webappName')]"
                                     ],
@@ -812,7 +835,7 @@
                     ]
                 }
             },
-            "resourceGroup": "[parameters('rgNameIot')]"
+            "resourceGroup": "[parameters('resourceGroupIot')]"
         }
     ]
 }
