@@ -55,7 +55,7 @@
         "identityName":{
             "type": "String",
             "metadata":{
-                "description": "Specify the name of user managed identity which has been created in rgNameIdentity"
+                "description": "Specify the name of user managed identity which has been created in Rg Name Identity"
             }
         },
 		"useExistingEdgeDevice" :{
