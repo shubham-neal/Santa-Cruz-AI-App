@@ -16,7 +16,10 @@
         },
         "resourceGroupLocation": {
             "defaultValue": "East US",
-            "type": "String"
+            "type": "String",
+			"metadata": {
+      				"description": "Location for all resources."
+    }
         },
 		"deviceArchitecture": {
 			"allowedValues": [
@@ -46,16 +49,16 @@
       				"description": "Specify the password for the web app."
                 }
         },
-        "rgNameIdentity":{
+        "managedIdentityResourceGroup":{
             "type": "String",
             "metadata":{
                 "description": "Specify the resource group name where user managed identity has been created"
             }
         },
-        "identityName":{
+        "managedIdentityName":{
             "type": "String",
             "metadata":{
-                "description": "Specify the name of user managed identity which has been created in Rg Name Identity"
+                "description": "Specify the name of user managed identity present in Rg Name Identity"
             }
         },
 		"useExistingEdgeDevice" :{
@@ -170,7 +173,7 @@
                             "identity": {
                                 "type": "UserAssigned",
                                 "userAssignedIdentities": {
-                                    "[concat(subscription().id,'/resourceGroups/', parameters('rgNameIdentity'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('identityName'))]": {}
+                                    "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
                                 }
                             },
                             "properties": {
@@ -371,7 +374,7 @@
                             "identity": {
                                 "type": "UserAssigned",
                                 "userAssignedIdentities": {
-                                    "[concat(subscription().id,'/resourceGroups/', parameters('rgNameIdentity'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('identityName'))]": {}
+                                    "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
                                 }
                             },
                             "properties": {
@@ -464,11 +467,11 @@
                     "moduleRuntime": {
                         "value": "[parameters('moduleRuntime')]"
                     },
-					"rgNameIdentity": {
-						"value": "[parameters('rgNameIdentity')]"
+					"managedIdentityResourceGroup": {
+						"value": "[parameters('managedIdentityResourceGroup')]"
 					},
-					"identityName": {
-						"value": "[parameters('identityName')]"
+					"managedIdentityName": {
+						"value": "[parameters('managedIdentityName')]"
 					},
                     "customVideoSource": {
                         "value": "[variables('customVideoSource')]"
@@ -514,10 +517,10 @@
                         "moduleRuntime": {
                             "type": "String"
                         },
-						"rgNameIdentity": {
+						"managedIdentityResourceGroup": {
 							"type": "String"
 						},
-						"identityName": {
+						"managedIdentityName": {
 							"type": "String"
 						},
                         "customVideoSource": {
@@ -630,7 +633,7 @@
                             "identity": {
                                 "type": "UserAssigned",
                                 "userAssignedIdentities": {
-                                    "[concat(subscription().id,'/resourceGroups/', parameters('rgNameIdentity'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('identityName'))]": {}
+                                    "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
                                 }
                             },
                             "properties": {
