@@ -115,7 +115,7 @@ stages:
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
                 if [ "$CREATE_NEW_CONTAINER" == "true" ];then
-                  echo "Creating container \"RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME\" in storage account"
+                  echo "Creating container \"$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME\" in storage account"
                   
                   az storage container create \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
