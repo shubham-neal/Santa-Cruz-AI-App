@@ -19,9 +19,10 @@ pool:
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
-    Variable_Group: 'Release_Environment'
+    Variable_Group: 'ARMTemplateVariables'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment'
+     Variable_Group: 'ARMTemplateVariables'
+
 
 stages:
 - stage: 'Deploy'
@@ -76,8 +77,6 @@ stages:
           fi  
 
     - task: AzureResourceManagerTemplateDeployment@3
-      enabled: true
-      displayName: 'Validate and Deploy ARM Template'
       inputs:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
@@ -85,7 +84,7 @@ stages:
         location: 'East US'
         templateLocation: 'Linked artifact'
         csmFile: '/home/vsts/work/1/s/azuredeploy.json'
-        overrideParameters: '-rgNameIot "$(RESOURCE_GROUP_IOT_ARM)" -rgNameDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -rgLocation "$(LOCATION)" -deviceArchitecture "X86" -moduleRuntime "CPU" -rgNameIdentity "rg-devops-test-environment" -identityName "Managed_Identity" -useExistingEdgeDevice "No"'
+        overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -resourceGroupLocation "$(LOCATION)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -rgNameIdentity "$(RG_NAME_IDENTITY)" -identityName "$(IDENTITY_NAME)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
         deploymentMode: 'Incremental'
 
 
