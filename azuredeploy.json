@@ -58,7 +58,7 @@
         "managedIdentityName":{
             "type": "String",
             "metadata":{
-                "description": "Specify the name of user managed identity present in Rg Name Identity"
+                "description": "Specify the name of user managed identity present in Managed Identity Resource Group"
             }
         },
 		"useExistingEdgeDevice" :{
