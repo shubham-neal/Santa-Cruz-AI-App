@@ -179,7 +179,7 @@
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
-                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/test/armscript22.sh",
+                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/arm-template/disk-setup.sh",
                                 "supportingScriptUris": [],
                                 "environmentVariables": [
                                     {
@@ -380,7 +380,7 @@
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
-                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/test/edgedevice_armscript.sh",
+                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/arm-template/create-setup-iot-edge-device.sh",
                                 "supportingScriptUris": [],
                                 "environmentVariables": [
                                     {
@@ -639,7 +639,7 @@
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
-                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/test/module_deployment.sh",
+                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/arm-template/deploy-modules.sh",
                                 "supportingScriptUris": [],
                                 "environmentVariables": [
                                    
