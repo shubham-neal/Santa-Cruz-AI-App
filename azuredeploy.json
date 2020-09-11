@@ -4,93 +4,77 @@
     "parameters": {
         "resourceGroupIot": {
             "type": "String",
-			"metadata": {
-      				"description": "Enter the name of resource group to be created for Iot hub."
-    }
+            "metadata": {
+                "description": "Enter the name of resource group to be created for Iot hub."
+            }
         },
         "resourceGroupDevice": {
             "type": "String",
-			"metadata": {
-      				"description": "Enter the name of resource group to be created for Edge device."
-    }
+            "metadata": {
+                "description": "Enter the name of resource group to be created for Edge device."
+            }
         },
-        "resourceGroupLocation": {
-            "defaultValue": "East US",
+        "deviceArchitecture": {
+            "defaultValue": "X86",
+            "allowedValues": [
+                "X86",
+                "ARM64"
+            ],
             "type": "String",
-			"metadata": {
-      				"description": "Location for all resources."
-    }
+            "metadata": {
+                "description": "Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'."
+            }
         },
-		"deviceArchitecture": {
-			"allowedValues": [
-				"X86",
-				"ARM64"
-				],
+        "moduleRuntime": {
+            "defaultValue": "CPU",
+            "allowedValues": [
+                "CPU",
+                "NVIDIA",
+                "MOVIDIUS"
+            ],
             "type": "String",
-			"metadata": {
-      				"description": "Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'."
-    }
-        },
-		"moduleRuntime": {
-			"allowedValues": [
-				"CPU",
-				"NVIDIA",
-				"MOVIDIUS"
-				],
-            "type": "String",
-			"metadata": {
-      				"description": "Select value for runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'."
-    }
+            "metadata": {
+                "description": "Select value for runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'."
+            }
         },
         "Password": {
             "defaultValue": "UnifiedEdge2020",
             "type": "String",
-			"metadata": {
-      				"description": "Specify the password for the web app."
-                }
-        },
-        "managedIdentityResourceGroup":{
-            "type": "String",
-            "metadata":{
-                "description": "Specify the resource group name where user managed identity has been created"
+            "metadata": {
+                "description": "Specify the password for the web app."
             }
         },
-        "managedIdentityName":{
+        "useExistingEdgeDevice": {
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
             "type": "String",
-            "metadata":{
-                "description": "Specify the name of user managed identity present in Managed Identity Resource Group"
+            "metadata": {
+                "description": "Select whether you want to create the edge device or skip this part and use existing resources."
             }
         },
-		"useExistingEdgeDevice" :{
-			"allowedValues": [
-				"Yes",
-				"No"
-				],
+        "existingIotHubName": {
+            "defaultValue": "",
             "type": "String",
-			"metadata": {
-      				"description": "Select whether you want to create the edge device or skip this part and use existing resources."
-		}
-		},
-		"existingIotHubName" :{
-			"defaultValue":"",
-			"type":"String",
-			"metadata": {
-      				"description": "Enter the name of existing iot hub to be used."
-		}
-		},
-		"existingDeviceName" :{
-			"defaultValue":"",
-			"type":"String",
-			"metadata": {
-      				"description": "Enter the name of existing device to be used."
-		}
-		}
+            "metadata": {
+                "description": "Enter the name of existing iot hub to be used."
+            }
+        },
+        "existingDeviceName": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "Enter the name of existing device to be used."
+            }
+        }
     },
     "variables": {
+        "location": "[deployment().location]",
         "webappName": "[concat('ues-eyeapp',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "appServiceName": "[concat('ues-eyeasp',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "diskName": "mariner",
-		"deviceName" : "[if(equals(parameters('existingDeviceName'), ''), 'azureEyeEdgeDevice', parameters('existingDeviceName'))]",
+        "deviceName": "[if(equals(parameters('existingDeviceName'), ''), 'azureEyeEdgeDevice', parameters('existingDeviceName'))]",
         "networkSecurityGroupName": "default-NSG",
         "vmName": "marinervm",
         "nicName": "marinervmVMNic",
@@ -101,34 +85,168 @@
         "publicIPAddressName": "myPublicIP",
         "resourceGroupIot": "[if(equals(parameters('resourceGroupIot'), parameters('resourceGroupDevice')), 'storage', parameters('resourceGroupDevice'))]",
         "resourceGroupDevice": "[parameters('resourceGroupIot')]",
-		"storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
-		"iothublogic":"[if(equals(parameters('existingIotHubName'), ''), 'azureeyeiothub', parameters('existingIotHubName'))]",
-		"iotHubName": "[if(equals(parameters('existingIotHubName'),variables('iothublogic')),parameters('existingIotHubName'),concat(variables('iothublogic'),substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4)))]",
-		"deploymentName" :"[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
-		"customVideoSource": ""
+        "storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
+        "iothublogic": "[if(equals(parameters('existingIotHubName'), ''), 'azureeyeiothub', parameters('existingIotHubName'))]",
+        "iotHubName": "[if(equals(parameters('existingIotHubName'),variables('iothublogic')),parameters('existingIotHubName'),concat(variables('iothublogic'),substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4)))]",
+        "deploymentName": "[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
+        "managedIdentityName": "[concat('Managed_Identity',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
+        "managedIdentityResourceGroup": "[parameters('resourceGroupIot')]",
+        "customVideoSource": ""
     },
     "resources": [
         {
             "type": "Microsoft.Resources/resourceGroups",
             "apiVersion": "2020-06-01",
             "name": "[variables('resourceGroupDevice')]",
-            "location": "[parameters('resourceGroupLocation')]",
+            "location": "[variables('location')]",
             "properties": {}
         },
         {
             "type": "Microsoft.Resources/resourceGroups",
             "apiVersion": "2020-06-01",
             "name": "[variables('resourceGroupIot')]",
-            "location": "[parameters('resourceGroupLocation')]",
+            "location": "[variables('location')]",
             "properties": {},
-			"condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
+            "condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "CreatingManagedIdentity",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+                            "name": "[variables('managedIdentityName')]",
+                            "apiVersion": "2018-11-30",
+                            "location": "[variables('location')]"
+                        }
+                    ]
+                }
+            },
+            "resourceGroup": "[parameters('resourceGroupIot')]"
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "CreatingRoleAssignments",
+            "dependsOn": [
+                "CreatingManagedIdentity"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "expressionEvaluationOptions": {
+                    "scope": "inner"
+                },
+                "parameters": {
+                    "managedIdentityName": {
+                        "value": "[variables('managedIdentityName')]"
+                    },
+					"resourceGroupDevice": {
+                        "value": "[parameters('resourceGroupDevice')]"
+                    }
+                },
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "managedIdentityName": {
+                            "type": "String"
+                        },
+						"resourceGroupDevice": {
+                            "type": "String"
+                        }
+                    },
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Authorization/roleAssignments",
+                            "apiVersion": "2018-09-01-preview",
+                            "name": "[guid(concat(resourceGroup().id, 'contributor'))]",
+                            "properties": {
+                                "roleDefinitionId": "[concat(resourceGroup().id, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2018-11-30').principalId]",
+                                "scope": "[resourceGroup().id]",
+                                "principalType": "ServicePrincipal"
+                            }
+                        }
+                    ]
+                }
+            },
+            "resourceGroup": "[parameters('resourceGroupIot')]"
+        },
+		{
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-06-01",
+            "name": "CreatingRoleAssignmentsDevice",
+            "dependsOn": [
+                "CreatingManagedIdentity"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "expressionEvaluationOptions": {
+                    "scope": "inner"
+                },
+                "parameters": {
+                    "managedIdentityName": {
+                        "value": "[variables('managedIdentityName')]"
+                    },
+					"resourceGroupDevice": {
+                        "value": "[parameters('resourceGroupDevice')]"
+                    },
+					"resourceGroupIot": {
+                        "value": "[parameters('resourceGroupIot')]"
+                    }
+                },
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "managedIdentityName": {
+                            "type": "String"
+                        },
+						"resourceGroupDevice": {
+                            "type": "String"
+                        },
+						"resourceGroupIot": {
+                            "type": "String"
+                        }
+                    },
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Authorization/roleAssignments",
+                            "apiVersion": "2018-09-01-preview",
+                            "name": "[guid(concat(resourceGroup().id, 'contributor', 'Device'))]",
+                            "properties": {
+                                "roleDefinitionId": "[concat('/subscriptions/' , subscription().subscriptionId , '/resourceGroups/', parameters('resourceGroupDevice'),  '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                                "principalId": "[reference(resourceId(parameters('resourceGroupIot'),'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2018-11-30').principalId]",
+                                "scope": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', parameters('resourceGroupDevice'))]",
+                                "principalType": "ServicePrincipal"
+                            }
+                        }
+                    ]
+                }
+            },
+            "resourceGroup": "[parameters('resourceGroupDevice')]",
+            "condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
         },
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "diskVMDeployment",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupDevice'))]"
+                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupDevice'))]",
+                "CreatingRoleAssignments"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -142,7 +260,7 @@
                             "type": "Microsoft.Compute/disks",
                             "apiVersion": "2019-07-01",
                             "name": "[variables('diskName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "location": "[variables('location')]",
                             "sku": {
                                 "name": "Premium_LRS",
                                 "tier": "Premium"
@@ -168,12 +286,12 @@
                             "dependsOn": [
                                 "[variables('diskName')]"
                             ],
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "location": "[variables('location')]",
                             "kind": "AzureCLI",
                             "identity": {
                                 "type": "UserAssigned",
                                 "userAssignedIdentities": {
-                                    "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
+                                    "[concat(subscription().id,'/resourceGroups/', variables('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',variables('managedIdentityName'))]": {}
                                 }
                             },
                             "properties": {
@@ -201,23 +319,23 @@
                             "type": "Microsoft.Network/networkSecurityGroups",
                             "apiVersion": "2019-08-01",
                             "name": "[variables('networkSecurityGroupName')]",
-                            "location": "[parameters('resourceGroupLocation')]"
+                            "location": "[variables('location')]"
                         },
                         {
                             "type": "Microsoft.Network/publicIPAddresses",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('publicIPAddressName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "location": "[variables('location')]",
                             "properties": {
                                 "publicIPAllocationMethod": "Dynamic"
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Network/virtualNetworks",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('virtualNetworkName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
-							"dependsOn": [
+                            "location": "[variables('location')]",
+                            "dependsOn": [
                                 "[variables('networkSecurityGroupName')]"
                             ],
                             "properties": {
@@ -239,14 +357,14 @@
                                 ]
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Network/networkInterfaces",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('nicName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
-							"dependsOn": [
+                            "location": "[variables('location')]",
+                            "dependsOn": [
                                 "[variables('virtualNetworkName')]",
-								"[variables('publicIPAddressName')]"
+                                "[variables('publicIPAddressName')]"
                             ],
                             "properties": {
                                 "ipConfigurations": [
@@ -265,15 +383,15 @@
                                 ]
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Compute/virtualMachines",
                             "apiVersion": "2019-07-01",
                             "name": "[variables('vmName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
-							"dependsOn": [
+                            "location": "[variables('location')]",
+                            "dependsOn": [
                                 "[variables('diskName')]",
-								"[variables('nicName')]",
-								"scriptforcopy"
+                                "[variables('nicName')]",
+                                "scriptforcopy"
                             ],
                             "properties": {
                                 "hardwareProfile": {
@@ -306,16 +424,16 @@
                     "outputs": {}
                 }
             },
-			"condition": "[equals(parameters('useExistingEdgeDevice'),'No')]",
-            "resourceGroup": "[parameters('resourceGroupDevice')]"
+            "resourceGroup": "[parameters('resourceGroupDevice')]",
+            "condition": "[equals(parameters('useExistingEdgeDevice'),'No')]"
         },
-		{
+        {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "IothubDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-				"diskVMDeployment"
+                "diskVMDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -324,13 +442,13 @@
                     "contentVersion": "1.0.0.0",
                     "parameters": {},
                     "variables": {},
-                    "resources": [						
-						{
+                    "resources": [
+                        {
                             "type": "Microsoft.Devices/IotHubs",
                             "apiVersion": "2020-04-01",
                             "name": "[variables('iotHubName')]",
-							"dependsOn": [],
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "dependsOn": [],
+                            "location": "[variables('location')]",
                             "sku": {
                                 "name": "S1",
                                 "tier": "Standard",
@@ -362,19 +480,19 @@
                                 }
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
                             "name": "configureEdgeDevice",
                             "dependsOn": [
-								"[variables('iotHubName')]"
-							],
-                            "location": "[parameters('resourceGroupLocation')]",
+                                "[variables('iotHubName')]"
+                            ],
+                            "location": "[variables('location')]",
                             "kind": "AzureCLI",
                             "identity": {
                                 "type": "UserAssigned",
                                 "userAssignedIdentities": {
-                                    "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
+                                    "[concat(subscription().id,'/resourceGroups/', variables('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',variables('managedIdentityName'))]": {}
                                 }
                             },
                             "properties": {
@@ -390,19 +508,19 @@
                                     {
                                         "name": "VM_NAME",
                                         "value": "[variables('vmName')]"
-                                    },									
-									{
+                                    },
+                                    {
                                         "name": "IOTHUB_NAME",
                                         "value": "[variables('iotHubName')]"
-                                    },									
-									{
-										"name": "NSG_NAME",
-										"value": "[variables('networkSecurityGroupName')]"
-									},
-									{
-										"name": "DEVICE_NAME",
-										"value" : "[variables('deviceName')]"
-									}
+                                    },
+                                    {
+                                        "name": "NSG_NAME",
+                                        "value": "[variables('networkSecurityGroupName')]"
+                                    },
+                                    {
+                                        "name": "DEVICE_NAME",
+                                        "value": "[variables('deviceName')]"
+                                    }
                                 ],
                                 "retentionInterval": "P1D",
                                 "timeout": "PT15M",
@@ -414,8 +532,8 @@
                     "outputs": {}
                 }
             },
-			"condition": "[equals(parameters('useExistingEdgeDevice'),'No')]",
-            "resourceGroup": "[parameters('resourceGroupIot')]"
+            "resourceGroup": "[parameters('resourceGroupIot')]",
+            "condition": "[equals(parameters('useExistingEdgeDevice'),'No')]"
         },
         {
             "type": "Microsoft.Resources/deployments",
@@ -424,7 +542,7 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
                 "diskVMDeployment",
-				"IothubDeployment"
+                "IothubDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -438,11 +556,11 @@
                     "StorageAccountName": {
                         "value": "[variables('storageAccountName')]"
                     },
-					"iotHubName": {
-						"value": "[variables('iotHubName')]"
-					},
+                    "iotHubName": {
+                        "value": "[variables('iotHubName')]"
+                    },
                     "resourceGroupLocation": {
-                        "value": "[parameters('resourceGroupLocation')]"
+                        "value": "[variables('location')]"
                     },
                     "accountType": {
                         "value": "Standard_RAGRS"
@@ -467,21 +585,21 @@
                     "moduleRuntime": {
                         "value": "[parameters('moduleRuntime')]"
                     },
-					"managedIdentityResourceGroup": {
-						"value": "[parameters('managedIdentityResourceGroup')]"
-					},
-					"managedIdentityName": {
-						"value": "[parameters('managedIdentityName')]"
-					},
+                    "managedIdentityResourceGroup": {
+                        "value": "[variables('managedIdentityResourceGroup')]"
+                    },
+                    "managedIdentityName": {
+                        "value": "[variables('managedIdentityName')]"
+                    },
                     "customVideoSource": {
                         "value": "[variables('customVideoSource')]"
                     },
-					"deviceName":{
-						"value" : "[variables('deviceName')]"
-					},
-					"deploymentName":{
-						"value": "[variables('deploymentName')]"
-					}
+                    "deviceName": {
+                        "value": "[variables('deviceName')]"
+                    },
+                    "deploymentName": {
+                        "value": "[variables('deploymentName')]"
+                    }
                 },
                 "template": {
                     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -493,7 +611,7 @@
                         "StorageAccountName": {
                             "type": "String"
                         },
-						"iotHubName": {
+                        "iotHubName": {
                             "type": "string"
                         },
                         "resourceGroupLocation": {
@@ -517,21 +635,21 @@
                         "moduleRuntime": {
                             "type": "String"
                         },
-						"managedIdentityResourceGroup": {
-							"type": "String"
-						},
-						"managedIdentityName": {
-							"type": "String"
-						},
+                        "managedIdentityResourceGroup": {
+                            "type": "String"
+                        },
+                        "managedIdentityName": {
+                            "type": "String"
+                        },
                         "customVideoSource": {
                             "type": "String"
                         },
-						"deviceName":{
-							"type": "String"
-						},
-						"deploymentName":{
-							"type": "String"
-						}
+                        "deviceName": {
+                            "type": "String"
+                        },
+                        "deploymentName": {
+                            "type": "String"
+                        }
                     },
                     "variables": {},
                     "resources": [
@@ -596,14 +714,14 @@
                                 }
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
                             "apiVersion": "2019-06-01",
                             "name": "[concat(parameters('storageAccountName'), '/default/detectoroutput')]",
                             "dependsOn": [
-								"[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
-								"[parameters('storageAccountName')]"
-							],
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
+                                "[parameters('storageAccountName')]"
+                            ],
                             "properties": {
                                 "publicAccess": "None"
                             }
@@ -613,21 +731,21 @@
                             "apiVersion": "2019-06-01",
                             "name": "[concat(parameters('storageAccountName'), '/default/still-images')]",
                             "dependsOn": [
-								"[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
-								"[parameters('storageAccountName')]"
-							],
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
+                                "[parameters('storageAccountName')]"
+                            ],
                             "properties": {
                                 "publicAccess": "None"
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
                             "name": "moduleDeployment",
                             "dependsOn": [
-								"[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
-								"[parameters('storageAccountName')]"
-							],
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
+                                "[parameters('storageAccountName')]"
+                            ],
                             "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
                             "identity": {
@@ -642,39 +760,38 @@
                                 "primaryScriptUri": "https://unifiededgescenarios.blob.core.windows.net/arm-template/deploy-modules.sh",
                                 "supportingScriptUris": [],
                                 "environmentVariables": [
-                                   
-									{
+                                    {
                                         "name": "DETECTOR_MODULE_RUNTIME",
                                         "value": "[parameters('moduleRuntime')]"
                                     },
-									{
+                                    {
                                         "name": "EDGE_DEVICE_ARCHITECTURE",
                                         "value": "[parameters('deviceArchitecture')]"
                                     },
-									{
+                                    {
                                         "name": "IOTHUB_NAME",
                                         "value": "[parameters('iotHubName')]"
                                     },
-									{
+                                    {
                                         "name": "STORAGE_ACCOUNT_NAME",
                                         "value": "[parameters('StorageAccountName')]"
                                     },
-									{
+                                    {
                                         "name": "RESOURCE_GROUP_IOT",
                                         "value": "[parameters('resourceGroupIot')]"
-                                    },									
-									{
-										"name": "CUSTOM_VIDEO_SOURCE",
-										"value": "[parameters('customVideoSource')]"
-									},
-									{
-										"name": "DEVICE_NAME",
-										"value" : "[parameters('deviceName')]"
-									},
-									{
-										"name": "DEPLOYMENT_NAME",
-										"value": "[parameters('deploymentName')]"
-									}
+                                    },
+                                    {
+                                        "name": "CUSTOM_VIDEO_SOURCE",
+                                        "value": "[parameters('customVideoSource')]"
+                                    },
+                                    {
+                                        "name": "DEVICE_NAME",
+                                        "value": "[parameters('deviceName')]"
+                                    },
+                                    {
+                                        "name": "DEPLOYMENT_NAME",
+                                        "value": "[parameters('deploymentName')]"
+                                    }
                                 ],
                                 "retentionInterval": "P1D",
                                 "timeout": "PT15M",
@@ -697,13 +814,13 @@
             },
             "resourceGroup": "[parameters('resourceGroupIot')]"
         },
-		{
+        {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "appServicePlanDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-				"resourcesDeployment"
+                "resourcesDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -717,7 +834,7 @@
                             "type": "Microsoft.Web/serverfarms",
                             "apiVersion": "2018-02-01",
                             "name": "[variables('appServiceName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "location": "[variables('location')]",
                             "sku": {
                                 "name": "S1",
                                 "tier": "Standard",
@@ -737,14 +854,14 @@
                                 "targetWorkerSizeId": 0
                             }
                         },
-						{
+                        {
                             "type": "Microsoft.Web/sites",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('webappName')]",
-                            "location": "[parameters('resourceGroupLocation')]",
+                            "location": "[variables('location')]",
                             "dependsOn": [
-								"[variables('appServiceName')]"
-							],
+                                "[variables('appServiceName')]"
+                            ],
                             "kind": "app",
                             "properties": {
                                 "enabled": true,
@@ -825,7 +942,7 @@
                                     "type": "Extensions",
                                     "apiVersion": "2018-11-01",
                                     "name": "MSDeploy",
-                                    "location": "[parameters('resourceGroupLocation')]",
+                                    "location": "[variables('location')]",
                                     "dependsOn": [
                                         "[variables('webappName')]"
                                     ],
@@ -834,7 +951,7 @@
                                     }
                                 }
                             ]
-                        }						
+                        }
                     ]
                 }
             },
