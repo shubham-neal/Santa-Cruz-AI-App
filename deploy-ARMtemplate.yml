@@ -84,7 +84,7 @@ stages:
         location: 'East US'
         templateLocation: 'Linked artifact'
         csmFile: '/home/vsts/work/1/s/azuredeploy.json'
-        overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -resourceGroupLocation "$(LOCATION)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -managedIdentityResourceGroup "$(RG_NAME_IDENTITY)" -managedIdentityName "$(IDENTITY_NAME)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
+        overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -password "$(PASSWORD)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
         deploymentMode: 'Incremental'
 
 
