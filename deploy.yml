@@ -20,7 +20,7 @@ variables:
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     Variable_Group: 'Release_Environment'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment2'
+     Variable_Group: 'Test_Environment'
 
 stages:
 - stage: 'Deploy'
@@ -313,6 +313,23 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
                   --name deployment-bundle-latest.zip
+                
+                
+                unzip deployment-bundle.zip -d .
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment-$(buildSuffix).sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment.sh"
               workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
           - task: Bash@3

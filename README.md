@@ -34,7 +34,7 @@ Two deployment scenarios are supported.
   Step 1: Use the following command to download the shell script to your local machine
      
   ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/cloudshell-script/cloudshell-deployment.sh" -O cloudshell-deployment.sh
+  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
   ```
     
 
@@ -59,7 +59,7 @@ Two deployment scenarios are supported.
   Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
     
   ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/cloudshell-script/cloudshell-deployment.sh" -O cloudshell-deployment.sh
+  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
   ```
     
   Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
@@ -109,7 +109,7 @@ Two deployment scenarios are supported.
   Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
     
   ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/cloudshell-script/cloudshell-deployment.sh" -O cloudshell-deployment.sh
+  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
   ```
 
   Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.
@@ -134,7 +134,7 @@ Two deployment scenarios are supported.
   Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
     
   ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/cloudshell-script/cloudshell-deployment.sh" -O cloudshell-deployment.sh
+  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
   ```
 
   Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
