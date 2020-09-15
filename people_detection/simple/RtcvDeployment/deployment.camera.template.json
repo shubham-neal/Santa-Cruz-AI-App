@@ -138,6 +138,7 @@
     "camerastream": {
       "properties.desired": {
         "blob": "$CAMERA_BLOB_SAS",
+        "shared_memory": true,
         "cameras": {
           "cam001": {
             "space": "Office",
