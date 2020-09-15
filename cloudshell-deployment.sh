@@ -178,9 +178,11 @@ LOCATION="WEST US 2"
 sed -i 's#^\(LOCATION[ ]*=\).*#\1\"'"$LOCATION"'\"#g' "variables.template"
 
 USE_INTERACTIVE_LOGIN_FOR_AZURE="false"
+
 sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "variables.template"
 
 USE_EXISTING_RESOURCES="true"
+
 sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "variables.template"
 
 # Read variable values from updated variable.template file
