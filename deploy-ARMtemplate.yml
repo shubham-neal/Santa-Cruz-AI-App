@@ -322,13 +322,13 @@ stages:
                 
                 echo "Updating Primary scripts Url for deploymentScript in arm template"
                 
-                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/disk-setup.sh"
+                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/disk-setup.sh"
                 jq --arg a "$SCRIPT_URL" '.resources[5].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
-                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/create-setup-iot-edge-device.sh"
+                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/create-setup-iot-edge-device.sh"
                 jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
-                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules.sh.sh"
+                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/deploy-modules.sh.sh"
                 jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
                 
                 echo "Updated Primary scripts Url for deploymentScript in arm template"
@@ -350,7 +350,7 @@ stages:
               workingDirectory: '/home/vsts/work/1/s'
 
           - task: Bash@3
-            enabled: true
+            enabled: false
             displayName: 'Delete the resource groups'
             env:
               SP_APP_PWD: $(SP_APP_PWD)
