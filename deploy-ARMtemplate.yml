@@ -125,6 +125,9 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
+          # Exit the script on any error
+          set -e
+          
           echo "Logging into Azure"
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
