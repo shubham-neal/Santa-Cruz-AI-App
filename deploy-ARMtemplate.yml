@@ -189,6 +189,7 @@ stages:
           echo "Scripts are uploaded to temp storage account container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\""
           
           cd ..
+          echo $(ls)
           unzip deployment-bundle.zip -d "deployment-bundle"
           cd deployment-bundle
 
