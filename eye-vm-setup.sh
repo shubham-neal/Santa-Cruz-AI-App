@@ -329,8 +329,7 @@ fi
 echo "$(info) The required variables are defined and have a non-empty value"
 
 # VHD_URI is the direct link for VHD file in storage account. The VHD file must be in the current subscription
-VHD_URI="https://unifiededgescenarios.blob.core.windows.net/aedvhd/aedvhd-dev-1.0.MM5.20200603.2120.v0.0.4.vhd?sp=r&st=2020-08-11T08:03:43Z&se=2021-08-11T16:03:43Z&spr=https&sv=2019-12-12&sr=b&sig=CpNJL5iwIheSovRvWAKQXWxrapIus8PqqkFmNDHtmlA%3D"
-
+VHD_URI="https://unifiededgescenarios.blob.core.windows.net/aedvhd/aedvhd-dev-1.0.MM5.20200603.2120.v0.0.5.vhd?sp=r&st=2020-09-01T09:47:08Z&se=2022-09-01T17:47:08Z&spr=https&sv=2019-12-12&sr=b&sig=jEum6oD8O5fESu%2BxO60VUijjGsMHkzo%2BZcvOl6L9ZnM%3D"
 # Whether to create a rule in NSG for SSH or RDP.
 # The following are the allowed values:
 # 	NONE: Do not create any inbound security rule in NSG for RDP or SSH ports. (Recommended)
@@ -543,7 +542,7 @@ fi
 # does not allow ssh access. Please make sure the edge device is on the local area
 # network and is accepting ssh requests.
 echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
-EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity show-connection-string --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
+EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
 
 echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
 CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
