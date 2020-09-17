@@ -200,7 +200,7 @@ stages:
           SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/create-setup-iot-edge-device.sh"
           jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
-          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules.sh.sh"
+          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules.sh"
           jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
           
           echo "Updated Primary scripts Url for deploymentScript in arm template"
@@ -328,7 +328,7 @@ stages:
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/create-setup-iot-edge-device.sh"
                 jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
-                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/deploy-modules.sh.sh"
+                SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/deploy-modules.sh"
                 jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
                 
                 echo "Updated Primary scripts Url for deploymentScript in arm template"
