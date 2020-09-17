@@ -137,7 +137,8 @@ stages:
         script: |
           # Exit the script on any error
           set -e
-          
+          echo $(pwd)
+          echo $(ls)
           echo "Logging into Azure"
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
@@ -187,11 +188,14 @@ stages:
             --name deploy-modules.sh
           
           echo "Scripts are uploaded to temp storage account container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\""
-          
+          echo $(pwd)
+          echo $(ls)
           cd ..
           echo $(ls)
           unzip deployment-bundle.zip -d "deployment-bundle"
-          cd deployment-bundle
+          #cd deployment-bundle
+          echo $(pwd)
+          echo $(ls)
 
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
