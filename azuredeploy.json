@@ -9,6 +9,7 @@
             }
         },
         "resourceGroupDevice": {
+            "defaultValue": "",
             "type": "String",
             "metadata": {
                 "description": "Enter the name of resource group to be created for Edge device."
@@ -37,14 +38,15 @@
                 "description": "Select value for runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'."
             }
         },
-        "Password": {
-            "defaultValue": "UnifiedEdge2020",
+        "password": {
+            "defaultValue": "",
             "type": "String",
             "metadata": {
                 "description": "Specify the password for the web app."
             }
         },
         "useExistingEdgeDevice": {
+			"defaultValue": "No",
             "allowedValues": [
                 "Yes",
                 "No"
@@ -81,12 +83,14 @@
         "virtualNetworkName": "MyVNET",
         "subnetName": "Subnet",
         "addressPrefix": "10.0.0.0/16",
-        "subnetPrefix": "10.0.0.0/24",
         "publicIPAddressName": "myPublicIP",
-        "resourceGroupIot": "[if(equals(parameters('resourceGroupIot'), parameters('resourceGroupDevice')), 'storage', parameters('resourceGroupDevice'))]",
         "resourceGroupDevice": "[parameters('resourceGroupIot')]",
         "storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "iothublogic": "[if(equals(parameters('existingIotHubName'), ''), 'azureeyeiothub', parameters('existingIotHubName'))]",
+        "rgdeviceName": "[if(equals(parameters('resourceGroupDevice'), ''), parameters('resourceGroupIot'), parameters('resourceGroupDevice'))]",
+        "resourceDevice": "[if(equals(parameters('useExistingEdgeDevice'),'Yes'),'temp',variables('rgdeviceName'))]",
+        "rgDevice": "[if(equals(variables('resourceDevice'),'temp'),parameters('resourceGroupIot'),variables('rgdeviceName'))]",
+        "resourceGroupIot": "[if(equals(parameters('resourceGroupIot'), variables('resourceDevice')), 'storage', variables('resourceDevice'))]",
         "iotHubName": "[if(equals(parameters('existingIotHubName'),variables('iothublogic')),parameters('existingIotHubName'),concat(variables('iothublogic'),substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4)))]",
         "deploymentName": "[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "managedIdentityName": "[concat('Managed_Identity',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
@@ -107,7 +111,7 @@
             "name": "[variables('resourceGroupIot')]",
             "location": "[variables('location')]",
             "properties": {},
-            "condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
+            "condition": "[not(equals(parameters('resourceGroupIot'),variables('rgDevice')))]"
         },
         {
             "type": "Microsoft.Resources/deployments",
@@ -151,8 +155,8 @@
                     "managedIdentityName": {
                         "value": "[variables('managedIdentityName')]"
                     },
-					"resourceGroupDevice": {
-                        "value": "[parameters('resourceGroupDevice')]"
+                    "resourceGroupDevice": {
+                        "value": "[variables('rgDevice')]"
                     }
                 },
                 "template": {
@@ -162,7 +166,7 @@
                         "managedIdentityName": {
                             "type": "String"
                         },
-						"resourceGroupDevice": {
+                        "resourceGroupDevice": {
                             "type": "String"
                         }
                     },
@@ -184,7 +188,7 @@
             },
             "resourceGroup": "[parameters('resourceGroupIot')]"
         },
-		{
+        {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
             "name": "CreatingRoleAssignmentsDevice",
@@ -200,10 +204,10 @@
                     "managedIdentityName": {
                         "value": "[variables('managedIdentityName')]"
                     },
-					"resourceGroupDevice": {
-                        "value": "[parameters('resourceGroupDevice')]"
+                    "rgDevice": {
+                        "value": "[variables('rgDevice')]"
                     },
-					"resourceGroupIot": {
+                    "resourceGroupIot": {
                         "value": "[parameters('resourceGroupIot')]"
                     }
                 },
@@ -214,10 +218,10 @@
                         "managedIdentityName": {
                             "type": "String"
                         },
-						"resourceGroupDevice": {
+                        "rgDevice": {
                             "type": "String"
                         },
-						"resourceGroupIot": {
+                        "resourceGroupIot": {
                             "type": "String"
                         }
                     },
@@ -228,25 +232,26 @@
                             "apiVersion": "2018-09-01-preview",
                             "name": "[guid(concat(resourceGroup().id, 'contributor', 'Device'))]",
                             "properties": {
-                                "roleDefinitionId": "[concat('/subscriptions/' , subscription().subscriptionId , '/resourceGroups/', parameters('resourceGroupDevice'),  '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                                "roleDefinitionId": "[concat('/subscriptions/' , subscription().subscriptionId , '/resourceGroups/', parameters('rgDevice'),  '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
                                 "principalId": "[reference(resourceId(parameters('resourceGroupIot'),'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2018-11-30').principalId]",
-                                "scope": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', parameters('resourceGroupDevice'))]",
+                                "scope": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', parameters('rgDevice'))]",
                                 "principalType": "ServicePrincipal"
                             }
                         }
                     ]
                 }
             },
-            "resourceGroup": "[parameters('resourceGroupDevice')]",
-            "condition": "[not(equals(parameters('resourceGroupIot'),parameters('resourceGroupDevice')))]"
+            "resourceGroup": "[variables('rgDevice')]",
+            "condition": "[not(equals(parameters('resourceGroupIot'),variables('rgDevice')))]"
         },
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
-            "name": "diskVMDeployment",
+            "name": "VMDeployment",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupDevice'))]",
-                "CreatingRoleAssignments"
+                "[resourceId('Microsoft.Resources/resourceGroups/', variables('rgDevice'))]",
+                "CreatingRoleAssignments",
+                "CreatingRoleAssignmentsDevice"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -282,7 +287,7 @@
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
-                            "name": "scriptforcopy",
+                            "name": "Scriptforcopy",
                             "dependsOn": [
                                 "[variables('diskName')]"
                             ],
@@ -302,7 +307,7 @@
                                 "environmentVariables": [
                                     {
                                         "name": "RESOURCE_GROUP_DEVICE",
-                                        "value": "[parameters('resourceGroupDevice')]"
+                                        "value": "[variables('rgDevice')]"
                                     },
                                     {
                                         "name": "DISK_NAME",
@@ -350,7 +355,7 @@
                                         "properties": {
                                             "addressPrefix": "[variables('addressPrefix')]",
                                             "networkSecurityGroup": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', variables('rgDevice'),'/providers/Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
                                             }
                                         }
                                     }
@@ -373,10 +378,10 @@
                                         "properties": {
                                             "privateIPAllocationMethod": "Dynamic",
                                             "publicIPAddress": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', variables('rgDevice'),'/providers/Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
                                             },
                                             "subnet": {
-                                                "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('subnetName'))]"
+                                                "id": "[concat(subscription().id,'/resourceGroups/', variables('rgDevice'),'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('subnetName'))]"
                                             }
                                         }
                                     }
@@ -391,7 +396,7 @@
                             "dependsOn": [
                                 "[variables('diskName')]",
                                 "[variables('nicName')]",
-                                "scriptforcopy"
+                                "Scriptforcopy"
                             ],
                             "properties": {
                                 "hardwareProfile": {
@@ -405,7 +410,7 @@
                                         "caching": "ReadWrite",
                                         "managedDisk": {
                                             "storageAccountType": "Premium_LRS",
-                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Compute/disks/', variables('diskName'))]"
+                                            "id": "[concat(subscription().id,'/resourceGroups/', variables('rgDevice'),'/providers/Microsoft.Compute/disks/', variables('diskName'))]"
                                         },
                                         "diskSizeGB": 64
                                     },
@@ -414,7 +419,7 @@
                                 "networkProfile": {
                                     "networkInterfaces": [
                                         {
-                                            "id": "[concat(subscription().id,'/resourceGroups/', parameters('resourceGroupDevice'),'/providers/Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+                                            "id": "[concat(subscription().id,'/resourceGroups/', variables('rgDevice'),'/providers/Microsoft.Network/networkInterfaces/', variables('nicName'))]"
                                         }
                                     ]
                                 }
@@ -424,16 +429,16 @@
                     "outputs": {}
                 }
             },
-            "resourceGroup": "[parameters('resourceGroupDevice')]",
+            "resourceGroup": "[variables('rgDevice')]",
             "condition": "[equals(parameters('useExistingEdgeDevice'),'No')]"
         },
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
-            "name": "IothubDeployment",
+            "name": "IotHubDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-                "diskVMDeployment"
+                "VMDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -483,7 +488,7 @@
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
-                            "name": "configureEdgeDevice",
+                            "name": "ConfigureEdgeDevice",
                             "dependsOn": [
                                 "[variables('iotHubName')]"
                             ],
@@ -503,7 +508,7 @@
                                 "environmentVariables": [
                                     {
                                         "name": "RESOURCE_GROUP_DEVICE",
-                                        "value": "[parameters('resourceGroupDevice')]"
+                                        "value": "[variables('rgDevice')]"
                                     },
                                     {
                                         "name": "VM_NAME",
@@ -538,11 +543,11 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
-            "name": "resourcesDeployment",
+            "name": "ResourcesDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-                "diskVMDeployment",
-                "IothubDeployment"
+                "VMDeployment",
+                "IotHubDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -649,6 +654,10 @@
                         },
                         "deploymentName": {
                             "type": "String"
+                        },
+                        "utcValue": {
+                            "type": "string",
+                            "defaultValue": "[utcNow()]"
                         }
                     },
                     "variables": {},
@@ -741,7 +750,7 @@
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
-                            "name": "moduleDeployment",
+                            "name": "ModuleDeployment",
                             "dependsOn": [
                                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
                                 "[parameters('storageAccountName')]"
@@ -790,7 +799,11 @@
                                     },
                                     {
                                         "name": "DEPLOYMENT_NAME",
-                                        "value": "[parameters('deploymentName')]"
+                                        "value": "[concat(parameters('deploymentName'),parameters('utcValue'))]"
+                                    },
+                                    {
+                                        "name": "IDENTITY_NAME",
+                                        "value": "[parameters('managedIdentityName')]"
                                     }
                                 ],
                                 "retentionInterval": "P1D",
@@ -817,10 +830,10 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
-            "name": "appServicePlanDeployment",
+            "name": "AppServicePlanDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-                "resourcesDeployment"
+                "ResourcesDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -915,7 +928,7 @@
                                     ],
                                     "properties": {
                                         "EventHub": {
-                                            "value": "[reference('resourcesDeployment').outputs.IoTHubConnectionString.value]",
+                                            "value": "[reference('ResourcesDeployment').outputs.IoTHubConnectionString.value]",
                                             "type": "Custom"
                                         }
                                     }
@@ -930,12 +943,12 @@
                                     ],
                                     "properties": {
                                         "STORAGE_BLOB_ACCOUNT": "[variables('storageAccountName')]",
-                                        "PASSWORD": "[parameters('Password')]",
+                                        "PASSWORD": "[parameters('password')]",
                                         "WEBSITE_HTTPLOGGING_RETENTION_DAYS": "7",
                                         "WEBSITE_NODE_DEFAULT_VERSION": "10.15.2",
                                         "STORAGE_BLOB_CONTAINER_NAME": "still-images",
                                         "STORAGE_BLOB_PATH": "Office/cam001",
-                                        "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE": "[reference('resourcesDeployment').outputs.sasToken.value]"
+                                        "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE": "[reference('ResourcesDeployment').outputs.sasToken.value]"
                                     }
                                 },
                                 {
@@ -957,5 +970,11 @@
             },
             "resourceGroup": "[parameters('resourceGroupIot')]"
         }
-    ]
+    ],
+    "outputs": {
+        "WebAppURL": {
+            "type": "String",
+            "value": "[concat('https://', variables('webappName'), '.azurewebsites.net')]"
+        }
+    }
 }
