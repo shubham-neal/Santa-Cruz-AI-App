@@ -133,7 +133,7 @@ stages:
 
           CONTAINER=$(az storage container exists --name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
-          if [ "$CONTAINER" == "false" ]; then
+          if [ "$CONTAINER" == "False" ]; then
             echo "Creating temp container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\" for arm template scripts in storage account"
           
             az storage container create \
