@@ -229,7 +229,7 @@ stages:
         workingDirectory: '/home/vsts/work/1/s'
     
     - task: AzureResourceManagerTemplateDeployment@3
-      enabled: false
+      enabled: true
       inputs:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
@@ -395,7 +395,7 @@ stages:
               workingDirectory: '/home/vsts/work/1/s'
 
           - task: Bash@3
-            enabled: false
+            enabled: true
             displayName: 'Delete the resource groups'
             env:
               SP_APP_PWD: $(SP_APP_PWD)
