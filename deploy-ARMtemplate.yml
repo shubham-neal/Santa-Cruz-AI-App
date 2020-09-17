@@ -188,20 +188,16 @@ stages:
             --name deploy-modules.sh
           
           echo "Scripts are uploaded to temp storage account container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\""
-          echo $(pwd)
-          echo $(ls)
+          
           cd ..
-          echo $(ls)
           cd deployment-bundle
           unzip deployment-bundle.zip -d .
           
-          echo $(pwd)
-          echo $(ls)
-
+          # Upload webApp zip code to temp storage account
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-            --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+            --container-name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" \
             --file people-detection-app.zip \
             --name people-detection-app.zip
           
@@ -347,8 +343,8 @@ stages:
                   --name deploy-modules.sh
 
                 cd ..
-                unzip deployment-bundle.zip -d "deployment-bundle"
                 cd deployment-bundle
+                unzip deployment-bundle.zip -d .
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
