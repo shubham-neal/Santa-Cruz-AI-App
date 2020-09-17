@@ -192,8 +192,9 @@ stages:
           echo $(ls)
           cd ..
           echo $(ls)
-          unzip deployment-bundle.zip -d "deployment-bundle"
-          #cd deployment-bundle
+          cd deployment-bundle
+          unzip deployment-bundle.zip -d .
+          
           echo $(pwd)
           echo $(ls)
 
