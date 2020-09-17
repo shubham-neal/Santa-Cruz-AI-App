@@ -118,7 +118,7 @@ stages:
       
     - task: DownloadPipelineArtifact@2
       enabled: true
-      displayName: 'Download artifacts from webAPP Build Pipeline'
+      displayName: 'Download artifacts from WebApp Build Pipeline'
       inputs:
         buildType: 'specific'
         project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
@@ -193,7 +193,7 @@ stages:
           cd deployment-bundle
           unzip deployment-bundle.zip -d .
           
-          # Upload webApp zip code to temp storage account
+          # Upload WebApp zip code to temp storage account
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -283,7 +283,7 @@ stages:
 
           - task: DownloadPipelineArtifact@2
             enabled: true
-            displayName: 'Download artifacts from Build Pipeline'
+            displayName: 'Download artifacts from WebApp Build Pipeline'
             inputs:
               buildType: 'specific'
               project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
