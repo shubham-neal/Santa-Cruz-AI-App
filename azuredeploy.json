@@ -4,15 +4,15 @@
     "parameters": {
         "resourceGroupIot": {
             "type": "String",
-            "metadata": {
-                "description": "Enter the name of resource group to be created for Iot hub."
+            "metadata": { 
+                "description": "Enter the name of resource group to be created for Iot Hub, Storage Account and Web App."
             }
         },
         "resourceGroupDevice": {
             "defaultValue": "",
             "type": "String",
             "metadata": {
-                "description": "Enter the name of resource group to be created for Edge device."
+                "description": "Enter the name of resource group to be created for Edge device. It is required if 'Use Existing Edge Device' is set to 'No'. If a value is not provided here, the device will be created in 'Resource Group Iot' resource group"
             }
         },
         "deviceArchitecture": {
@@ -53,21 +53,21 @@
             ],
             "type": "String",
             "metadata": {
-                "description": "Select whether you want to create the edge device or skip this part and use existing resources."
+                "description": "Select whether you want to use an existing Edge device or create a new one"
             }
         },
         "existingIotHubName": {
             "defaultValue": "",
             "type": "String",
             "metadata": {
-                "description": "Enter the name of existing iot hub to be used."
+                "description": "Enter the name of existing Iot Hub. This is required only if 'Use Existing Edge Device' is set to 'Yes'"
             }
         },
         "existingDeviceName": {
             "defaultValue": "",
             "type": "String",
             "metadata": {
-                "description": "Enter the name of existing device to be used."
+                "description": "Enter the name of existing IoT Edge device. This is required only if 'Use Existing Edge Device' is set to 'Yes'"
             }
         }
     },
