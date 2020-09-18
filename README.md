@@ -4,14 +4,29 @@ This document serves to walk through the end-user deployment and onboarding expe
 
 ## Prerequisites
 
-- The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Azure CloudShell.
-- The user or service principal running the scripts should have access to create resources in the given subscription in Azure
-- User running the script should have access to create directories and files on the machine
+- CloudShell Deployment
+  - The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Azure CloudShell.
+  - The user or service principal running the scripts should have access to create resources in the given subscription in Azure.
+  - User running the script should have access to create directories and files on the machine.
+- ARM Template Deployment
+  - The following resource providers need to enabled in the subscription:
+      1.	Microsoft.Devices
+      2.	Microsoft.Authorization
+      3.	Microsoft.ContainerInstance
+      4.	Microsoft.ManagedIdentity
+      5.	Microsoft.Web
+      6.	Microsoft.Compute
+      7.	Microsoft.Network
+      8.	Microsoft.Storage
+      9.	Microsoft.Resources
+  - The user running the ARM template should have owner access on the subscription.
+
 
 ## Install Package Dependencies
 
-- The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
-You can follow the [instruction here](docs/packages-installation-steps.md) if you need to install the required packaged manually.  
+- CloudShell Deployment
+  - The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
+  You can follow the [instruction here](docs/packages-installation-steps.md) if you need to install the required packaged manually.  
 
 ## Deploy Solution
 Two deployment scenarios are supported. 
@@ -20,16 +35,20 @@ Two deployment scenarios are supported.
 - End-to-end deployment (Developer / dogfooding experience)
 - Edge Module Deployment (End-user-unboxing experience)
 
+Two deployment methods are supported.
+
+**Supported Deployment Methods:**
+- CloudShell Deployment
+- ARM Template Deployment
 
 ### Scenario #1: End-to-end deployment (Developer / dogfooding experience)
 
 - Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
 - Customizes the deployment for your environment
 - Deploys the IoT Edge manifest to the edge device
-  
 
+  ### Method #1: CloudShell Deployment
   **Deployment Steps for Standard Deployment**
-      
 
   Step 1: Use the following command to download the shell script to your local machine
      
@@ -94,6 +113,33 @@ Two deployment scenarios are supported.
   ```sh
   sudo ./frontend-setup.sh
   ```
+  ### Method #2: ARM Template Deployment
+  **Deployment Steps**
+
+  Step 1: Login to the azure portal in your tenant and create a [resource](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/quickstart-create-templates-use-the-portal#edit-and-deploy-the-template) called 'deploy a custom template'.
+
+  Step 2: Copy and Paste the content of the [link](https://unifiededgescenariostest.blob.core.windows.net/arm-template/azuredeploy-latest.json) to editor of custom deployment on azure.  
+  
+  Step 3: Provide the following parameters value to deploy:
+
+  **Mandatory Variables**
+  |Name | Description  |
+  |---|---|
+  |Region|Location for resources to be deployed|
+  |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
+  |Resource Group Device| Resource group name for Mariner VM|
+
+  **Optional Variables**
+  |Name | Description  |
+  |---|---|
+  |Module Runtime| Runtime for Detector module on Edge Device. Default value is 'CPU'. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
+  |Device Architecture| Specify the architecture of the Edge Device. Default value is 'X86'. Currently supported values are 'X86' and 'ARM64'.|
+  |Password| Password to access the web app. Default value is empty|
+  |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of End-to-end deployment, set the value to 'NO'|
+
+  Step 4: Click on Review+Create to validate and start the deployment.
+
+  Step 5: After deployment completes, you can find the WebApp Url in the output section of deployment.
 
 
 ### Scenario 2: Edge Module Deployment (End-user unboxing experience)
@@ -102,7 +148,7 @@ Two deployment scenarios are supported.
 - Customizes the deployment for your environment
 - Deploys the IoT Edge manifest to the edge device
   
-
+  ### Method #1: CloudShell Deployment
   **Deployment Steps for Standard Deployment**
     
     
@@ -163,6 +209,35 @@ Two deployment scenarios are supported.
   ```sh
   sudo ./frontend-setup.sh
   ```
+
+  ### Method #2: ARM Template Deployment
+  **Deployment Steps**
+
+  Step 1: Login to the azure portal in your tenant and create a [resource](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/quickstart-create-templates-use-the-portal#edit-and-deploy-the-template) called 'deploy a custom template'.
+
+  Step 2: Copy and Paste the content of the [link](https://unifiededgescenariostest.blob.core.windows.net/arm-template/azuredeploy-latest.json) to editor of custom deployment on azure.  
+  
+  Step 3: Provide the following parameters value to deploy:
+
+  **Mandatory Variables**
+  |Name | Description  |
+  |---|---|
+  |Region|Location for resources to be deployed|
+  |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
+  |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of Edge Module Deployment, set the value to 'YES' and provide the Iot Hub & Device name parameters as well|
+  |Existing Iot Hub Name|the name of existing iot hub to be used.|
+  |Existing Device Name|the name of existing device to be used.|
+
+  **Optional Variables**
+  |Name | Description  |
+  |---|---|
+  |Module Runtime| Runtime for Detector module on Edge Device. Default value is 'CPU'. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
+  |Device Architecture| Specify the architecture of the Edge Device. Default value is 'X86'. Currently supported values are 'X86' and 'ARM64'.|
+  |Password| Password to access the web app. Default value is empty|
+
+  Step 4: Click on Review+Create to validate and start the deployment.
+
+  Step 5: After deployment completes, you can find the WebApp Url in the output section of deployment.
 
 
 
