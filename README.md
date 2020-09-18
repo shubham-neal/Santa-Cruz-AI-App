@@ -4,96 +4,141 @@ This document serves to walk through the end-user deployment and onboarding expe
 
 ## Prerequisites
 
-- The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Azure CloudShell.
-- The user or service principal running the scripts should have access to create resources in the given subscription in Azure
-- User running the script should have access to create directories and files on the machine
+- CloudShell Deployment
+  - The machine you run the below instructions from must be a linux-based device. The instructions below have been tested on Azure CloudShell.
+  - The user or service principal running the scripts should have access to create resources in the given subscription in Azure.
+  - User running the script should have access to create directories and files on the machine.
+- ARM Template Deployment
+  - The following resource providers need to enabled in the subscription:
+      1.	Microsoft.Devices
+      2.	Microsoft.Authorization
+      3.	Microsoft.ContainerInstance
+      4.	Microsoft.ManagedIdentity
+      5.	Microsoft.Web
+      6.	Microsoft.Compute
+      7.	Microsoft.Network
+      8.	Microsoft.Storage
+      9.	Microsoft.Resources
+  - The user running the ARM template should have owner access on the subscription.
+
 
 ## Install Package Dependencies
 
-- The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
-You can follow the [instruction here](docs/packages-installation-steps.md) if you need to install the required packaged manually.  
+- CloudShell Deployment
+  - The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
+  You can follow the [instruction here](docs/packages-installation-steps.md) if you need to install the required packaged manually.  
 
 ## Deploy Solution
 Two deployment scenarios are supported. 
 
 **Supported Deployment Scenarios:**
-- End-to-end deployment (Developer / dogfooding experience)
+- End-to-end Deployment (Developer / dogfooding experience)
 - Edge Module Deployment (End-user-unboxing experience)
 
+Two deployment methods are supported.
 
-### Scenario #1: End-to-end deployment (Developer / dogfooding experience)
+**Supported Deployment Methods:**
+- CloudShell Deployment
+- ARM Template Deployment
+
+### Scenario #1: End-to-end Deployment (Developer / dogfooding experience)
 
 - Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
 - Customizes the deployment for your environment
 - Deploys the IoT Edge manifest to the edge device
-  
 
-  **Deployment Steps for Standard Deployment**
+  ### Method 1: CloudShell Deployment
+  - **Deployment Steps for Standard Deployment**
+
+    Step 1: Use the following command to download the shell script to your local machine
+      
+    ```sh
+    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
+    ```
       
 
-  Step 1: Use the following command to download the shell script to your local machine
-     
-  ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-  ```
-    
+    Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.  
+    |Name | Description  |
+    |---|---|
+    |--create-iothub| Specify if you do not have an existing IoT Edge Device setup on IoT Hub.|
+    |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
+    |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
+    |--website-password| Password to access the web app|
+    |--rg-iot| Resource group name for IoT Hub, Storage Accounts and Web App|
+    |--rg-vm| Resource group name for Mariner VM|
 
-  Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.  
-  |Name | Description  |
-  |---|---|
-  |--create-iothub| Specify if you do not have an existing IoT Edge Device setup on IoT Hub.|
-  |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
-  |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
-  |--website-password| Password to access the web app|
-  |--rg-iot| Resource group name for IoT Hub, Storage Accounts and Web App|
-  |--rg-vm| Resource group name for Mariner VM|
+    ```sh
+    chmod +x cloudshell-deployment.sh
+    ./cloudshell-deployment.sh --create-iothub --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --rg-vm "vmresourcegroup"
+    ```
 
-  ```sh
-  chmod +x cloudshell-deployment.sh
-  ./cloudshell-deployment.sh --create-iothub --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --rg-vm "vmresourcegroup"
-  ```
+  - **Deployment Steps for Custom Deployment**
+        
 
-  **Deployment Steps for Custom Deployment**
+    Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
       
+    ```sh
+    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
+    ```
+      
+    Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
+    ```sh
+    chmod +x cloudshell-deployment.sh
+    ./cloudshell-deployment.sh --custom-deployment
+    cd deployment-bundle-latest
+    ```
 
-  Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
-    
-  ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-  ```
-    
-  Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
-  ```sh
-  chmod +x cloudshell-deployment.sh
-  ./cloudshell-deployment.sh --custom-deployment
-  cd deployment-bundle-latest
-  ```
-
-  Step 3: Provide the variables in variables.template file in deployment-bundle-latest directory.
-  - Add values in [variables.template](variables.template) file. Specify values for all the mandatory variables in [Configuring Variable Template Files](#configuring-variable-template-files) and specify values for variables RESOURCE_GROUP_DEVICE variable.
+    Step 3: Provide the variables in variables.template file in deployment-bundle-latest directory.
+    - Add values in [variables.template](variables.template) file. Specify values for all the mandatory variables in [Configuring Variable Template Files](#configuring-variable-template-files) and specify values for variables RESOURCE_GROUP_DEVICE variable.
 
 
-  Step 4: Run eye-vm-setup.sh script
-  - Run [eye-vm-setup.sh](eye-vm-setup.sh) script
+    Step 4: Run eye-vm-setup.sh script
+    - Run [eye-vm-setup.sh](eye-vm-setup.sh) script
 
-  ```sh
-  sudo ./eye-vm-setup.sh
-  ```
+    ```sh
+    sudo ./eye-vm-setup.sh
+    ```
 
-  Step 5: Setup IoT Hub and Edge Device   
-  - Run [deploy-iot.sh](deploy-iot.sh) script
+    Step 5: Setup IoT Hub and Edge Device   
+    - Run [deploy-iot.sh](deploy-iot.sh) script
 
-  ```sh
-  sudo ./deploy-iot.sh
-  ```
+    ```sh
+    sudo ./deploy-iot.sh
+    ```
 
 
-  Step 6: Setup a Front End app to visualize the results
-  - Run [frontend-setup.sh](frontend-setup.sh) script
+    Step 6: Setup a Front End app to visualize the results
+    - Run [frontend-setup.sh](frontend-setup.sh) script
 
-  ```sh
-  sudo ./frontend-setup.sh
-  ```
+    ```sh
+    sudo ./frontend-setup.sh
+    ```
+
+  ### Method 2: ARM Template Deployment
+  - **Deployment Steps**
+
+    Step 1: Create a custom template deployment using this [link](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2Fazuredeploy-latest.json) on azure portal. 
+
+    Step 2: Provide the following parameters value to deploy:
+
+    **Mandatory Variables**
+    |Name | Description  |
+    |---|---|
+    |Region|Location for resources to be deployed|
+    |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
+    |Resource Group Device| Resource group name for Mariner VM|
+
+    **Optional Variables**
+    |Name | Description  |
+    |---|---|
+    |Module Runtime| Runtime for Detector module on Edge Device. Default value is 'CPU'. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
+    |Device Architecture| Specify the architecture of the Edge Device. Default value is 'X86'. Currently supported values are 'X86' and 'ARM64'.|
+    |Password| Password to access the Web App. Default value is empty|
+    |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of End-to-end Deployment, set the value to 'NO'|
+
+    Step 3: Click on Review+Create to validate and start the deployment.
+
+    Step 4: After deployment completes, you can find the Web App Url in the output section of deployment.
 
 
 ### Scenario 2: Edge Module Deployment (End-user unboxing experience)
@@ -102,67 +147,92 @@ Two deployment scenarios are supported.
 - Customizes the deployment for your environment
 - Deploys the IoT Edge manifest to the edge device
   
-
-  **Deployment Steps for Standard Deployment**
+  ### Method 1: CloudShell Deployment
+  - **Deployment Steps for Standard Deployment**
     
     
-  Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
-    
-  ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-  ```
-
-  Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.
-  |Name | Description  |
-  |---|---|
-  |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
-  |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
-  |--website-password| Password to access the web app|
-  |--rg-iot| Resource group IoT Hub, Storage Accounts and Web App|
-  |--iothub-name| Name of the existing IoT Hub. This IoT Hub must have a existing IoT Edge device setup in it. This IoT Hub must be present in rg-iot resource group.|
-  |--device-name| Name of the IoT Edge device in the IoT Hub.|
-
-  ```sh
-  chmod +x cloudshell-deployment.sh
-  ./cloudshell-deployment.sh --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --iot-name "azureeyeiot" --device-name "azureeye"
-  ```
-
-
-  **Deployment Steps for Custom Deployment**
+    Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
       
+    ```sh
+    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
+    ```
 
-  Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
+    Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.
+    |Name | Description  |
+    |---|---|
+    |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
+    |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
+    |--website-password| Password to access the Web App|
+    |--rg-iot| Resource group IoT Hub, Storage Accounts and Web App|
+    |--iothub-name| Name of the existing IoT Hub. This IoT Hub must have a existing IoT Edge device setup in it. This IoT Hub must be present in rg-iot resource group.|
+    |--device-name| Name of the IoT Edge device in the IoT Hub.|
+
+    ```sh
+    chmod +x cloudshell-deployment.sh
+    ./cloudshell-deployment.sh --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --iot-name "azureeyeiot" --device-name "azureeye"
+    ```
+
+
+  - **Deployment Steps for Custom Deployment**
+        
+
+    Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
+      
+    ```sh
+    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
+    ```
+
+    Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
+
+    ```sh
+    chmod +x cloudshell-deployment.sh
+    ./cloudshell-deployment.sh --custom-deployment
+    cd deployment-bundle-latest
+    ```
+
+    Step 3: Update values in variables.template file.
+    - Add values in [variables.template](variables.template) file. Specify values for all the mandatory variables in [Configuring Variable Template Files](#configuring-variable-template-files) and specify values for variables IOTHUB_NAME, DEVICE_NAME variables.
+
+
+    Step 4: Setup the IoT Hub and Edge Device     
+    - Run [deploy-iot.sh](deploy-iot.sh) script
+
+    ```sh
+    sudo ./deploy-iot.sh
+    ```
+
+
+    Step 5: Setup a Front End app to visualize the results 
+    - Run [frontend-setup.sh](frontend-setup.sh) script
+
+    ```sh
+    sudo ./frontend-setup.sh
+    ```
+
+  ### Method 2: ARM Template Deployment
+  - **Deployment Steps**
+
+    Step 1: Create a custom template deployment using this [link](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2Fazuredeploy-latest.json) on azure portal. 
     
-  ```sh
-  wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-  ```
+    Step 2: Provide the following parameters value to deploy:
 
-  Step 2: Add executable bit to cloudshell-deployment script and execute it with --custom-deployment argument. Switch to deployment-bundle-latest directory.
+    **Mandatory Variables**
+    |Name | Description  |
+    |---|---|
+    |Region|Location for resources to be deployed|
+    |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
+    |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of Edge Module Deployment, set the value to 'YES' and provide the Iot Hub & Device Name parameters as well|
+    |Existing Iot Hub Name|the name of existing iot hub to be used.|
+    |Existing Device Name|the name of existing device to be used.|
 
-  ```sh
-  chmod +x cloudshell-deployment.sh
-  ./cloudshell-deployment.sh --custom-deployment
-  cd deployment-bundle-latest
-  ```
+    **Optional Variables**
+    |Name | Description  |
+    |---|---|
+    |Password| Password to access the web app. Default value is empty|
 
-  Step 3: Update values in variables.template file.
-  - Add values in [variables.template](variables.template) file. Specify values for all the mandatory variables in [Configuring Variable Template Files](#configuring-variable-template-files) and specify values for variables IOTHUB_NAME, DEVICE_NAME variables.
+    Step 3: Click on Review+Create to validate and start the deployment.
 
-
-  Step 4: Setup the IoT Hub and Edge Device     
-  - Run [deploy-iot.sh](deploy-iot.sh) script
-
-  ```sh
-  sudo ./deploy-iot.sh
-  ```
-
-
-  Step 5: Setup a Front End app to visualize the results 
-  - Run [frontend-setup.sh](frontend-setup.sh) script
-
-  ```sh
-  sudo ./frontend-setup.sh
-  ```
+    Step 4: After deployment completes, you can find the WebApp Url in the output section of deployment.
 
 
 
