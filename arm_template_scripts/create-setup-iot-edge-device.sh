@@ -53,17 +53,17 @@ echo "Password: \"$EDGE_DEVICE_PASSWORD\""
 # This step creates a new edge device in the IoT Hub account or will use an existing edge device
 # if the USE_EXISTING_RESOURCES configuration variable is set to true.
 printf "\n%60s\n" " " | tr ' ' '-'
-echo "Configuring Edge Device in IoT Hub"
+echo "$(info) Configuring Edge Device in IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
 
 # If an Edge Device with given name already exists, use it else create a new one.
 EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
 if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
-    echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
+    echo "$(info) Creating \"$DEVICE_NAME\" device in IoT Hub \"$IOTHUB_NAME\""
     az iot hub device-identity create --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME" --edge-enabled --output "none"
     echo "$(info) Created \"$DEVICE_NAME\" device in IoT Hub \"$IOTHUB_NAME\""
 else
-    echo "Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
+    echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
 fi
 
 
