@@ -19,8 +19,9 @@ pool:
 # multi-checkout
 steps:
 # - checkout: uesapp
-#   path: s/uesapp   
-- checkout: self  
+#   path: s/uesapp
+- checkout: self
+
 - task: NodeTool@0
   inputs:
     versionSpec: '10.x'
