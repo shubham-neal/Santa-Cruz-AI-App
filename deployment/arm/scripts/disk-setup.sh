@@ -19,7 +19,7 @@ cd "$CURRENT_DIRECTORY"
 
 # This is required as the az commands fail in ACI created by deploymentScript
 echo "Updating az-cli"
-pip install --upgrade azure-cli
+pip install --upgrade azure-cli==2.11.0
 
 echo "Installation complete"
 
