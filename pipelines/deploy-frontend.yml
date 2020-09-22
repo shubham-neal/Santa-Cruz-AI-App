@@ -6,10 +6,7 @@ resources:
     project: UnifiedEdgeScenarios
     source: Build ues-app
     trigger:
-      branches: 
-        include:
-        - master
-        - BuildReleasePipeline
+      enabled: true
 
 
 pool:
