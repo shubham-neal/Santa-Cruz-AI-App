@@ -90,7 +90,7 @@ stages:
           fi
           
           # Change directory location to template scripts folder
-          cd arm_template_scripts
+          cd deployment/arm/scripts
           
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the result returned by shellcheck.
@@ -164,7 +164,7 @@ stages:
             echo "Created temp container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\" for arm template scripts in storage account"
           fi
 
-          cd arm_template_scripts
+          cd deployment/arm/scripts
           
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -189,7 +189,7 @@ stages:
           
           echo "Scripts are uploaded to temp storage account container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\""
           
-          cd ..
+          cd /home/vsts/work/1/s
           cd deployment-bundle
           unzip deployment-bundle.zip -d .
           
@@ -201,7 +201,7 @@ stages:
             --file people-detection-app.zip \
             --name people-detection-app.zip
           
-          cd ..
+          cd /home/vsts/work/1/s/deployment/arm
           
           IS_JQ_INSTALLED=$(apt list --installed | grep -c -w jq)
           if [ "$IS_JQ_INSTALLED" -eq 0 ]; then
@@ -219,7 +219,7 @@ stages:
           jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
           SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules.sh"
-          jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
           
           SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/people-detection-app.zip"
           jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
@@ -236,7 +236,7 @@ stages:
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
         location: 'East US'
         templateLocation: 'Linked artifact'
-        csmFile: '/home/vsts/work/1/s/azuredeploy.json'
+        csmFile: '/home/vsts/work/1/s/deployment/arm/azuredeploy.json'
         overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -password "$(PASSWORD)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
         deploymentMode: 'Incremental'
     
@@ -319,7 +319,7 @@ stages:
                   --public-access blob
                 fi
                 
-                cd arm_template_scripts
+                cd deployment/arm/scripts
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -342,7 +342,7 @@ stages:
                   --file deploy-modules.sh \
                   --name deploy-modules.sh
 
-                cd ..
+                cd /home/vsts/work/1/s
                 cd deployment-bundle
                 unzip deployment-bundle.zip -d .
 
@@ -353,7 +353,7 @@ stages:
                   --file people-detection-app.zip \
                   --name people-detection-app.zip
                 
-                cd ..
+                cd /home/vsts/work/1/s/deployment/arm
           
                 IS_JQ_INSTALLED=$(apt list --installed | grep -c -w jq)
                 if [ "$IS_JQ_INSTALLED" -eq 0 ]; then
@@ -371,7 +371,7 @@ stages:
                 jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/deploy-modules.sh"
-                jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+                jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
                 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/people-detection-app.zip"
                 jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
