@@ -85,7 +85,7 @@ STORAGE_CONNECTION_STRING_WITH_SAS="BlobEndpoint=https://${STORAGE_ACCOUNT_NAME}
 
 
 MANIFEST_TEMPLATE_NAME="deployment.camera.template.json"
-MANIFEST_ENVIRONMENT_VARIABLES_FILENAME="prod.env"
+MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
 if [ "$DETECTOR_MODULE_RUNTIME" == "CPU" ]; then
     MODULE_RUNTIME="runc"
@@ -121,10 +121,10 @@ else
     fi
 fi
 
-echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
-echo -n "" >.env
-cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
-echo "$(info) Copied values to .env"
+#echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
+#echo -n "" >.env
+#cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
+#echo "$(info) Copied values to .env"
 
 if [ "$EDGE_DEVICE_ARCHITECTURE" == "X86" ]; then
     PLATFORM_ARCHITECTURE="amd64"
