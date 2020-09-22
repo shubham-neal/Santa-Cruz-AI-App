@@ -748,12 +748,82 @@
                             }
                         },
                         {
+                            "type": "Microsoft.Devices/IotHubs",
+                            "apiVersion": "2020-04-01",
+                            "name": "[parameters('iotHubName')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
+                                "[parameters('storageAccountName')]"
+                            ],
+                            "location": "[parameters('resourceGroupLocation')]",
+                            "sku": {
+                                "name": "S1",
+                                "tier": "Standard",
+                                "capacity": 1
+                            },
+                            "identity": {
+                                "type": "None"
+                            },
+                            "properties": {
+                                "ipFilterRules": [],
+                                "eventHubEndpoints": {
+                                    "events": {
+                                        "retentionTimeInDays": 1,
+                                        "partitionCount": 4
+                                    }
+                                },
+                                "routing": {
+                                    "endpoints": {
+                                        "storageContainers": [
+                                            {
+                                                "connectionString": "[Concat('DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value)]",
+                                                "containerName": "detectoroutput",
+                                                "fileNameFormat": "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}",
+                                                "batchFrequencyInSeconds": 60,
+                                                "maxChunkSizeInBytes": 104857600,
+                                                "encoding": "json",
+                                                "name": "adls-endpoint"
+                                            }
+                                        ]
+                                    },
+                                    "routes": [
+                                        {
+                                            "name": "defaultroute",
+                                            "source": "DeviceMessages",
+                                            "condition": "$twin.moduleId = 'tracker' OR $twin.moduleId = 'camerastream'",
+                                            "endpointNames": [
+                                                "events"
+                                            ],
+                                            "isEnabled": true
+                                        },
+                                        {
+                                            "name": "adls-route",
+                                            "source": "DeviceMessages",
+                                            "condition": "$twin.moduleId = 'camerastream'",
+                                            "endpointNames": [
+                                                "adls-endpoint"
+                                            ],
+                                            "isEnabled": true
+                                        }
+                                    ],
+                                    "fallbackRoute": {
+                                        "name": "$fallback",
+                                        "source": "DeviceMessages",
+                                        "condition": "true",
+                                        "endpointNames": [
+                                            "events"
+                                        ],
+                                        "isEnabled": true
+                                    }
+                                }
+                            }
+                        },
+                        {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
                             "name": "ModuleDeployment",
                             "dependsOn": [
-                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
-                                "[parameters('storageAccountName')]"
+                                "[parameters('iotHubName')]"
                             ],
                             "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
