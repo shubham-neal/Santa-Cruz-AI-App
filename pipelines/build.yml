@@ -58,15 +58,15 @@ stages:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
           README.md 
-          people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
-          people_detection/simple/RtcvDeployment/deployment.camera.template.json
-          people_detection/simple/RtcvDeployment/prod.env
-          cloudshell-deployment.sh
-          eye-vm-setup.sh
-          deploy-iot.sh
-          variables.template
-          frontend-setup.sh
-          smoketest.sh
+          edge-solution/modules/CameraStream/camera-stream/video/staircase.mp4
+          edge-solution/deployment.camera.template.json
+          edge-solution/.env
+          deployment/cloudshell/cloudshell-deployment.sh
+          deployment/cloudshell/eye-vm-setup.sh
+          deployment/cloudshell/deploy-iot.sh
+          deployment/cloudshell/variables.template
+          deployment/cloudshell/frontend-setup.sh
+          deployment/smoketest.sh
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
         flattenFolders: true
 
@@ -75,7 +75,7 @@ stages:
       inputs:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
-          people_detection/simple/RtcvDeployment/modules/CameraStream/module.json
+          edge-solution/modules/CameraStream/module.json
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/CameraStream'
         flattenFolders: true
 
@@ -84,7 +84,7 @@ stages:
       inputs:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
-          people_detection/simple/RtcvDeployment/modules/Detector/module.json
+          edge-solution/modules/Detector/module.json
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/Detector'
         flattenFolders: true
 
