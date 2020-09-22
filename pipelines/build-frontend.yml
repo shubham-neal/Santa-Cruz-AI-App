@@ -1,12 +1,12 @@
-resources:
- repositories:
-   - repository: uesapp
-     type: git
-     name: ues-app
-     ref: master
+# resources:
+#  repositories:
+#    - repository: uesapp
+#      type: git
+#      name: ues-app
+#      ref: master
 
 variables:
- uiSource: '$(pwd)/uesapp/app'
+ uiSource: '$(pwd)/frontend-app/app'
  uiBuild: '$(uiSource)/build'
  buildSuffix: '$(Build.BuildNumber)'
 
@@ -18,8 +18,8 @@ pool:
 
 # multi-checkout
 steps:
-- checkout: uesapp
-  path: s/uesapp   
+# - checkout: uesapp
+#   path: s/uesapp   
 - checkout: self  
 - task: NodeTool@0
   inputs:
@@ -36,21 +36,21 @@ steps:
 # copying the files from build folder to uesmessagesapp
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '/home/vsts/work/1/s/uesapp/app/build'
+    SourceFolder: '/home/vsts/work/1/s/frontend-app/app/build'
     Contents: '**'
-    TargetFolder: '/home/vsts/work/1/s/uesapp/api/public'
+    TargetFolder: '/home/vsts/work/1/s/frontend-app/api/public'
   displayName: 'npm install and build and copy'
 
 # install dependencies for api
 - script: |
-    pushd $(pwd)/uesapp/api
+    pushd $(pwd)/frontend-app/api
     npm install
     popd
 
 # creating the zip for app deployment
 - task: ArchiveFiles@2
   inputs:
-    rootFolderOrFile: 'uesapp/api'
+    rootFolderOrFile: 'frontend-app/api'
     includeRootFolder: false
     archiveType: 'zip'
     archiveFile: '$(Build.ArtifactStagingDirectory)/people-detection-app.zip'
