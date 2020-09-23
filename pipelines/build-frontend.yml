@@ -11,7 +11,10 @@ variables:
  buildSuffix: '$(Build.BuildNumber)'
 
 trigger:
-- master
+  batch: true
+  paths:
+    include:
+    - frontend-app
 
 pool:
   vmImage: 'ubuntu-latest'
