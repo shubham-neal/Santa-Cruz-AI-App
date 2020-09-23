@@ -6,19 +6,19 @@
 # repository is the ID of external repository
 # type: git specifies, it's present in azure repository in same project
 # ref is used to refer to which particular branch
-resources:
- repositories:
-   - repository: EdgeScenario
-     type: git
-     name: UnifiedEdgeScenarios
-     ref: master
+# resources:
+#  repositories:
+#    - repository: EdgeScenario
+#      type: git
+#      name: UnifiedEdgeScenarios
+#      ref: master
 
 # specific branch build with batching
 trigger:
   batch: true
-  branches:
+  paths:
     include:
-    - master
+    - deployment/cloudshell
 
 pool:
   vmImage: 'ubuntu-latest'
