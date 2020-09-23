@@ -131,6 +131,24 @@ stages:
         buildVersionToDownload: 'latest'
         targetPath: '/home/vsts/work/1/s'
 
+    - task: CopyFiles@2
+      displayName: 'Copy docs to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+        Contents: |
+          .env
+          deployment.camera.template.json
+        TargetFolder: '/home/vsts/work/1/s/edge-solution/combined'
+    
+     # Creating the manifest bundle zip from combined folder
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '/home/vsts/work/1/s/edge-solution/combined'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '/home/vsts/work/1/s/manifest-bundle.zip'
+        replaceExistingArchive: true
+
     - task: Bash@3
       enabled: true
       displayName: 'Upload the ARM template scripts to temporary container in storage account and update the azuredeploy.json'
@@ -185,6 +203,9 @@ stages:
             --file create-setup-iot-edge-device.sh \
             --name create-setup-iot-edge-device.sh
           
+          MANIFEST_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/manifest-bundle.zip"
+          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$MANIFEST_URL"'\"#g' "deploy-modules.sh"
+          
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -195,6 +216,14 @@ stages:
           echo "Scripts are uploaded to temp storage account container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\""
           
           cd /home/vsts/work/1/s
+
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" \
+            --file manifest-bundle.zip \
+            --name manifest-bundle.zip
+          
           cd deployment-bundle
           unzip deployment-bundle.zip -d .
           
@@ -296,6 +325,24 @@ stages:
               buildVersionToDownload: 'latest'
               targetPath: '/home/vsts/work/1/s'
 
+          - task: CopyFiles@2
+            displayName: 'Copy docs to a combined folder'
+            inputs:
+              SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+              Contents: |
+                .env
+                deployment.camera.template.json
+              TargetFolder: '/home/vsts/work/1/s/edge-solution/combined'
+          
+          # Creating the manifest bundle zip from combined folder
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '/home/vsts/work/1/s/edge-solution/combined'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '/home/vsts/work/1/s/manifest-bundle.zip'
+              replaceExistingArchive: true
+
           - task: Bash@3
             enabled: true
             displayName: 'Upload the ARM template to release storage account'
@@ -354,6 +401,9 @@ stages:
                   --file create-setup-iot-edge-device.sh \
                   --name "$(buildSuffix)/create-setup-iot-edge-device.sh"
                 
+                MANIFEST_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME}/manifest-bundle.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$MANIFEST_URL"'\"#g' "deploy-modules.sh"
+
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -369,6 +419,21 @@ stages:
                   --name "$(buildSuffix)/deploy-modules.sh"
 
                 cd /home/vsts/work/1/s
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file manifest-bundle.zip \
+                  --name "manifest-bundle.zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file manifest-bundle.zip \
+                  --name "$(buildSuffix)/manifest-bundle.zip"
+
                 cd deployment-bundle
                 unzip deployment-bundle.zip -d .
 
