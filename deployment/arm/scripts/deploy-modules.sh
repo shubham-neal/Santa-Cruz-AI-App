@@ -126,7 +126,6 @@ fi
 #cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
 #echo "$(info) Copied values to .env"
 
-
 if [ "$EDGE_DEVICE_ARCHITECTURE" == "X86" ]; then
     PLATFORM_ARCHITECTURE="amd64"
 elif [ "$EDGE_DEVICE_ARCHITECTURE" == "ARM64" ]; then
