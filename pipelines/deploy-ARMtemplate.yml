@@ -3,15 +3,20 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-trigger: none
+# specific branch build with batching
+trigger:
+  batch: true
+  paths:
+    include:
+    - deployment/arm
 
-resources:
-  pipelines:
-  - pipeline: build
-    project: UnifiedEdgeScenarios
-    source: Build Person Tracking App
-    trigger:
-      enabled: true
+# resources:
+#   pipelines:
+#   - pipeline: build
+#     project: UnifiedEdgeScenarios
+#     source: Build Person Tracking App
+#     trigger:
+#       enabled: true
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -332,6 +337,13 @@ stages:
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file disk-setup.sh \
+                  --name "$(buildSuffix)/disk-setup.sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file create-setup-iot-edge-device.sh \
                   --name create-setup-iot-edge-device.sh
                 
@@ -339,8 +351,22 @@ stages:
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file create-setup-iot-edge-device.sh \
+                  --name "$(buildSuffix)/create-setup-iot-edge-device.sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file deploy-modules.sh \
                   --name deploy-modules.sh
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file deploy-modules.sh \
+                  --name "$(buildSuffix)/deploy-modules.sh"
 
                 cd /home/vsts/work/1/s
                 cd deployment-bundle
@@ -352,6 +378,13 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file people-detection-app.zip \
                   --name people-detection-app.zip
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file people-detection-app.zip \
+                  --name "$(buildSuffix)/people-detection-app.zip"
                 
                 cd /home/vsts/work/1/s/deployment/arm
           
@@ -384,7 +417,7 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file azuredeploy.json \
-                  --name "azuredeploy-$(buildSuffix).json"
+                  --name "$(buildSuffix)/azuredeploy-$(buildSuffix).json"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
