@@ -243,7 +243,7 @@ stages:
             --file manifest-bundle.zip \
             --name manifest-bundle.zip
           
-          cd ues-app
+          cd ues_app
           
           # Upload WebApp zip code to temp storage account
           az storage blob upload \
@@ -470,7 +470,7 @@ stages:
                   --file manifest-bundle.zip \
                   --name "$(buildSuffix)/manifest-bundle.zip"
 
-                cd ues-app
+                cd ues_app
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
