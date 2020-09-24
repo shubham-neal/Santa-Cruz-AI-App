@@ -134,6 +134,7 @@ stages:
           deployment/arm/scripts/disk-setup.sh
           deployment/arm/azuredeploy.json
         TargetFolder: '/home/vsts/work/1/s/arm_template_bundle'
+        flattenFolders: true
 
 
     - task: Bash@3
