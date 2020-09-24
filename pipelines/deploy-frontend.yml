@@ -1,3 +1,6 @@
+# This pipeline takes the frontend-app build from build pipeline and
+# releases it to a test environment. It then releases it as a artifact after manual approval
+
 trigger: none
 
 resources:
