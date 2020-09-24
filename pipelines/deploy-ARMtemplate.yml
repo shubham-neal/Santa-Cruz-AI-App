@@ -1,8 +1,3 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 # specific branch build with batching
 trigger:
   batch: true
@@ -11,13 +6,14 @@ trigger:
     - deployment/arm
     - edge-solution
 
-# resources:
-#   pipelines:
-#   - pipeline: build
-#     project: UnifiedEdgeScenarios
-#     source: Build Person Tracking App
-#     trigger:
-#       enabled: true
+# Build after completion of Release WebApp
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Release ues-app
+    trigger:
+      enabled: true
 
 pool:
   vmImage: 'ubuntu-latest'
