@@ -1,4 +1,5 @@
-# This pipeline automates the deployment and setup for required resources for Person Tracking App
+# This pipeline takes the cloudshell-deployment zip from build pipeline and releases it to a test environment.
+# It then releases it to blob storage account after manual approval
 
 
 trigger: none
