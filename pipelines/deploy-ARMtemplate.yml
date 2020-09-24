@@ -1,3 +1,6 @@
+# CI disabled
+trigger: none
+
 # Trigger after completion of Build ARM Template Pipeline
 resources:
   pipelines:
