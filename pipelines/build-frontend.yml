@@ -1,3 +1,5 @@
+# This pipeline builds frontend-app and publishes it as a artifact
+
 variables:
  uiSource: '$(pwd)/frontend-app/app'
  uiBuild: '$(uiSource)/build'
@@ -12,7 +14,6 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-# multi-checkout
 steps:
 - checkout: self
 
