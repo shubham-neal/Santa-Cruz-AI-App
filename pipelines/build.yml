@@ -1,24 +1,19 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run UnifiedEdges, deploy, and more:
-# https://aka.ms/yaml
-
-# repository is the ID of external repository
-# type: git specifies, it's present in azure repository in same project
-# ref is used to refer to which particular branch
-# resources:
-#  repositories:
-#    - repository: EdgeScenario
-#      type: git
-#      name: UnifiedEdgeScenarios
-#      ref: master
-
-# specific branch build with batching
+# specific push build in branch with batching
 trigger:
   batch: true
   paths:
     include:
     - deployment/cloudshell
+    - edge-solution
+
+# Build after completion of Release WebApp
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Release ues-app
+    trigger:
+      enabled: true
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -27,8 +22,6 @@ stages:
 - stage: PublishArtifacts
   jobs:
   - job: 'Download_and_bundle'
-    # Can replace 'EdgeScenario' to 'self' if pipeline is in master branch:
-    # Currently set to self, as the changes are not yet merged to master and we need the latest artifact for the release pipeline
     steps:
     - checkout: self
       path: s/UnifiedEdge
