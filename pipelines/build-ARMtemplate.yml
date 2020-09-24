@@ -125,7 +125,7 @@ stages:
     - task: CopyFiles@2
       displayName: 'Copy deployment manifest files to a combined folder'
       inputs:
-        SourceFolder: '/home/vsts/work/1/s'
+        SourceFolder: '/home/vsts/work/1/s/'
         Contents: |
           manifest-bundle.zip
           ues_app/people-detection-app.zip
