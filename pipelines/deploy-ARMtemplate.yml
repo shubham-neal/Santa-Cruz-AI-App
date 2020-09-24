@@ -9,6 +9,7 @@ trigger:
   paths:
     include:
     - deployment/arm
+    - edge-solution
 
 # resources:
 #   pipelines:
@@ -127,12 +128,12 @@ stages:
       inputs:
         buildType: 'specific'
         project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-        definition: '16'
+        definition: '14'
         buildVersionToDownload: 'latest'
         targetPath: '/home/vsts/work/1/s'
 
     - task: CopyFiles@2
-      displayName: 'Copy docs to a combined folder'
+      displayName: 'Copy deployment manifest files to a combined folder'
       inputs:
         SourceFolder: '/home/vsts/work/1/s/edge-solution/'
         Contents: |
@@ -140,7 +141,25 @@ stages:
           deployment.camera.template.json
         TargetFolder: '/home/vsts/work/1/s/edge-solution/combined'
     
-     # Creating the manifest bundle zip from combined folder
+    - task: CopyFiles@2
+      displayName: 'Copy CameraStream module to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+        Contents: |
+          modules/CameraStream/module.json
+        TargetFolder: '/home/vsts/work/1/s/edge-solution/combined/modules/CameraStream'
+        flattenFolders: true
+
+    - task: CopyFiles@2
+      displayName: 'Copy Detector module to a combined folder'
+      inputs:
+        SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+        Contents: |
+          modules/Detector/module.json
+        TargetFolder: '/home/vsts/work/1/s/edge-solution/combined/modules/Detector'
+        flattenFolders: true
+    
+    # Creating the manifest bundle zip from combined folder
     - task: ArchiveFiles@2
       inputs:
         rootFolderOrFile: '/home/vsts/work/1/s/edge-solution/combined'
@@ -224,8 +243,8 @@ stages:
             --file manifest-bundle.zip \
             --name manifest-bundle.zip
           
-          cd deployment-bundle
-          unzip deployment-bundle.zip -d .
+          # cd deployment-bundle
+          # unzip deployment-bundle.zip -d .
           
           # Upload WebApp zip code to temp storage account
           az storage blob upload \
@@ -321,7 +340,7 @@ stages:
             inputs:
               buildType: 'specific'
               project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-              definition: '16'
+              definition: '14'
               buildVersionToDownload: 'latest'
               targetPath: '/home/vsts/work/1/s'
 
@@ -333,6 +352,24 @@ stages:
                 .env
                 deployment.camera.template.json
               TargetFolder: '/home/vsts/work/1/s/edge-solution/combined'
+          
+          - task: CopyFiles@2
+            displayName: 'Copy CameraStream module to a combined folder'
+            inputs:
+              SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+              Contents: |
+                modules/CameraStream/module.json
+              TargetFolder: '/home/vsts/work/1/s/edge-solution/combined/modules/CameraStream'
+              flattenFolders: true
+
+          - task: CopyFiles@2
+            displayName: 'Copy Detector module to a combined folder'
+            inputs:
+              SourceFolder: '/home/vsts/work/1/s/edge-solution/'
+              Contents: |
+                modules/Detector/module.json
+              TargetFolder: '/home/vsts/work/1/s/edge-solution/combined/modules/Detector'
+              flattenFolders: true
           
           # Creating the manifest bundle zip from combined folder
           - task: ArchiveFiles@2
@@ -434,8 +471,8 @@ stages:
                   --file manifest-bundle.zip \
                   --name "$(buildSuffix)/manifest-bundle.zip"
 
-                cd deployment-bundle
-                unzip deployment-bundle.zip -d .
+                # cd deployment-bundle
+                # unzip deployment-bundle.zip -d .
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
