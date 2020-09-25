@@ -249,6 +249,7 @@ fi
 
 # Generating a random suffix that will create a unique resource name based on the resource group name.
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
+RANDOM_NUMBER="${RANDOM:0:3}"
 
 if [ -z "$LOCATION" ]; then
     # Value is empty for LOCATION
@@ -518,6 +519,20 @@ else
     EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
     if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ -n "$EXISTING_IOTHUB" ]; then
         echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
+    else
+        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
+            echo "$(info) \"$IOTHUB_NAME\" already exists in current subscription but it does not exist in resource group \"$RESOURCE_GROUP_IOT\""
+        else
+            echo "$(info) \"$IOTHUB_NAME\" already exists"
+        fi
+        echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to \"$IOTHUB_NAME\""
+        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_NUMBER}
+        # Writing the updated value back to variables file
+        sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"'"$IOTHUB_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+
+        echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
+        az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_IOT" --output "none"
+        echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
     fi
 fi
 
