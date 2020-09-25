@@ -271,6 +271,12 @@ stages:
                   --file disk-setup.sh \
                   --name "$(buildSuffix)/disk-setup.sh"
                 
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/disk-setup.sh"
+                
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -285,6 +291,12 @@ stages:
                   --file create-setup-iot-edge-device.sh \
                   --name "$(buildSuffix)/create-setup-iot-edge-device.sh"
                 
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/create-setup-iot-edge-device.sh"
+                
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -298,6 +310,12 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file deploy-modules.sh \
                   --name "$(buildSuffix)/deploy-modules.sh"
+                
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/deploy-modules.sh"
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -312,6 +330,12 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file manifest-bundle.zip \
                   --name "$(buildSuffix)/manifest-bundle.zip"
+                
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/manifest-bundle.zip"
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -327,6 +351,12 @@ stages:
                   --file people-detection-app.zip \
                   --name "$(buildSuffix)/people-detection-app.zip"
                 
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/people-detection-app.zip"
+                
                 echo "Uploading ARM template to storage account"
                 
                 az storage blob upload \
@@ -336,6 +366,12 @@ stages:
                   --file azuredeploy.json \
                   --name "$(buildSuffix)/azuredeploy-$(buildSuffix).json"
                 
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/azuredeploy-$(buildSuffix).json"
+
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
