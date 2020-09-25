@@ -10,6 +10,8 @@ trigger:
   paths:
     include:
     - frontend-app
+    - pipelines/build-frontend.yml
+    - pipelines/deploy-frontend.yml
 
 pool:
   vmImage: 'ubuntu-latest'
