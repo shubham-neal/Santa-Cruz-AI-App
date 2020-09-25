@@ -63,7 +63,7 @@ stages:
           deployment/cloudshell/deploy-iot.sh
           deployment/cloudshell/variables.template
           deployment/cloudshell/frontend-setup.sh
-          deployment/smoketest.sh
+          deployment/cloudshell/smoketest.sh
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
         flattenFolders: true
 
