@@ -3,22 +3,6 @@
     "$edgeAgent": {
       "properties.desired": {
         "modules": {
-          "rtspsim": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
-              "createOptions": {
-                "HostConfig": {
-                  "Binds": [
-                    "$RTSP_VIDEO_INPUT_DIR:/live/mediaServer/media"
-                  ]
-                }
-              }
-            }
-          },
           "lvaEdge": {
             "version": "1.0",
             "type": "docker",
@@ -34,58 +18,6 @@
                       "max-size": "10m",
                       "max-file": "10"
                     }
-                  }
-                }
-              }
-            }
-          },
-          "openvino": {
-            "settings": {
-              "image": "marketplace.azurecr.io/intel_corporation/open_vino",
-              "createOptions": {
-                "Cmd": [
-                  "/ams_wrapper/start_ams.py",
-                  "--ams_port=4000",
-                  "--ovms_port=9000"
-                ]
-              }
-            },
-            "type": "docker",
-            "version": "1.0",
-            "status": "running",
-            "restartPolicy": "always"
-          },
-          "detector": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "${MODULES.Detector}",
-              "createOptions": {
-                "ExposedPorts": {
-                  "5010/tcp": {},
-                  "56781/tcp": {}
-                },
-                "HostConfig": {
-                  "IpcMode": "host",
-                  "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
-                    "/tmp/video:/tmp/video"
-                  ],
-                  "Runtime": "$RUNTIME",
-                  "ShmSize": 536870912,
-                  "PortBindings": {
-                    "5010/tcp": [
-                      {
-                        "HostPort": "5010"
-                      }
-                    ],
-                    "56781/tcp": [
-                      {
-                        "HostPort": "56781"
-                      }
-                    ]
                   }
                 }
               }
