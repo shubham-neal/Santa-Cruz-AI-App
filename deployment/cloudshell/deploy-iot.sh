@@ -19,9 +19,6 @@ exitWithError() {
     exit 1
 }
 
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
 ##############################################################################
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
@@ -125,13 +122,18 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
     fi
 fi
 
+# Generating a random suffix that will create a unique resource name based on the resource group name.
+RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
+RANDOM_NUMBER="${RANDOM:0:3}"
+
 if [ -z "$STORAGE_ACCOUNT_NAME" ]; then
     # Value is empty for STORAGE_ACCOUNT_NAME
     # Assign Default value and appending random suffix to it
-    STORAGE_ACCOUNT_NAME="azureeyeadlsstorage"${RANDOM_SUFFIX}
+    STORAGE_ACCOUNT_NAME="azureeyeadlsstorage"$RANDOM_SUFFIX
     # Writing the updated value back to variables file
     sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"'"$STORAGE_ACCOUNT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
+
 
 if [ -z "$MANIFEST_TEMPLATE_NAME" ]; then
     # Value is empty for MANIFEST_TEMPLATE_NAME;
@@ -156,6 +158,8 @@ if [ -z "$DEPLOYMENT_NAME" ]; then
     # Writing the updated value back to variables file
     sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"'"$DEPLOYMENT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
+
+
 
 #if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
 #    checkValue "AZURE_MONITOR_SP_NAME" "$AZURE_MONITOR_SP_NAME"
@@ -391,14 +395,15 @@ else
         exitWithError
     else
         # Check if the Storage Account exists in current resource group. This handles scenario, where a Storage Account exists but not in current resource group.
-        # If it doesn't exists in current Resource Group or USE_EXISTING_RESOURCES is not set to true, create a new storage account by appending a random number to user provided name
+        # If it exists in current resource group, then we use existing storage account.
         EXISTENCE_IN_RG=$(az storage account list --subscription "$SUBSCRIPTION_ID" --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$STORAGE_ACCOUNT_NAME'].{Name:name}" --output tsv)
         if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ ! -z "$EXISTENCE_IN_RG" ]; then
             echo "$(info) Using existing storage account \"$STORAGE_ACCOUNT_NAME\""
         else
             echo "$(info) Storage account \"$STORAGE_ACCOUNT_NAME\" already exists"
-            echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to storage account name \"$STORAGE_ACCOUNT_NAME\""
-            STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}${RANDOM_SUFFIX}
+            echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to storage account name \"$STORAGE_ACCOUNT_NAME\""
+            STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME::${#STORAGE_ACCOUNT_NAME}-4}
+            STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}${RANDOM_NUMBER}
             # Writing the updated value back to variables file
             sed -i 's#^\(STORAGE_ACCOUNT_NAME[ ]*=\).*#\1\"'"$STORAGE_ACCOUNT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating storage account \"$STORAGE_ACCOUNT_NAME\""
@@ -440,7 +445,7 @@ SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "rwacl" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
 STORAGE_CONNECTION_STRING_WITH_SAS="BlobEndpoint=https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/;SharedAccessSignature=${STORAGE_BLOB_SHARED_ACCESS_SIGNATURE}"
 
-ADLS_ENDPOINT_NAME="adls-endpoint"
+ADLS_ENDPOINT_NAME="adls-endpoint"$RANDOM_SUFFIX
 
 # Check if a azure storage endpoint with given name already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, check if all the properties are same as provided to current script. If the properties are same, use existing endpoint else create a new one
@@ -603,14 +608,15 @@ fi
 # messages to the cloud for further processing, visualization, etc).
 # Check if a deployment with given name, already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, append a random number to user given deployment name and create a deployment.
+
 EXISTING_DEPLOYMENT_NAME=$(az iot edge deployment list --hub-name "$IOTHUB_NAME" --query "[?id=='$DEPLOYMENT_NAME'].{Id:id}" --output tsv)
 if [ -z "$EXISTING_DEPLOYMENT_NAME" ]; then
     echo "$(info) Deploying \"$PRE_GENERATED_MANIFEST_FILENAME\" manifest file to \"$DEVICE_NAME\" Edge device"
     az iot edge deployment create --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IOTHUB_NAME" --content "$PRE_GENERATED_MANIFEST_FILENAME" --target-condition "deviceId='$DEVICE_NAME'" --output "none"
 else
     echo "$(info) Deployment \"$DEPLOYMENT_NAME\" already exists in IoT Hub \"$IOTHUB_NAME\""
-    echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Deployment name \"$DEPLOYMENT_NAME\""
-    DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_SUFFIX}
+    echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to Deployment name \"$DEPLOYMENT_NAME\""
+    DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
     # Writing the updated value back to variables file
     sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"'"$DEPLOYMENT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
     echo "$(info) Deploying \"$PRE_GENERATED_MANIFEST_FILENAME\" manifest file to \"$DEVICE_NAME\" Edge device"
