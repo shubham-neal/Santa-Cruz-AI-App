@@ -7,6 +7,8 @@ trigger:
     include:
     - deployment/cloudshell
     - edge-solution
+    - pipelines/build.yml
+    - pipelines/deploy.yml
 
 # Build after completion of Release WebApp
 resources:
