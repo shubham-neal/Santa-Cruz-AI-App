@@ -272,7 +272,7 @@ else
 fi
 
 # Check if the user provided webapp name is valid and available in Azure
-NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/"$SUBSCRIPTION_ID"/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'${WEBAPP_NAME}'","type":"Microsoft.Web/sites"}')
+NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/"$SUBSCRIPTION_ID"/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'"${WEBAPP_NAME}"'","type":"Microsoft.Web/sites"}')
 IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
