@@ -96,6 +96,12 @@ if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
     sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
+if [ -z "$LOCATION" ]; then
+    LOCATION="West US 2"    
+    # Writing the updated value back to variables file
+    sed -i 's#^\(LOCATION[ ]*=\).*#\1\"'"$LOCATION"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
+fi
+
 if [ -z "$USE_EXISTING_RESOURCES" ]; then
     USE_EXISTING_RESOURCES="false"    
     # Writing the updated value back to variables file
