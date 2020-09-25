@@ -5,6 +5,8 @@ trigger:
     include:
     - deployment/arm
     - edge-solution
+    - pipelines/build-ARMtemplate.yml
+    - pipelines/deploy-ARMtemplate.yml
 
 # Build after completion of Release WebApp
 resources:
