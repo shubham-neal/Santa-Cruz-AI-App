@@ -1,24 +1,23 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run UnifiedEdges, deploy, and more:
-# https://aka.ms/yaml
+# This pipeline builds a zip for cloudshell-deployment and publishes this zip as an artifact.
 
-# repository is the ID of external repository
-# type: git specifies, it's present in azure repository in same project
-# ref is used to refer to which particular branch
-resources:
- repositories:
-   - repository: EdgeScenario
-     type: git
-     name: UnifiedEdgeScenarios
-     ref: master
-
-# specific branch build with batching
+# Trigger build only for changes in specific folders
 trigger:
   batch: true
-  branches:
+  paths:
     include:
-    - master
+    - deployment/cloudshell
+    - edge-solution
+    - pipelines/build.yml
+    - pipelines/deploy.yml
+
+# Build after completion of Release WebApp
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Release ues-app
+    trigger:
+      enabled: true
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -27,8 +26,6 @@ stages:
 - stage: PublishArtifacts
   jobs:
   - job: 'Download_and_bundle'
-    # Can replace 'EdgeScenario' to 'self' if pipeline is in master branch:
-    # Currently set to self, as the changes are not yet merged to master and we need the latest artifact for the release pipeline
     steps:
     - checkout: self
       path: s/UnifiedEdge
@@ -58,15 +55,15 @@ stages:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
           README.md 
-          people_detection/simple/RtcvDeployment/modules/CameraStream/camera-stream/video/staircase.mp4
-          people_detection/simple/RtcvDeployment/deployment.camera.template.json
-          people_detection/simple/RtcvDeployment/prod.env
-          cloudshell-deployment.sh
-          eye-vm-setup.sh
-          deploy-iot.sh
-          variables.template
-          frontend-setup.sh
-          smoketest.sh
+          edge-solution/modules/CameraStream/camera-stream/video/staircase.mp4
+          edge-solution/deployment.camera.template.json
+          edge-solution/.env
+          deployment/cloudshell/cloudshell-deployment.sh
+          deployment/cloudshell/eye-vm-setup.sh
+          deployment/cloudshell/deploy-iot.sh
+          deployment/cloudshell/variables.template
+          deployment/cloudshell/frontend-setup.sh
+          deployment/cloudshell/smoketest.sh
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined'
         flattenFolders: true
 
@@ -75,7 +72,7 @@ stages:
       inputs:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
-          people_detection/simple/RtcvDeployment/modules/CameraStream/module.json
+          edge-solution/modules/CameraStream/module.json
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/CameraStream'
         flattenFolders: true
 
@@ -84,7 +81,7 @@ stages:
       inputs:
         SourceFolder: '/home/vsts/work/1/s/UnifiedEdge/'
         Contents: |
-          people_detection/simple/RtcvDeployment/modules/Detector/module.json
+          edge-solution/modules/Detector/module.json
         TargetFolder: '/home/vsts/work/1/s/UnifiedEdge/combined/modules/Detector'
         flattenFolders: true
 

@@ -3,14 +3,14 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "resourceGroupIot": {
-            "type": "String",
+            "type": "string",
             "metadata": { 
                 "description": "Enter the name of resource group to be created for Iot Hub, Storage Account and Web App."
             }
         },
         "resourceGroupDevice": {
             "defaultValue": "",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Enter the name of resource group to be created for Edge device. It is required if 'Use Existing Edge Device' is set to 'No'. If a value is not provided here, the device will be created in 'Resource Group Iot' resource group"
             }
@@ -21,7 +21,7 @@
                 "X86",
                 "ARM64"
             ],
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'."
             }
@@ -33,14 +33,14 @@
                 "NVIDIA",
                 "MOVIDIUS"
             ],
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Select value for runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'."
             }
         },
         "password": {
             "defaultValue": "",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Specify the password for the web app."
             }
@@ -51,21 +51,21 @@
                 "Yes",
                 "No"
             ],
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Select whether you want to use an existing Edge device or create a new one"
             }
         },
         "existingIotHubName": {
             "defaultValue": "",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Enter the name of existing Iot Hub. This is required only if 'Use Existing Edge Device' is set to 'Yes'"
             }
         },
         "existingDeviceName": {
             "defaultValue": "",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Enter the name of existing IoT Edge device. This is required only if 'Use Existing Edge Device' is set to 'Yes'"
             }
@@ -154,9 +154,6 @@
                 "parameters": {
                     "managedIdentityName": {
                         "value": "[variables('managedIdentityName')]"
-                    },
-                    "resourceGroupDevice": {
-                        "value": "[variables('rgDevice')]"
                     }
                 },
                 "template": {
@@ -164,9 +161,6 @@
                     "contentVersion": "1.0.0.0",
                     "parameters": {
                         "managedIdentityName": {
-                            "type": "String"
-                        },
-                        "resourceGroupDevice": {
                             "type": "String"
                         }
                     },
@@ -748,12 +742,82 @@
                             }
                         },
                         {
+                            "type": "Microsoft.Devices/IotHubs",
+                            "apiVersion": "2020-04-01",
+                            "name": "[parameters('iotHubName')]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
+                                "[parameters('storageAccountName')]"
+                            ],
+                            "location": "[parameters('resourceGroupLocation')]",
+                            "sku": {
+                                "name": "S1",
+                                "tier": "Standard",
+                                "capacity": 1
+                            },
+                            "identity": {
+                                "type": "None"
+                            },
+                            "properties": {
+                                "ipFilterRules": [],
+                                "eventHubEndpoints": {
+                                    "events": {
+                                        "retentionTimeInDays": 1,
+                                        "partitionCount": 4
+                                    }
+                                },
+                                "routing": {
+                                    "endpoints": {
+                                        "storageContainers": [
+                                            {
+                                                "connectionString": "[Concat('DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value)]",
+                                                "containerName": "detectoroutput",
+                                                "fileNameFormat": "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}",
+                                                "batchFrequencyInSeconds": 60,
+                                                "maxChunkSizeInBytes": 104857600,
+                                                "encoding": "json",
+                                                "name": "adls-endpoint"
+                                            }
+                                        ]
+                                    },
+                                    "routes": [
+                                        {
+                                            "name": "defaultroute",
+                                            "source": "DeviceMessages",
+                                            "condition": "$twin.moduleId = 'tracker' OR $twin.moduleId = 'camerastream'",
+                                            "endpointNames": [
+                                                "events"
+                                            ],
+                                            "isEnabled": true
+                                        },
+                                        {
+                                            "name": "adls-route",
+                                            "source": "DeviceMessages",
+                                            "condition": "$twin.moduleId = 'camerastream'",
+                                            "endpointNames": [
+                                                "adls-endpoint"
+                                            ],
+                                            "isEnabled": true
+                                        }
+                                    ],
+                                    "fallbackRoute": {
+                                        "name": "$fallback",
+                                        "source": "DeviceMessages",
+                                        "condition": "true",
+                                        "endpointNames": [
+                                            "events"
+                                        ],
+                                        "isEnabled": true
+                                    }
+                                }
+                            }
+                        },
+                        {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
                             "name": "ModuleDeployment",
                             "dependsOn": [
-                                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default','detectoroutput')]",
-                                "[parameters('storageAccountName')]"
+                                "[parameters('iotHubName')]"
                             ],
                             "location": "[parameters('resourceGroupLocation')]",
                             "kind": "AzureCLI",
@@ -973,7 +1037,7 @@
     ],
     "outputs": {
         "WebAppURL": {
-            "type": "String",
+            "type": "string",
             "value": "[concat('https://', variables('webappName'), '.azurewebsites.net')]"
         }
     }

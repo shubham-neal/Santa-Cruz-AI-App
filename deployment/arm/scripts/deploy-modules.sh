@@ -18,10 +18,6 @@ exitWithError() {
     exit 1
 }
 
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
-
 SAS_URL="https://unifiededgescenarios.blob.core.windows.net/people-detection/deployment-bundle-latest.zip?sp=r&st=2020-08-12T13:17:07Z&se=2020-12-30T21:17:07Z&spr=https&sv=2019-12-12&sr=b&sig=%2BakjkDanqU5CczPmIVXz3gn8Bu3MWjB0vZ2IEnJoUKE%3D"
 
 
@@ -79,20 +75,6 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Configuring IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
 
-DEFAULT_ROUTE_ROUTING_CONDITION="\$twin.moduleId = 'tracker' OR \$twin.moduleId = 'camerastream'"
-
-# Adding default route in IoT hub. This is used to retrieve messages from IoT Hub
-# as they are generated.
-EXISTING_DEFAULT_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='defaultroute'].name" --output tsv)
-if [ -z "$EXISTING_DEFAULT_ROUTE" ]; then
-    echo "$(info) Creating default IoT Hub route"
-    az iot hub route create --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
-else
-    echo "$(info) Updating existing default IoT Hub route"
-    az iot hub route update --name "defaultroute" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "events" --enabled --condition "$DEFAULT_ROUTE_ROUTING_CONDITION" --output "none"
-fi
-
-
 # Retrieve connection string for storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP_IOT" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
 
@@ -100,75 +82,10 @@ SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "rwacl" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
 STORAGE_CONNECTION_STRING_WITH_SAS="BlobEndpoint=https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/;SharedAccessSignature=${STORAGE_BLOB_SHARED_ACCESS_SIGNATURE}"
 
-ADLS_ENDPOINT_NAME="adls-endpoint"
-DETECTOR_OUTPUT_CONTAINER_NAME="detectoroutput"
-
-# Check if a azure storage endpoint with given name already exists in IoT Hub. If it doesn't exist create a new one.
-# If it exists, check if all the properties are same as provided to current script. If the properties are same, use existing endpoint else create a new one
-EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "*[?name=='$ADLS_ENDPOINT_NAME'].name" --output tsv)
-if [ -z "$EXISTING_ENDPOINT" ]; then
-    echo "$(info) Creating a custom endpoint $ADLS_ENDPOINT_NAME in IoT Hub for ADLS"
-    # Create a custom-endpoint for storage account on IoT Hub
-    az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP_IOT" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
-else
-
-    # check details of current endpoint
-    EXISTING_ENDPOINT=$(az iot hub routing-endpoint list --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --query "storageContainers[?name=='$ADLS_ENDPOINT_NAME']" --output json)
-
-    IS_NEW_ENDPOINT_SAME_AS_EXISTING="false"
-    if [ ! -z "$EXISTING_ENDPOINT" ]; then
-        EXISTING_SA_RG=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].resourceGroup')
-        EXISTING_SA_SUBSCRIPTION=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].subscriptionId')
-        # Retrieve storage account from connection string using cut
-        EXISTING_SA_NAME=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].connectionString' | cut -d';' -f 3 | cut -d'=' -f 2)
-        EXISTING_SA_CONTAINER=$(echo "$EXISTING_ENDPOINT" | jq -r '.[0].containerName')
-
-        if [ "$EXISTING_SA_RG" == "$RESOURCE_GROUP_IOT" ] && [ "$EXISTING_SA_SUBSCRIPTION" == "$SUBSCRIPTION_ID" ] && [ "$EXISTING_SA_NAME" == "$STORAGE_ACCOUNT_NAME" ] && [ "$EXISTING_SA_CONTAINER" == "$DETECTOR_OUTPUT_CONTAINER_NAME" ]; then
-            IS_NEW_ENDPOINT_SAME_AS_EXISTING="true"
-        fi
-    fi
-    if [ "$IS_NEW_ENDPOINT_SAME_AS_EXISTING" == "true" ]; then
-        echo "$(info) Using existing endpoint \"$ADLS_ENDPOINT_NAME\""
-    else
-        echo "$(info) Custom endpoint \"$ADLS_ENDPOINT_NAME\" already exists in IoT Hub \"$IOTHUB_NAME\". It's configuration is different from the values provided to this script."
-        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to custom endpoint name \"$ADLS_ENDPOINT_NAME\""
-        ADLS_ENDPOINT_NAME=${ADLS_ENDPOINT_NAME}${RANDOM_SUFFIX}
-
-        # Writing the updated value back to variables file
-        sed -i 's#^\(ADLS_ENDPOINT_NAME[ ]*=\).*#\1\"'"$ADLS_ENDPOINT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-        echo "$(info) Creating a custom endpoint \"$ADLS_ENDPOINT_NAME\" in IoT Hub for ADLS"
-        # Create a custom-endpoint for storage account on IoT Hub
-        az iot hub routing-endpoint create --resource-group "$RESOURCE_GROUP_IOT" --hub-name "$IOTHUB_NAME" --endpoint-name "$ADLS_ENDPOINT_NAME" --endpoint-type azurestoragecontainer --endpoint-resource-group "$RESOURCE_GROUP_IOT" --endpoint-subscription-id "$SUBSCRIPTION_ID" --connection-string "$STORAGE_CONNECTION_STRING" --container-name "$DETECTOR_OUTPUT_CONTAINER_NAME" --batch-frequency 60 --chunk-size 100 --encoding json --ff "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}" --output "none"
-        echo "$(info) Created custom endpoint \"$ADLS_ENDPOINT_NAME\""
-    fi
-fi
-
-
-IOTHUB_ADLS_ROUTENAME="adls-route"
-ADLS_ROUTING_CONDITION="\$twin.moduleId = 'camerastream'"
-
-# Check if a route exists with given name, update it if it already exists else create a new one
-# Adding route to send messages to ADLS. This step creates an Azure Data Lake Storage account,
-# and creates routing endpoints and routes in Iot Hub. Messages will spill into a data lake
-# every one minute.
-EXISTING_IOTHUB_ADLS_ROUTE=$(az iot hub route list --hub-name "$IOTHUB_NAME" --query "[?name=='$IOTHUB_ADLS_ROUTENAME'].{Name:name}" --output tsv)
-if [ -z "$EXISTING_IOTHUB_ADLS_ROUTE" ]; then
-
-    echo "$(info) Creating a route in IoT Hub for ADLS custom endpoint"
-    # Create a route for storage endpoint on IoT Hub
-    az iot hub route create --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
-    echo "$(info) Created route \"$IOTHUB_ADLS_ROUTENAME\" in IoT Hub \"$IOTHUB_NAME\""
-else
-
-    echo "$(info) Updating existing route \"$IOTHUB_ADLS_ROUTENAME\""
-    az iot hub route update --name "$IOTHUB_ADLS_ROUTENAME" --hub-name "$IOTHUB_NAME" --source devicemessages --resource-group "$RESOURCE_GROUP_IOT" --endpoint-name "$ADLS_ENDPOINT_NAME" --enabled --condition "$ADLS_ROUTING_CONDITION" --output "none"
-    echo "$(info) Updated existing route \"$IOTHUB_ADLS_ROUTENAME\""
-fi
-
 
 
 MANIFEST_TEMPLATE_NAME="deployment.camera.template.json"
-MANIFEST_ENVIRONMENT_VARIABLES_FILENAME="prod.env"
+MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
 if [ "$DETECTOR_MODULE_RUNTIME" == "CPU" ]; then
     MODULE_RUNTIME="runc"
@@ -203,11 +120,6 @@ else
         exitWithError
     fi
 fi
-
-echo "$(info) Copying variable values from \"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\" to .env"
-echo -n "" >.env
-cat "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME" >>.env
-echo "$(info) Copied values to .env"
 
 if [ "$EDGE_DEVICE_ARCHITECTURE" == "X86" ]; then
     PLATFORM_ARCHITECTURE="amd64"

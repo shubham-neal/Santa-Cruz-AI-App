@@ -80,8 +80,6 @@ if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
 fi
 
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
-checkValue "LOCATION" "$LOCATION"
-
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "DEVICE_NAME" "$DEVICE_NAME"
 
@@ -566,7 +564,6 @@ else
         exitWithError
     fi
 fi
-
 
 if [ "$EDGE_DEVICE_ARCHITECTURE" == "X86" ]; then
     PLATFORM_ARCHITECTURE="amd64"

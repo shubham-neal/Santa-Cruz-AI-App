@@ -1,4 +1,5 @@
-# This pipeline automates the deployment and setup for required resources for Person Tracking App
+# This pipeline takes the cloudshell-deployment zip from build pipeline and releases it to a test environment.
+# It then releases it to blob storage account after manual approval
 
 
 trigger: none
@@ -148,12 +149,6 @@ stages:
           [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v EDGE_DEVICE_ARCHITECTURE ] && sed -i 's#^\(EDGE_DEVICE_ARCHITECTURE[ ]*=\).*#\1\"$EDGE_DEVICE_ARCHITECTURE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v MANIFEST_TEMPLATE_NAME ] && sed -i 's#^\(MANIFEST_TEMPLATE_NAME[ ]*=\).*#\1\"$MANIFEST_TEMPLATE_NAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v MANIFEST_ENVIRONMENT_VARIABLES_FILENAME ] && sed -i 's#^\(MANIFEST_ENVIRONMENT_VARIABLES_FILENAME[ ]*=\).*#\1\"$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DEPLOYMENT_NAME ] && sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"$DEPLOYMENT_NAME\"#g' "$VARIABLES_FILE_PATH"
           
           [ -v CUSTOM_VIDEO_SOURCE ] && sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"$CUSTOM_VIDEO_SOURCE\"#g' "$VARIABLES_FILE_PATH"
           
