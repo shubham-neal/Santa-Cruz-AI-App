@@ -534,7 +534,7 @@ int main(int argc, char** argv)
                 return cv::GComputation(cv::GIn(in),
                     cv::GOut(h264, h264_seqno, h264_ts,      // main path: H264 (~constant framerate)
                         img,                                 // desynchronized path: BGR
-                        nn_seqno, nn_ts, rcs, ids, cfs));
+                        nn_seqno, nn_ts, sz, rcs, ids, cfs));
             });
 
         // Prepare parameters for the graph
@@ -573,6 +573,7 @@ int main(int argc, char** argv)
         cv::optional<std::vector<uint8_t>> out_h264;
         cv::optional<int64_t> out_h264_seqno;
         cv::optional<int64_t> out_h264_ts;
+        cv::optional<cv::Size> img_size;
 
         cv::optional<cv::Mat> out_nn;
         cv::optional<cv::Mat> out_nn2;
@@ -596,7 +597,7 @@ int main(int argc, char** argv)
         // Pull the data from the pipeline while it is running
         while (
             pipeline.pull(
-                cv::gout(out_h264, out_h264_seqno, out_h264_ts, out_bgr, out_nn_seqno, out_nn_ts, out_boxes, out_labels, out_confidences)))
+                cv::gout(out_h264, out_h264_seqno, out_h264_ts, out_bgr, out_nn_seqno, out_nn_ts, img_size, out_boxes, out_labels, out_confidences)))
         {
             // NOTE: This version is asynchronous.
             // Different outputs may be available at different time
@@ -663,10 +664,11 @@ int main(int argc, char** argv)
                 CV_Assert(out_boxes.has_value());
                 CV_Assert(out_labels.has_value());
                 CV_Assert(out_confidences.has_value());
+                CV_Assert(img_size.has_value());
 
+                cv::Size2f im_size(img_size->width, img_size->height);
                 std::vector<std::string> messages;
 
-                for (std::size_t i = 0; i < out_labels->size(); i++)
                 for (std::size_t i = 0; i < out_labels->size(); i++)
                 {
                     std::string str = std::string("{");
@@ -704,6 +706,7 @@ int main(int argc, char** argv)
                 str.append("]");
                 // terminate
                 str.append("}");
+
                 //log_info("nn: size=" + to_size_string(out_nn.value()) + ", seqno=" + std::to_string(*out_nn_seqno) + ", ts=" + std::to_string(*out_nn_ts) + ", " + str);
                 log_info("nn: seqno=" + std::to_string(*out_nn_seqno) + ", ts=" + std::to_string(*out_nn_ts) + ", " + str);
 

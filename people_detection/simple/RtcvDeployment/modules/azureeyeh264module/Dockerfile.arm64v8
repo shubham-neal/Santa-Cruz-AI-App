@@ -5,9 +5,10 @@
 
 # docker build -t azureeyemodule -f Dockerfile.arm64v8 .
 ARG REGISTRY
-ARG ARCH=aarch64
 
 FROM $REGISTRY/azureeyebase:latest-arm64v8
+
+ARG ARCH=aarch64
 
 # Install dependencies
 RUN tdnf install -y build-essential cmake rpm && \
