@@ -9,7 +9,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "mcr.microsoft.com/media/live-video-analytics:1",
+              "image": "$ACR_NAME/live-video-analytics:1.0.5rc-arm64v8",
               "createOptions": {
                 "HostConfig": {
                   "LogConfig": {
@@ -22,7 +22,36 @@
                 }
               }
             }
+          },
+          "AzureEyeModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.azureeyeh264module}",
+              "createOptions": {
+                "ExposedPorts": {
+                  "8554/tcp": {}
+                },
+                "Name": "/rtspserver",
+                "HostConfig": {
+                  "Binds": [
+                    "/dev/bus/usb:/dev/bus/usb"
+                  ],
+                  "Privileged": true,
+                  "PortBindings": {
+                    "8554/tcp": [
+                      {
+                        "HostPort": "8554"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           }
+
         },
         "runtime": {
           "settings": {
@@ -106,6 +135,16 @@
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
-    }
+    },
+    "AzureEyeModule": {
+      "properties.desired": {
+        "Logging": true,
+        "ModelZipUrl": "",
+        "RawStream": true,
+        "ResultStream": true,
+        "Running": true,
+        "TelemetryInterval": 5
+      }
+    }    
   }
 }
