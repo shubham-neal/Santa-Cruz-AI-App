@@ -29,7 +29,7 @@
                 "name": "rtspSource",
                 "endpoint":{
                     "@type": "#Microsoft.Media.MediaGraphUnsecuredEndpoint",
-                    "url": "${RTSP_URL}",
+                    "url": "${rtspUrl}",
                     "credentials": {
                         "@type": "#Microsoft.Media.MediaGraphUsernamePasswordCredentials",
                         "username": "${rtspUserName}",
