@@ -3,29 +3,13 @@
     "$edgeAgent": {
       "properties.desired": {
         "modules": {
-          "rtspsim": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "mcr.microsoft.com/lva-utilities/rtspsim-live555:1.2",
-              "createOptions": {
-                "HostConfig": {
-                  "Binds": [
-                    "$RTSP_VIDEO_INPUT_DIR:/live/mediaServer/media"
-                  ]
-                }
-              }
-            }
-          },
           "lvaEdge": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "mcr.microsoft.com/media/live-video-analytics:1",
+              "image": "$ACR_NAME/live-video-analytics:1.0.5rc-arm64v8",
               "createOptions": {
                 "HostConfig": {
                   "LogConfig": {
@@ -39,51 +23,27 @@
               }
             }
           },
-          "openvino": {
-            "settings": {
-              "image": "marketplace.azurecr.io/intel_corporation/open_vino",
-              "createOptions": {
-                "Cmd": [
-                  "/ams_wrapper/start_ams.py",
-                  "--ams_port=4000",
-                  "--ovms_port=9000"
-                ]
-              }
-            },
-            "type": "docker",
-            "version": "1.0",
-            "status": "running",
-            "restartPolicy": "always"
-          },
-          "detector": {
+          "AzureEyeModule": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.Detector}",
+              "image": "${MODULES.azureeyeh264module}",
               "createOptions": {
                 "ExposedPorts": {
-                  "5010/tcp": {},
-                  "56781/tcp": {}
+                  "8554/tcp": {}
                 },
+                "Name": "/rtspserver",
                 "HostConfig": {
-                  "IpcMode": "host",
                   "Binds": [
-                    "/tmp/.X11-unix:/tmp/.X11-unix",
-                    "/tmp/video:/tmp/video"
+                    "/dev/bus/usb:/dev/bus/usb"
                   ],
-                  "Runtime": "$RUNTIME",
-                  "ShmSize": 536870912,
+                  "Privileged": true,
                   "PortBindings": {
-                    "5010/tcp": [
+                    "8554/tcp": [
                       {
-                        "HostPort": "5010"
-                      }
-                    ],
-                    "56781/tcp": [
-                      {
-                        "HostPort": "56781"
+                        "HostPort": "8554"
                       }
                     ]
                   }
@@ -91,6 +51,7 @@
               }
             }
           }
+
         },
         "runtime": {
           "settings": {
@@ -174,6 +135,16 @@
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
-    }
+    },
+    "AzureEyeModule": {
+      "properties.desired": {
+        "Logging": true,
+        "ModelZipUrl": "",
+        "RawStream": true,
+        "ResultStream": true,
+        "Running": true,
+        "TelemetryInterval": 5
+      }
+    }    
   }
 }
