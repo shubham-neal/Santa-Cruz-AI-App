@@ -1024,7 +1024,7 @@
                                         "[variables('webappName')]"
                                     ],
                                     "properties": {
-                                        "packageUri": "https://unifiededgescenariostest.blob.core.windows.net/test/people-detection-app.zip"
+                                        "packageUri": "https://unifiededgescenarios.blob.core.windows.net/arm-template/people-detection-app.zip"
                                     }
                                 }
                             ]

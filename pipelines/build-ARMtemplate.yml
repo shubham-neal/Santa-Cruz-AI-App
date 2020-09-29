@@ -153,7 +153,7 @@ stages:
           echo $(pwd)
           echo $(ls)
           
-          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="temp-arm-deploy-scripts"
+          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_ARM_CONTAINER_NAME"
 
           MANIFEST_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/manifest-bundle.zip"
           sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$MANIFEST_URL"'\"#g' "deploy-modules.sh"
@@ -189,12 +189,70 @@ stages:
         rootFolderOrFile: '/home/vsts/work/1/s/arm_template_bundle'
         includeRootFolder: false
         archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/arm_deployment-bundle.zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/arm-deployment-bundle.zip'
         replaceExistingArchive: true
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Update the ARM template for primaryScriptUrl to temporary container in storage account and update deploy-modules script'
+      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any error
+          set -e
+          echo $(pwd)
+          echo $(ls)
+          
+          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME"
+          
+          MANIFEST_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/manifest-bundle.zip"
+          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$MANIFEST_URL"'\"#g' "deploy-modules.sh"
+          
+          IS_JQ_INSTALLED=$(apt list --installed | grep -c -w jq)
+          if [ "$IS_JQ_INSTALLED" -eq 0 ]; then
+              echo "Installing jq"
+              sudo apt-get install jq
+              echo "Installed jq"
+          fi
+          
+          echo "Updating Primary scripts Url for deploymentScript in arm template"
+          
+          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/disk-setup.sh"
+          jq --arg a "$SCRIPT_URL" '.resources[5].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          
+          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/create-setup-iot-edge-device.sh"
+          jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[1].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          
+          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules.sh"
+          jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          
+          SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/people-detection-app.zip"
+          jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          
+          echo "Updated Primary scripts Url for deploymentScript in arm template"
+        workingDirectory: '/home/vsts/work/1/s/arm_template_bundle'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '/home/vsts/work/1/s/arm_template_bundle'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/release-arm-deployment-bundle.zip'
+        replaceExistingArchive: true
+
 
     # Publishing the pipeline artifact
     - task: PublishPipelineArtifact@1
       inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)/arm_deployment-bundle.zip'
-        artifact: 'arm_deployment-bundle'
+        targetPath: '$(Build.ArtifactStagingDirectory)/arm-deployment-bundle.zip'
+        artifact: 'arm-deployment-bundle'
+        publishLocation: 'pipeline'
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/release-arm-deployment-bundle.zip'
+        artifact: 'release-arm-deployment-bundle'
         publishLocation: 'pipeline'

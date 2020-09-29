@@ -81,6 +81,7 @@ stages:
         project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
         definition: '19'
         buildVersionToDownload: 'latest'
+        artifactName: 'arm-deployment-bundle'
         targetPath: '/home/vsts/work/1/s'
 
     - task: Bash@3
@@ -100,7 +101,7 @@ stages:
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="temp-arm-deploy-scripts"
+          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_ARM_CONTAINER_NAME"
 
           CONTAINER=$(az storage container exists --name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
@@ -121,7 +122,7 @@ stages:
             echo "Created temp container \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\" for arm template scripts in storage account"
           fi
 
-          unzip arm_deployment-bundle.zip -d .
+          unzip arm-deployment-bundle.zip -d .
 
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -162,7 +163,7 @@ stages:
             --name people-detection-app.zip
           
           
-        workingDirectory: '/home/vsts/work/1/s/arm_deployment-bundle'
+        workingDirectory: '/home/vsts/work/1/s/arm-deployment-bundle'
     
     - task: AzureResourceManagerTemplateDeployment@3
       enabled: true
@@ -172,7 +173,7 @@ stages:
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
         location: 'East US'
         templateLocation: 'Linked artifact'
-        csmFile: '/home/vsts/work/1/s/arm_deployment-bundle/azuredeploy.json'
+        csmFile: '/home/vsts/work/1/s/arm-deployment-bundle/azuredeploy.json'
         overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -password "$(PASSWORD)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
         deploymentMode: 'Incremental'
     
@@ -189,7 +190,7 @@ stages:
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="temp-arm-deploy-scripts"
+          STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_ARM_CONTAINER_NAME"
           CONTAINER=$(az storage container exists --name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
           if [ "$CONTAINER" == "True" ]; then
@@ -225,6 +226,7 @@ stages:
               project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
               definition: '19'
               buildVersionToDownload: 'latest'
+              artifactName: 'release-arm-deployment-bundle'
               targetPath: '/home/vsts/work/1/s'
 
           - task: Bash@3
@@ -255,7 +257,7 @@ stages:
                   --public-access blob
                 fi
                 
-                unzip arm_deployment-bundle.zip -d .
+                unzip release-arm-deployment-bundle.zip -d .
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -378,7 +380,7 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --file azuredeploy.json \
                   --name azuredeploy-latest.json
-              workingDirectory: '/home/vsts/work/1/s/arm_deployment-bundle'
+              workingDirectory: '/home/vsts/work/1/s/release-arm-deployment-bundle'
 
           - task: Bash@3
             enabled: true

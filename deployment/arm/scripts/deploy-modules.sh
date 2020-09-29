@@ -18,20 +18,20 @@ exitWithError() {
     exit 1
 }
 
-SAS_URL="https://unifiededgescenarios.blob.core.windows.net/people-detection/deployment-bundle-latest.zip?sp=r&st=2020-08-12T13:17:07Z&se=2020-12-30T21:17:07Z&spr=https&sv=2019-12-12&sr=b&sig=%2BakjkDanqU5CczPmIVXz3gn8Bu3MWjB0vZ2IEnJoUKE%3D"
+SAS_URL="https://unifiededgescenarios.blob.core.windows.net/arm-template/manifest-bundle.zip"
 
 
-# Download the latest deployment-bundle.zip from storage account
-wget -O deployment-bundle-latest.zip "$SAS_URL"
+# Download the latest manifest-bundle.zip from storage account
+wget -O manifest-bundle.zip "$SAS_URL"
 
 echo "Downloading is done for latest files"
 
 # Extracts all the files from zip in curent directory;
 # overwrite existing ones
 echo "Unzipping the files"
-unzip -o deployment-bundle-latest.zip -d "deployment-bundle-latest"
-cd deployment-bundle-latest
-echo "Unzipped the files in directory deployment-bundle-latest"
+unzip -o manifest-bundle.zip -d "manifest-bundle"
+cd manifest-bundle
+echo "Unzipped the files in directory manifest-bundle"
 
 echo "Installing packages"
 
@@ -105,7 +105,7 @@ STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOU
 # Update the value of CAMERA_BLOB_SAS in the environment variable file with the SAS token for the images container
 sed -i "s|\(^CAMERA_BLOB_SAS=\).*|CAMERA_BLOB_SAS=\"${STORAGE_CONNECTION_STRING_WITH_SAS//\&/\\\&}\"|g" "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
-# This step updates the video stream if specified in the variables.template file. This
+# This step updates the video stream if specified in the ARM template parameters. This
 # is intended to let the user provide their own video stream instead of using the sample video provided as part of this repo.
 if [ -z "$CUSTOM_VIDEO_SOURCE" ]; then
     echo "$(info) Using default sample video to edge device"
