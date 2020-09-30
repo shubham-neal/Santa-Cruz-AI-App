@@ -8,7 +8,7 @@ resources:
   pipelines:
   - pipeline: build
     project: UnifiedEdgeScenarios
-    source: Build Person Tracking App
+    source: Build Cloud Shell Script
     trigger:
       enabled: true
 
