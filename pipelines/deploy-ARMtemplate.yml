@@ -78,8 +78,8 @@ stages:
       displayName: 'Download artifacts from Build ARM Template Pipeline'
       inputs:
         buildType: 'specific'
-        project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-        definition: '19'
+        project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+        definition: '1'
         buildVersionToDownload: 'latest'
         artifactName: 'arm-deployment-bundle'
         targetPath: '/home/vsts/work/1/s'
@@ -223,8 +223,8 @@ stages:
             displayName: 'Download artifacts from Build ARM Template Pipeline'
             inputs:
               buildType: 'specific'
-              project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-              definition: '19'
+              project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+              definition: '1'
               buildVersionToDownload: 'latest'
               artifactName: 'release-arm-deployment-bundle'
               targetPath: '/home/vsts/work/1/s'
