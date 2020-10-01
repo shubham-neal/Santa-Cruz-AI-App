@@ -35,7 +35,7 @@ stages:
       inputs:
         buildType: 'specific'
         project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
-        definition: '5'
+        definition: '6'
         buildVersionToDownload: 'latest'
         artifactName: 'ues_app'
         targetPath: '$(Pipeline.Workspace)'
