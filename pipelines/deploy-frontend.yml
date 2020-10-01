@@ -16,7 +16,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  Variable_Group: 'FrontEndVariables'
+  Variable_Group: 'FrontEnd_ReleaseEnvrionment'
 
 stages:
 - stage: Deploy
