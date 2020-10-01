@@ -19,9 +19,9 @@ pool:
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
-    Variable_Group: 'Release_Environment'
+    Variable_Group: 'CloudShell_ReleaseEnvironment'
   ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-     Variable_Group: 'Test_Environment'
+     Variable_Group: 'CloudShell_TestEnvrionment'
 
 stages:
 - stage: 'Deploy'
