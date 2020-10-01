@@ -445,7 +445,7 @@ SAS_EXPIRY_DATE=$(date -u -d "1 year" '+%Y-%m-%dT%H:%MZ')
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(az storage account generate-sas --account-name "$STORAGE_ACCOUNT_NAME" --expiry "$SAS_EXPIRY_DATE" --permissions "rwacl" --resource-types "sco" --services "b" --connection-string "$STORAGE_CONNECTION_STRING" --output tsv)
 STORAGE_CONNECTION_STRING_WITH_SAS="BlobEndpoint=https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/;SharedAccessSignature=${STORAGE_BLOB_SHARED_ACCESS_SIGNATURE}"
 
-ADLS_ENDPOINT_NAME="adls-endpoint"$RANDOM_SUFFIX
+ADLS_ENDPOINT_NAME="adls-endpoint"
 
 # Check if a azure storage endpoint with given name already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, check if all the properties are same as provided to current script. If the properties are same, use existing endpoint else create a new one
