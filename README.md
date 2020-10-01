@@ -10,7 +10,7 @@ Press this button to deploy the people detector application to either the Azure 
 This is an open source Santa Cruz AI application providing edge-based people detection. Video and AI output from the on-prem edge device is egressed to Azure Data Lake, with the user interface running as an Azure Website. AI inferencing is provided by an open source AI model for people detection:
 
 
-![People Detector](/images/People-Detector-AI.gif)
+![People Detector](docs/images/People-Detector-AI.gif)
 
 
 ###
@@ -20,10 +20,10 @@ This application can execute against a Virtual Azure Eye AI Device in the cloud,
 
 **Please note: the current implementation runs as emulation in the cloud. A version for the physical Santa Cruz Devkit will be available soon!**
 ## Software emulation app topology
-![People Detector](/images/Software-Emulation.PNG)
+![People Detector](docs/images/Software-Emulation.PNG)
 
 ## Physical hardware app topology
-![People Detector](/images/Hardware-Topology.PNG)
+![People Detector](docs/images/Hardware-Topology.PNG)
 
 
 # Installation details
@@ -34,7 +34,7 @@ This reference open source application showcases best practices for AI security,
 
 This will redirect you to the Azure portal with this deployment page:
 
-![People Detector](/images/Custom-Deployment.PNG)
+![People Detector](docs/images/Custom-Deployment.PNG)
 #
 
 To deploy an emulation environment in the cloud, please enter the following parameters:
@@ -47,7 +47,7 @@ To deploy an emulation environment in the cloud, please enter the following para
 
 Once deployment is complete, you can launch the web application by navigating to the `Resource Group IoT` name selected above. You will see an Azure Web Services deployment which starts with `ues-eyeapp` followed by 4 random digits. Select this app, then chose the `Browse` button in the top left:
 
-![Web Application](/images/Web-App-Launch.PNG)
+![Web Application](docs/images/Web-App-Launch.PNG)
 
 Once the application loads, you will need to enter the password you entered at deployment time. The password is cached for subsequent visits to the same application.
 
