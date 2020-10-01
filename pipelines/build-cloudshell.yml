@@ -34,8 +34,8 @@ stages:
     - task: DownloadPipelineArtifact@2
       inputs:
         buildType: 'specific'
-        project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-        definition: '14'
+        project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+        definition: '5'
         buildVersionToDownload: 'latest'
         artifactName: 'ues_app'
         targetPath: '$(Pipeline.Workspace)'
