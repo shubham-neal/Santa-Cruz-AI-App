@@ -70,4 +70,4 @@ To install this reference application you must have Owner or Contributor level a
 * Microsoft.Storage
 * Microsoft.Resources
 
-**Note :** If you want to use CloudShell for the deployment, follow the [instructions here](docs/cloudshell-deployment-steps.md)
+**Note :** If you want to use Azure Cloud Shell for the deployment, follow the [instructions here](docs/cloudshell-deployment-steps.md)
