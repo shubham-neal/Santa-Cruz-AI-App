@@ -245,7 +245,7 @@ stages:
   jobs:
   - deployment: 'Release'
     displayName: 'Release bundle zip to storage account'
-    environment: 'ApproveOverallRelease'
+    environment: 'ApproveCloudShellRelease'
     variables:
       - group: ${{variables.Variable_Group}}
     strategy:
