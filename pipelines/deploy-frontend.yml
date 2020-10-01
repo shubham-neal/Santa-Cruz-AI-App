@@ -21,7 +21,9 @@ variables:
 stages:
 - stage: Deploy
   jobs:
-  - job: Download 
+  - job: Deploy
+    variables:
+     - group: ${{variables.Variable_Group}}
     steps:
     - checkout: none
     - download: none
