@@ -15,6 +15,9 @@ resources:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  Variable_Group: 'FrontEndVariables'
+
 stages:
 - stage: Deploy
   jobs:
