@@ -1,158 +1,71 @@
-# Unified Edge Scenarios Deployment Guide
-
-This document serves to walk through the end-user deployment and onboarding experience for the open source people detection on Azure Mariner VM. 
+# Open Source People Detector AI Application
 
 
-## Deploy Solution
-Two deployment scenarios are supported. 
+Press this button to deploy the people detector application to either the Azure public cloud or your Santa Cruz AI device:
 
-**Supported Deployment Scenarios:**
-- End-to-end Deployment (Developer / dogfooding experience)
-- Edge Module Deployment (End-user-unboxing experience)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2F20200918.5%2Fazuredeploy-20200918.5.json)
 
-### Scenario 1: End-to-end Deployment (Developer / dogfooding experience)
+### Overview
 
-- Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
-- Customizes the deployment for your environment
-- Deploys the IoT Edge manifest to the edge device
-
-### Scenario 2: Edge Module Deployment (End-user unboxing experience)
-
-- Uses existing resource groups, IoT Hub, and Edge Device that has already been onboarded
-- Customizes the deployment for your environment
-- Deploys the IoT Edge manifest to the edge device
+This is an open source Santa Cruz AI application providing edge-based people detection. Video and AI output from the on-prem edge device is egressed to Azure Data Lake, with the user interface running as an Azure Website. AI inferencing is provided by an open source AI model for people detection:
 
 
-Two deployment methods are supported.
-
-**Supported Deployment Methods:**
-- ARM Template Deployment
-- CloudShell Deployment
-
-### **Method 1: ARM Template Deployment**
-
-  [Prerequisites](docs/arm_template-prerequisites.md#arm-template-deployment-prerequisites) for ARM Template Deployment. 
-  
-  ### Scenario 1: End-to-end Deployment (Developer / dogfooding experience)
-  - **Deployment Steps**
-    
-    
-    Step 1: Create a custom template deployment using this button 
-    
-    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2Fazuredeploy-latest.json)
-
-    Step 2: Provide the following parameters value to deploy:
-
-    **Mandatory Variables**
-    |Name | Description  |
-    |---|---|
-    |Region|Location for resources to be deployed|
-    |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
-    |Resource Group Device| Resource group name for Mariner VM|
-
-    **Optional Variables**
-    |Name | Description  |
-    |---|---|
-    |Module Runtime| Runtime for Detector module on Edge Device. Default value is 'CPU'. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
-    |Device Architecture| Specify the architecture of the Edge Device. Default value is 'X86'. Currently supported values are 'X86' and 'ARM64'.|
-    |Password| Password to access the Web App. Default value is empty|
-    |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of End-to-end Deployment, set the value to 'NO'|
-
-    Step 3: Click on Review+Create to validate and start the deployment.
-
-    Step 4: After deployment completes, you can find the Web App Url in the output section of deployment.
+![People Detector](/images/People-Detector-AI.gif)
 
 
-  ### Scenario 2: Edge Module Deployment (End-user unboxing experience)
-  - **Deployment Steps**
+###
+This application can execute against a Virtual Azure Eye AI Device in the cloud, or with a physical Santa Cruz AI Devkit.
 
 
-    Step 1: Create a custom template deployment using this button
 
-    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2Fazuredeploy-latest.json) 
-    
-    Step 2: Provide the following parameters value to deploy:
+**Please note: the current implementation runs as emulation in the cloud. A version for the physical Santa Cruz Devkit will be available soon!**
+## Software emulation app topology
+![People Detector](/images/Software-Emulation.PNG)
 
-    **Mandatory Variables**
-    |Name | Description  |
-    |---|---|
-    |Region|Location for resources to be deployed|
-    |Resource Group Iot| Resource group name for IoT Hub, Storage Accounts and Web App|
-    |Use Existing Edge Device|Whether you want to create the edge device or skip this part and use existing resources. NOTE: In scenario of Edge Module Deployment, set the value to 'YES' and provide the Iot Hub & Device Name parameters as well|
-    |Existing Iot Hub Name|the name of existing iot hub to be used.|
-    |Existing Device Name|the name of existing device to be used.|
-
-    **Optional Variables**
-    |Name | Description  |
-    |---|---|
-    |Password| Password to access the web app. Default value is empty|
-
-    Step 3: Click on Review+Create to validate and start the deployment.
-
-    Step 4: After deployment completes, you can find the WebApp Url in the output section of deployment.
+## Physical hardware app topology
+![People Detector](/images/Hardware-Topology.PNG)
 
 
-### **Method 2: CloudShell Deployment**
+# Installation details
+This reference open source application showcases best practices for AI security, privacy and compliance.  It is intended to be immediately useful for anyone to use with their Santa Cruz AI device. Deployment starts with this button:
 
-[Prerequisites](docs/cloudshell-deployment-steps.md#prerequisites) for CloudShell Deployment.
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://ms.portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2F20200918.5%2Fazuredeploy-20200918.5.json)
+#
 
-  ### Scenario 1: End-to-end Deployment (Developer / dogfooding experience)
-  - **Deployment Steps for Standard Deployment**
+This will redirect you to the Azure portal with this deployment page:
 
+![People Detector](/images/Custom-Deployment.PNG)
+#
 
-    Step 1: Use the following command to download the shell script to your local machine
-      
-    ```sh
-    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-    ```
-      
+To deploy an emulation environment in the cloud, please enter the following parameters:
 
-    Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.  
-    |Name | Description  |
-    |---|---|
-    |--create-iothub| Specify if you do not have an existing IoT Edge Device setup on IoT Hub.|
-    |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
-    |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
-    |--website-password| Password to access the web app|
-    |--rg-iot| Resource group name for IoT Hub, Storage Accounts and Web App|
-    |--rg-vm| Resource group name for Mariner VM|
+* __Resource Group IoT__ = Unique name of a new resource group to host your IoT Hub, Data Lake and Web App
+* __Resource Group Device__ = Unique name of a new resource group to host the virtualized Santa Cruz AI device. This virtualized device connects to your Data Lake to store the AI and Video output.
+* __Device Architecture__ = X86 - Only x86-based devices is supported at this time. ARM64 is coming soon!
+* __Module Runtime__ = CPU - Only CPU-based AI inferencing in emulation is supported at this time. Movidius Myriad X is coming soon!
+* __Password__ = A password to protect access to the web app which visualizes your output. A best practice is to assign a password to prevent others on the internet from seeing the testing output of your Santa Cruz AI device.
 
-    ```sh
-    chmod +x cloudshell-deployment.sh
-    ./cloudshell-deployment.sh --create-iothub --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --rg-vm "vmresourcegroup"
-    ```
+Once deployment is complete, you can launch the web application by navigating to the `Resource Group IoT` name selected above. You will see an Azure Web Services deployment which starts with `ues-eyeapp` followed by 4 random digits. Select this app, then chose the `Browse` button in the top left:
 
-  - **Deployment Steps for Custom Deployment**
-        
-        
-    You can follow the detailed step by step [instructions here](docs/cloudshell-deployment-steps.md#scenario-1:-end-to-end-deployment-(developer-/-dogfooding-experience))
+![Web Application](/images/Web-App-Launch.PNG)
 
-  ### Scenario 2: Edge Module Deployment (End-user unboxing experience)
-  - **Deployment Steps for Standard Deployment**
-    
-    
-    Step 1: Use the following command to download deployment bundle zip to your local machine and inflate it
-      
-    ```sh
-    wget "https://unifiededgescenarios.blob.core.windows.net/people-detection/cloudshell-deployment.sh?sp=r&st=2020-09-03T16:01:57Z&se=2022-09-04T00:01:57Z&spr=https&sv=2019-12-12&sr=b&sig=m%2F0dNbnwsnz1081pU5l2YC3XUclrTJ5ku7vLK4WsOIY%3D" -O cloudshell-deployment.sh
-    ```
+Once the application loads, you will need to enter the password you entered at deployment time. The password is cached for subsequent visits to the same application.
 
-    Step 2: Add executable bit to cloudshell-deployment script and execute it with following parameters as arguments.
-    |Name | Description  |
-    |---|---|
-    |--device-runtime| Runtime for Detector module on Edge Device. Set it to 'CPU' to use CPU to run detector module. If the Edge Device has Nvidia GPU, set it to 'NVIDIA' to use GPU to run detector module or to use movidius set it to 'MOVIDIUS'.|
-    |--device-architecture| Specify the architecture of the Edge Device. Currently supported values are 'X86' and 'ARM64'.|
-    |--website-password| Password to access the Web App|
-    |--rg-iot| Resource group IoT Hub, Storage Accounts and Web App|
-    |--iothub-name| Name of the existing IoT Hub. This IoT Hub must have a existing IoT Edge device setup in it. This IoT Hub must be present in rg-iot resource group.|
-    |--device-name| Name of the IoT Edge device in the IoT Hub.|
+# People Counting in a Zone
 
-    ```sh
-    chmod +x cloudshell-deployment.sh
-    ./cloudshell-deployment.sh --device-runtime "CPU" --website-password "Password" --rg-iot "iotresourcegroup" --device-architecture "X86" --iot-name "azureeyeiot" --device-name "azureeye"
-    ```
+You can create a poloygon region in the camera frame to count the number of people in the zone.  Metrics are displayed at the bottom showing total people in the frame vs. people in the zone.  To create a zone, click anywhere on the video window to establish the first corner of your polygon. Clicking 4 times will create a 4-sided polygon. People identified in the zone are shown with a yellow highlight.  Press the `Clear` button in the lower right to clear your zone definition.
 
-  - **Deployment Steps for Custom Deployment**
-       
-       
-    You can follow the detailed step by step [instructions here](docs/cloudshell-deployment-steps.md#scenario-2:-edge-module-deployment-(end-user-unboxing-experience))  
+#
+
+### Application Installation Permissions
+To install this reference application you must have Owner or Contributor level access to the target subscription.  This deployment will create resources within the following Azure namespaces:
+
+* Microsoft.Devices
+* Microsoft.Authorization
+* Microsoft.ContainerInstance
+* Microsoft.ManagedIdentity
+* Microsoft.Web
+* Microsoft.Compute
+* Microsoft.Network
+* Microsoft.Storage
+* Microsoft.Resources
