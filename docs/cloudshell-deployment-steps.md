@@ -1,4 +1,4 @@
-## CloudShell Deployment
+## Azure Cloud Shell Deployment
 
 ### Prerequisites
 
@@ -10,7 +10,24 @@
 
   - The machine should have Azure CLI installed on it. The other required packages can be installed from the scripts if they are not present. \
   You can follow the [instruction here](packages-installation-steps.md) if you need to install the required packaged manually. 
+
+**Supported Deployment Scenarios:**
+- End-to-end Deployment (Developer / dogfooding experience)
+- Edge Module Deployment (End-user-unboxing experience)
+
+### Scenario 1: End-to-end Deployment (Developer / dogfooding experience)
+
+- Creates a new resource group, IoT Hub, Edge Device, and links physical edge device to IoT Hub
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device
+
+### Scenario 2: Edge Module Deployment (End-user unboxing experience)
+
+- Uses existing resource groups, IoT Hub, and Edge Device that has already been onboarded
+- Customizes the deployment for your environment
+- Deploys the IoT Edge manifest to the edge device  
   
+
 ### Scenario 1: End-to-end Deployment (Developer / dogfooding experience)
   - **Deployment Steps for Standard Deployment**
 
