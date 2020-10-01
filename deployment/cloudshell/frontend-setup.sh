@@ -120,7 +120,6 @@ checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
-checkValue "PASSWORD_FOR_WEBSITE_LOGIN" "$PASSWORD_FOR_WEBSITE_LOGIN"
 
 # Generating a random suffix that will create a unique resource name based on the resource group name.
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
