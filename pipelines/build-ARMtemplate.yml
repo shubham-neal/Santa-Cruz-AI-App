@@ -21,10 +21,9 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildSuffix: '$(Build.BuildNumber)' 
-  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+  ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
     Variable_Group: 'ARMTemplate_ReleaseEnvironment'
-  ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+  ${{ if ne(variables['Build.SourceBranchName'], 'release') }}:
      Variable_Group: 'ARMTemplate_TestEnvironment'
 
 
