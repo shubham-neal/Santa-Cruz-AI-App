@@ -18,7 +18,10 @@
                       "max-size": "10m",
                       "max-file": "10"
                     }
-                  }
+                  },
+                  "Binds": [
+                    "$LVA_LOGS_LOCATION:/var/lib/azuremediaservices/logs"
+                  ]
                 }
               }
             }
