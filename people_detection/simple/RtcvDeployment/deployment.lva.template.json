@@ -135,6 +135,7 @@
         "operationalEventsOutputName": "AmsOperational",
         "logLevel": "Information",
         "logCategories": "Application,Events",
+        "DebugLogsDirectory": "$LVA_LOGS_LOCATION",
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
