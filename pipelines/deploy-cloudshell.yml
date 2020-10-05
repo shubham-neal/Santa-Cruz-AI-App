@@ -145,40 +145,40 @@ stages:
           apt install -y sshpass
 
           if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-              echo "$(info) Installing azure-iot extension"
-              az extension add --name azure-iot
+            echo "$(info) Installing azure-iot extension"
+            az extension add --name azure-iot
           fi
 
           INSTALL_AZCOPY="true"
           if [ -n "$(command -v azcopy)" ]; then
-              currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
-              requiredVersion="10.5.1"
-              # Sort the current version and required version to get the lowest of the two and then then compare it with required version
-              if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
-                  # Current installed azcopy version is higher than required, no need to re-install
-                  INSTALL_AZCOPY="false"
-              fi
+            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
+            requiredVersion="10.5.1"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+              # Current installed azcopy version is higher than required, no need to re-install
+              INSTALL_AZCOPY="false"
+            fi
           fi
   
           if [ "$INSTALL_AZCOPY" == "true" ]; then
   
-              echo "$(info) Installing AzCopy"
-  
-              CURRENT_DIRECTORY="$PWD"
-              wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
-              # unzipping the downloaded archive
-              tar -xvf downloadazcopy-v10-linux
-              # changing directory to fetch the azcopy executable
-              cd azcopy_linux*/
-              # Add azcopy to /usr/bin directory
-              sudo cp azcopy /usr/bin/
-              # Return to original directory
-              cd "$CURRENT_DIRECTORY"
-              # Remove the downloaded files
-              rm azcopy_linux* -r
-              rm downloadazcopy-v10-linux
-  
-              echo "$(info) Installed AzCopy "
+            echo "$(info) Installing AzCopy"
+
+            CURRENT_DIRECTORY="$PWD"
+            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
+            # unzipping the downloaded archive
+            tar -xvf downloadazcopy-v10-linux
+            # changing directory to fetch the azcopy executable
+            cd azcopy_linux*/
+            # Add azcopy to /usr/bin directory
+            sudo cp azcopy /usr/bin/
+            # Return to original directory
+            cd "$CURRENT_DIRECTORY"
+            # Remove the downloaded files
+            rm azcopy_linux* -r
+            rm downloadazcopy-v10-linux
+
+            echo "$(info) Installed AzCopy "
           fi
         workingDirectory: 'System.DefaultWorkingDirectory'
 
@@ -274,8 +274,10 @@ stages:
                 echo "Logging into Azure"
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+
+                CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
                 
-                if [ "$CREATE_NEW_CONTAINER" == "true" ];then
+                if [ "$CONTAINER" == "False" ];then
                   echo "Creating container \"RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME\" in storage account"
                   
                   az storage container create \
@@ -297,24 +299,21 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
-                  --name "deployment-bundle-$(buildSuffix).zip"
+                  --name "$(buildSuffix)/deployment-bundle.zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
-                  --name deployment-bundle-latest.zip
+                  --name deployment-bundle.zip
                 
-                
-                unzip deployment-bundle.zip -d .
-                
-                az storage blob upload \
-                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
-                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file cloudshell-deployment.sh \
-                  --name "cloudshell-deployment-$(buildSuffix).sh"
+                cd '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
+
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
+                echo "Updated sas url for deployment bundle zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -322,6 +321,18 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file cloudshell-deployment.sh \
                   --name "cloudshell-deployment.sh"
+                
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
+                echo "Updated sas url for deployment bundle zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "$(buildSuffix)/cloudshell-deployment.sh"
               workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
           - task: Bash@3
