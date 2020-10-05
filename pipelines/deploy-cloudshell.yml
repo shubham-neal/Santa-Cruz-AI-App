@@ -88,7 +88,7 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Upload the deployment scripts to temporary container in storage account'
+      displayName: 'Upload the cloudshell deployment scripts to temporary container in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
         SP_APP_PWD: $(SP_APP_PWD)
@@ -101,31 +101,29 @@ stages:
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           
-          STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
-          
-          CONTAINER=$(az storage container exists --name "$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
           if [ "$CONTAINER" == "False" ]; then
-            echo "Creating temp container \"$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME\" for arm template scripts in storage account"
+            echo "Creating temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
           
             az storage container create \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-            --name "$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME"
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
           
             az storage container set-permission \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-            --name "$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME" \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
             --public-access blob
           
-            echo "Created temp container \"$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME\" for arm template scripts in storage account"
+            echo "Created temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
           fi
           
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-            --container-name "$STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME" \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
             --file deployment-bundle.zip \
             --name deployment-bundle.zip
           
@@ -193,7 +191,7 @@ stages:
           echo "Starting task"
 
           echo "Updating sas url for deployment bundle zip"
-          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_CLOUDSHELL_SCRIPTS_CONTAINER_NAME}/deployment-bundle.zip"
+          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle.zip"
           sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
           echo "Updated sas url for deployment bundle zip"
 
@@ -215,6 +213,31 @@ stages:
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete temporary container for cloudshell deployment scripts in storage account'
+      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          
+          if [ "$CONTAINER" == "True" ]; then
+            echo "Deleting temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+            az storage container delete \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
+
+            echo "Deleted temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+          fi
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
       enabled: true
