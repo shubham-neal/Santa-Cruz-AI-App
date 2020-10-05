@@ -35,7 +35,7 @@ stages:
     - download: none
 
     - task: Bash@3
-      enabled: true
+      enabled: false
       displayName: 'Delete existing resource groups'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -141,6 +141,23 @@ stages:
           sudo apt install -y timeout
           sudo apt install -y wget
           sudo apt install -y sshpass
+          sudo apt install -y python-pip
+
+          INSTALL_IOTEDGEDEV="true"
+          if [ ! -z "$(command -v iotedgedev)" ]; then
+            currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
+            requiredVersion="2.1.4"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+              # Current installed iotedgedev version is higher than required, no need to re-install
+              INSTALL_IOTEDGEDEV="false"
+            fi
+          fi
+
+          if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
+            echo "$(info) Installing iotedgedev"
+            sudo pip install iotedgedev==2.1.4
+          fi
 
           if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
             echo "$(info) Installing azure-iot extension"
