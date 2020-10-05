@@ -180,7 +180,7 @@ stages:
 
             echo "$(info) Installed AzCopy "
           fi
-        workingDirectory: 'System.DefaultWorkingDirectory'
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
       enabled: true
