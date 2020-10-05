@@ -138,11 +138,11 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          apt install -y curl
-          apt install -y jq
-          apt install -y timeout
-          apt install -y wget
-          apt install -y sshpass
+          sudo apt install -y curl
+          sudo apt install -y jq
+          sudo apt install -y timeout
+          sudo apt install -y wget
+          sudo apt install -y sshpass
 
           if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
             echo "$(info) Installing azure-iot extension"
@@ -213,7 +213,7 @@ stages:
           sudo "./cloudshell-deployment.sh"
           
           echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Scripts'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
 
     - task: Bash@3
