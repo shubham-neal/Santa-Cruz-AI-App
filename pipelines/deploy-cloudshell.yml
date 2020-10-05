@@ -198,17 +198,16 @@ stages:
           # Exit the inline script on any erros
           set -e
 
-          echo "Setting the distribution envrionment to cloudshell for skipping login step"
-          POWERSHELL_DISTRIBUTION_CHANNEL="CloudShell"
-          export POWERSHELL_DISTRIBUTION_CHANNEL
-
           echo "Logging into Azure"
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
 
+          echo "Setting the distribution envrionment to cloudshell for skipping login step"
+          export POWERSHELL_DISTRIBUTION_CHANNEL="CloudShell"
+
           echo "Running cloudshell-deployment.sh script"
           
-          sudo source ./cloudshell-deployment.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
+          sudo bash ./cloudshell-deployment.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
