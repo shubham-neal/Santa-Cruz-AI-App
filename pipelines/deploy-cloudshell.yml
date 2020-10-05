@@ -35,7 +35,7 @@ stages:
     - download: none
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Delete existing resource groups'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -198,7 +198,7 @@ stages:
         workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Run cloudshell-deployment.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
@@ -268,7 +268,7 @@ stages:
           set -e
           
           echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
-          #sleep 15m
+          sleep 10m
           echo "Logging into Azure"
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
