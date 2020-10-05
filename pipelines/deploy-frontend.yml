@@ -1,3 +1,6 @@
+# This pipeline takes the frontend-app build from build pipeline and
+# releases it to a test environment. It then releases it as a artifact after manual approval
+
 trigger: none
 
 resources:
@@ -6,19 +9,21 @@ resources:
     project: UnifiedEdgeScenarios
     source: Build ues-app
     trigger:
-      branches: 
-        include:
-        - master
-        - BuildReleasePipeline
+      enabled: true
 
 
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  Variable_Group: 'FrontEnd_ReleaseEnvrionment'
+
 stages:
 - stage: Deploy
   jobs:
-  - job: Download 
+  - job: Deploy
+    variables:
+     - group: ${{variables.Variable_Group}}
     steps:
     - checkout: none
     - download: none
@@ -26,8 +31,8 @@ stages:
     - task: DownloadPipelineArtifact@2
       inputs:
         buildType: 'specific'
-        project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-        definition: '14'
+        project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+        definition: '5'
         buildVersionToDownload: 'latest'
         artifactName: 'ues_app'
         targetPath: '$(Pipeline.Workspace)'
@@ -78,8 +83,8 @@ stages:
           - task: DownloadPipelineArtifact@2
             inputs:
               buildType: 'specific'
-              project: 'e9d7d516-43c2-413f-b83b-f320777504c6'
-              definition: '14'
+              project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+              definition: '5'
               buildVersionToDownload: 'latest'
               artifactName: 'ues_app'
               targetPath: '$(Pipeline.Workspace)'

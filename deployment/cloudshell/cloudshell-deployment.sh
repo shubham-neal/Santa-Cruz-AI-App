@@ -19,7 +19,6 @@ printHelp() {
     echo "
     Mandatory Arguments
         --device-runtime        : AI execution hardware: set to 'CPU' for CPU-based dectector in cloud, 'MOVIDIUS' for Intel Myriad X VPU, or 'NVIDIA' to use Nvidia GPU
-        --website-password      : Password to access the web app
         --rg-iot                : Resource group name for IoT Hub, Storage Accounts and Web App
         --device-architecture   : Specify the CPU architecture of the Edge Device. Currently supported values are X86 and ARM64
     
@@ -28,6 +27,7 @@ printHelp() {
         --rg-vm                 : Required if create-iothub is present. Resource group name for Edge Device vm. 
         --iothub-name           : Required if create-iothub is not present. Name of the existing IoT Hub. This IoT Hub must have a existing IoT Edge device setup in it. This IoT Hub must be present in rg-iot resource group.
         --device-name           : Required if create-iothub is not present. Name of the IoT Edge device in the IoT Hub.
+        --website-password      : Password to access the web app
         --custom-deployment     : If passed, the script will download the deployment files locally and allow specifying values for all the variables
         --help                  : Show this message and exit
 	
@@ -135,7 +135,6 @@ checkValue() {
 checkValue "--device-runtime" "$DETECTOR_MODULE_RUNTIME"
 checkValue "--rg-iot" "$RESOURCE_GROUP_IOT"
 checkValue "--device-architecture" "$EDGE_DEVICE_ARCHITECTURE"
-checkValue "--website-password" "$PASSWORD_FOR_WEBSITE_LOGIN"
 
 if [ "$CREATE_IOTHUB" == "true" ]; then
     checkValue "--rg-vm" "$RESOURCE_GROUP_DEVICE"

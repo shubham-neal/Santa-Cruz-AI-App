@@ -1,0 +1,363 @@
+# This pipeline takes the cloudshell-deployment zip from build pipeline and releases it to a test environment.
+# It then releases it to blob storage account after manual approval
+
+
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Build Cloud Shell Script
+    trigger:
+      enabled: true
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+
+variables:
+  buildSuffix: '$(Build.BuildNumber)' 
+  ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+    Variable_Group: 'CloudShell_ReleaseEnvironment'
+  ${{ if ne(variables['Build.SourceBranchName'], 'release') }}:
+     Variable_Group: 'CloudShell_TestEnvrionment'
+
+stages:
+- stage: 'Deploy'
+  jobs:
+  - job: 'Deploy'
+    variables:
+     - group: ${{variables.Variable_Group}}
+    displayName: 'Deploy Person Tracking App to a test environment'
+    steps:
+    - checkout: none
+    - download: none
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete existing resource groups'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging to Azure"
+                          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+              else
+                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+              fi  
+          else    
+            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
+                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
+            fi
+          
+            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
+                echo "Skipping deletion of resource group"
+            else
+                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
+                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
+                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
+                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
+            fi
+          fi  
+
+    - task: DownloadPipelineArtifact@2
+      enabled: true
+      displayName: 'Download artifacts from Build Pipeline'
+      inputs:
+        buildType: 'specific'
+        project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+        definition: '3'
+        buildVersionToDownload: 'latest'
+        targetPath: '$(System.DefaultWorkingDirectory)'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Unzip deployment bundle file from artifacts'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any errors
+          set -e
+          
+          DEPLOYMENT_BUNDLE_NAME="deployment-bundle.zip"
+          
+          if [ ! -f  "$DEPLOYMENT_BUNDLE_NAME" ]; then
+          echo "The artifact does not contain \"$DEPLOYMENT_BUNDLE_NAME\" file"
+          fi
+          
+          echo "Extracting file from deployment bundle zip"
+          # Extract files to current directory
+          unzip "$DEPLOYMENT_BUNDLE_NAME" -d .
+          
+          #TODO: Add steps to ensure the zip contains the required files
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Update values in variable.template file using pipeline variables'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the inline script on any errors
+          set -e
+          
+          VARIABLES_FILE_PATH="variables.template"
+          
+          echo "Updating variables in variables.template file"
+          
+          # The following steps check the existence of the variable in the file
+          # and replace the value with in the file with the pipeline variable value using sed
+          
+          [ -v USE_INTERACTIVE_LOGIN_FOR_AZURE ] && sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"$USE_INTERACTIVE_LOGIN_FOR_AZURE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
+
+          [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v INSTALL_REQUIRED_PACKAGES ] && sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"$INSTALL_REQUIRED_PACKAGES\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v PASSWORD_FOR_WEBSITE_LOGIN ] && sed -i 's#^\(PASSWORD_FOR_WEBSITE_LOGIN[ ]*=\).*#\1\"$PASSWORD_FOR_WEBSITE_LOGIN\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v EDGE_DEVICE_ARCHITECTURE ] && sed -i 's#^\(EDGE_DEVICE_ARCHITECTURE[ ]*=\).*#\1\"$EDGE_DEVICE_ARCHITECTURE\"#g' "$VARIABLES_FILE_PATH"
+          
+          [ -v CUSTOM_VIDEO_SOURCE ] && sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"$CUSTOM_VIDEO_SOURCE\"#g' "$VARIABLES_FILE_PATH"
+          
+          echo "Updates are complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run eye-vm-setup.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the inline script on any erros
+          set -e
+          
+          echo "Running eye-vm-sh script"
+          
+          source "./eye-vm-setup.sh"
+          
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run deploy-iot.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the inline script on any error
+          set -e          
+          
+          echo "Running deploy-iot script"
+
+          source "./deploy-iot.sh"
+
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run frontend-setup.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+          
+          # Exit the script on any error
+          set -e
+
+          cd deployment-bundle
+          
+          echo "Running frontend-setup script"
+          
+          source "./frontend-setup.sh"
+          
+          echo "Task is complete"
+
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run smoke test'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any error
+          set -e
+          
+          echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
+          sleep 15m
+          
+          echo "Running smoketest script"
+          
+          source "./smoketest.sh"
+          
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+- stage: Release
+  jobs:
+  - deployment: 'Release'
+    displayName: 'Release bundle zip to storage account'
+    environment: 'ApproveCloudShellRelease'
+    variables:
+      - group: ${{variables.Variable_Group}}
+    strategy:
+      runOnce:
+        deploy:
+          steps: 
+          - checkout: none
+          - download: none
+
+          - task: DownloadPipelineArtifact@2
+            enabled: true
+            displayName: 'Download artifacts from Build Pipeline'
+            inputs:
+              buildType: 'specific'
+              project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+              definition: '3'
+              buildVersionToDownload: 'latest'
+              targetPath: '$(System.DefaultWorkingDirectory)'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Upload the deployment bundle zip to release storage account'
+            env:
+              RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Logging into Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$CREATE_NEW_CONTAINER" == "true" ];then
+                  echo "Creating container \"RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME\" in storage account"
+                  
+                  az storage container create \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                
+                  az storage container set-permission \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --public-access blob
+                fi
+                
+                echo "Uploading deployment bundle zip to storage account"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle.zip \
+                  --name "deployment-bundle-$(buildSuffix).zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle.zip \
+                  --name deployment-bundle-latest.zip
+                
+                
+                unzip deployment-bundle.zip -d .
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment-$(buildSuffix).sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "cloudshell-deployment.sh"
+              workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Delete the resource group'
+            env:
+              SP_APP_PWD: $(SP_APP_PWD)
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Exit the script on any error
+                set -e
+                
+                echo "Logging to Azure"
+                
+                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
+                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE\""
+
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                else
+                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
+                  
+                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
+                fi  

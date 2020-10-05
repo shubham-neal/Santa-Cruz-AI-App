@@ -28,10 +28,6 @@ exitWithError() {
     exit 1
 }
 
-
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
 ##############################################################################
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
@@ -251,6 +247,9 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
     fi
 fi
 
+# Generating a random suffix that will create a unique resource name based on the resource group name.
+RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
+RANDOM_NUMBER="${RANDOM:0:3}"
 
 if [ -z "$LOCATION" ]; then
     # Value is empty for LOCATION
@@ -421,31 +420,38 @@ if [ -z "$EXISTING_DISK" ]; then
     az disk create -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" -l "$LOCATION" --for-upload --upload-size-bytes 68719477248 --sku "$STORAGE_TYPE" --os-type "Linux" --hyper-v-generation "V2" --output "none"
     echo "$(info) Created empty managed disk \"$DISK_NAME\""
 else
-    echo "$(error) Managed Disk \"$DISK_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
-    exitWithError
+    echo "$(info) Managed Disk \"$DISK_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
 fi
 
-# This section grants access to the empty disk we created in the prior step through a temporary SAS token. We
+
+# This section check the current disk state, if it is in ReadyToUpload state then grants access to the empty disk we created in the prior step through a temporary SAS token. We
 # will use this token to allow azcopy to copy the private Mariner OS vhd file to another subscription. After the copy
 # operation has completed, we revoke access to the disk in our environment to conclude the disk setup operation.
-echo "$(info) Fetching the SAS Token for temporary access to managed disk"
-SAS_URI=$(az disk grant-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --access-level Write --duration-in-seconds 86400)
-TOKEN=$(echo "$SAS_URI" | jq -r '.accessSas')
-echo "$(info) Retrieved the SAS Token"
+CURRENT_STATE=$(az disk list  --query "[?name=='$DISK_NAME'].diskState" --resource-group "$RESOURCE_GROUP_DEVICE" -o tsv)\
 
-echo "$(info) Copying vhd file from source to destination"
-# Run azcopy if current environment is CloudShell else run sudo azcopy.
-# azcopy needs to run as superuser in non Cloud Shell environment to be able to create plans
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-    azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
+if [ "$CURRENT_STATE" == "Attached"  ]; then
+    echo "$(info) Using existing Managed Disk \"$DISK_NAME\""
 else
-    sudo azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
-fi
-echo "$(info) Copy is complete"
+    echo "$(info) Fetching the SAS Token for temporary access to managed disk"
+    SAS_URI=$(az disk grant-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --access-level Write --duration-in-seconds 86400)
+    TOKEN=$(echo "$SAS_URI" | jq -r '.accessSas')
+    echo "$(info) Retrieved the SAS Token"
 
-echo "$(info) Revoking SAS token access for the managed disk"
-az disk revoke-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --output "none"
-echo "$(info) SAS REVOKED"
+    echo "$(info) Copying vhd file from source to destination"
+    # Run azcopy if current environment is CloudShell else run sudo azcopy.
+    # azcopy needs to run as superuser in non Cloud Shell environment to be able to create plans
+    if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
+        azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
+    else
+        sudo azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
+    fi
+    echo "$(info) Copy is complete"
+
+    echo "$(info) Revoking SAS token access for the managed disk"
+    az disk revoke-access -n "$DISK_NAME" -g "$RESOURCE_GROUP_DEVICE" --output "none"
+    echo "$(info) SAS REVOKED"
+
+fi
 
 echo "$(info) Managed disk setup is complete"
 
@@ -453,14 +459,24 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Virtual machine \"$VM_NAME\" setup"
 printf "%60s\n" " " | tr ' ' '-'
 
+# We check whether the Virtual machine with the provided name exists or not in the current resource group.
+# If it doesn't exists, we will create a new virtual machine.
+# If it exists, we check the os disk name. If it is same as the disk name provided, we use the existing virtual machine.
 EXISTING_VM=$(az vm list --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --query "[?name=='$VM_NAME'].{Name:name}" --output tsv)
+
+
 if [ -z "$EXISTING_VM" ]; then
     echo "$(info) Creating virtual machine \"$VM_NAME\""
     az vm create --name "$VM_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --attach-os-disk "$DISK_NAME" --os-type "linux" --location "$LOCATION" --nsg-rule "$NSG_RULE" --nsg "$NSG_NAME" --size "$VM_SIZE" --output "none"
     echo "$(info) Created virtual machine \"$VM_NAME\""
 else
-    echo "$(error) Virtual machine \"$VM_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
-    exitWithError
+    OS_DISK_NAME=$(az vm list --query "[?name=='$VM_NAME'].storageProfile.osDisk.name" --resource-group "$RESOURCE_GROUP_DEVICE" -o tsv)
+    if [ "$OS_DISK_NAME" == "$DISK_NAME" ]; then
+        echo "$(info) Virtual machine \"$VM_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\""
+    else
+        echo "$(info) Virtual machine \"$VM_NAME\" already exists in resource group \"$RESOURCE_GROUP_DEVICE\" but does not have the attached disk as \"$DISK_NAME\""
+        exitWithError
+    fi    
 fi
 
 CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
@@ -491,8 +507,7 @@ printf "%60s\n" " " | tr ' ' '-'
 
 # We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
 # It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
-# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub
-# else create a new IoT Hub by appending a random number to the user provided name
+# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub.
 EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
 
 if [ -z "$EXISTING_IOTHUB" ]; then
@@ -500,7 +515,7 @@ if [ -z "$EXISTING_IOTHUB" ]; then
     az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_IOT" --output "none"
     echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
 else
-    # Check if IoT Hub exists in current resource group. If it doesn't exist in current resource group. Create a new one based on value of USE_EXISTING_RESOURCES
+    # Check if IoT Hub exists in current resource group. If it exist, we will use the existing IoT Hub.
     EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_IOT" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
     if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ -n "$EXISTING_IOTHUB" ]; then
         echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
@@ -510,8 +525,8 @@ else
         else
             echo "$(info) \"$IOTHUB_NAME\" already exists"
         fi
-        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to \"$IOTHUB_NAME\""
-        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
+        echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to \"$IOTHUB_NAME\""
+        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_NUMBER}
         # Writing the updated value back to variables file
         sed -i 's#^\(IOTHUB_NAME[ ]*=\).*#\1\"'"$IOTHUB_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 

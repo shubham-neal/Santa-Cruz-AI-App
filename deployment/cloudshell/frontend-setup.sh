@@ -19,9 +19,6 @@ exitWithError() {
     exit 1
 }
 
-# Generating a random number. This will be used in case a user provided name is not unique.
-RANDOM_SUFFIX="${RANDOM:0:3}"
-
 ##############################################################################
 # Check existence and value of a variable
 # The function checks if the provided variable exists and it is a non-empty value.
@@ -123,7 +120,10 @@ checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
-checkValue "PASSWORD_FOR_WEBSITE_LOGIN" "$PASSWORD_FOR_WEBSITE_LOGIN"
+
+# Generating a random suffix that will create a unique resource name based on the resource group name.
+RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
+RANDOM_NUMBER="${RANDOM:0:3}"
 
 if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
     USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
@@ -156,7 +156,7 @@ fi
 if [ -z "$APP_SERVICE_PLAN_NAME" ]; then
     # Value is empty for APP_SERVICE_PLAN_NAME
     # Assign Default value
-    APP_SERVICE_PLAN_NAME="azureeye-appplan"
+    APP_SERVICE_PLAN_NAME="azureeye-appplan${RANDOM_SUFFIX}"
     # Writing the updated value back to variables file
     sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
@@ -164,7 +164,7 @@ fi
 if [ -z "$WEBAPP_NAME" ]; then
     # Value is empty for WEBAPP_NAME
     # Assign Default value and appending random suffix to it
-    WEBAPP_NAME="azureeye-webapp"-${RANDOM_SUFFIX}
+    WEBAPP_NAME="azureeye-webapp-${RANDOM_SUFFIX}"
     # Writing the updated value back to variables file
     sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
@@ -238,7 +238,7 @@ printf "%60s\n" " " | tr ' ' '-'
 WEBAPP_DEPLOYMENT_ZIP="people-detection-app.zip"
 
 # Retrieve IoT Hub Connection String
-IOTHUB_CONNECTION_STRING="$(az iot hub show-connection-string --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
+IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --hub-name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
 
 # Retrieve connection string for storage account
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -g "$RESOURCE_GROUP_IOT" -n "$STORAGE_ACCOUNT_NAME" --query connectionString -o tsv)
@@ -260,8 +260,8 @@ else
         echo "$(info) Using existing App Service Plan \"$APP_SERVICE_PLAN_NAME\""
     else
         echo "$(info) App Service Plan \"$APP_SERVICE_PLAN_NAME\" already exists"
-        echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
-        APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_SUFFIX}
+        echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to App Service Plan name \"$APP_SERVICE_PLAN_NAME\""
+        APP_SERVICE_PLAN_NAME=${APP_SERVICE_PLAN_NAME}${RANDOM_NUMBER}
         # Writing the updated value back to variables file
         sed -i 's#^\(APP_SERVICE_PLAN_NAME[ ]*=\).*#\1\"'"$APP_SERVICE_PLAN_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
         echo "$(info) Creating App Service Plan \"$APP_SERVICE_PLAN_NAME\""
@@ -271,7 +271,7 @@ else
 fi
 
 # Check if the user provided webapp name is valid and available in Azure
-NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/"$SUBSCRIPTION_ID"/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'${WEBAPP_NAME}'","type":"Microsoft.Web/sites"}')
+NAME_CHECK_JSON=$(az rest --method POST --url https://management.azure.com/subscriptions/"$SUBSCRIPTION_ID"/providers/Microsoft.Web/checknameavailability?api-version=2019-08-01 --body '{"name":"'"${WEBAPP_NAME}"'","type":"Microsoft.Web/sites"}')
 IS_NAME_AVAILABLE=$(echo "$NAME_CHECK_JSON" | jq -r '.nameAvailable')
 
 if [ "$IS_NAME_AVAILABLE" == "true" ]; then
@@ -291,8 +291,8 @@ else
             echo "$(info) Using existing Web App \"$WEBAPP_NAME\""
         else
             echo "$(info) Web App \"$WEBAPP_NAME\" already exists"
-            echo "$(info) Appending a random number \"$RANDOM_SUFFIX\" to Web App \"$WEBAPP_NAME\""
-            WEBAPP_NAME=${WEBAPP_NAME}-${RANDOM_SUFFIX}
+            echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to Web App \"$WEBAPP_NAME\""
+            WEBAPP_NAME=${WEBAPP_NAME}-${RANDOM_NUMBER}
             # Writing the updated value back to variables file
             sed -i 's#^\(WEBAPP_NAME[ ]*=\).*#\1\"'"$WEBAPP_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
             echo "$(info) Creating Web App \"$WEBAPP_NAME\""
