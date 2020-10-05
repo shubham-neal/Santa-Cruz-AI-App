@@ -35,7 +35,7 @@ stages:
     - download: none
 
     - task: Bash@3
-      enabled: false
+      enabled: true
       displayName: 'Delete existing resource groups'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
