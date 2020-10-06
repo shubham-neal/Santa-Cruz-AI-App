@@ -267,7 +267,9 @@ stages:
           # Exit the script on any error
           set -e
           
-          echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
+          cd deployment-bundle-latest
+          
+          echo "Delaying execution of smoketest script by 10 minutes to allow IoTEdge modules to start"
           sleep 10m
           echo "Logging into Azure"
           
@@ -277,7 +279,7 @@ stages:
           source "./smoketest.sh"
           
           echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
 - stage: Release
   jobs:
