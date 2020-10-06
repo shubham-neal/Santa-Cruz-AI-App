@@ -41,16 +41,10 @@ PASSWORD_FOR_WEBSITE_LOGIN=""
 #####################################################################
 
 # Section 1: General configuration
-# Enter your corporate tenant ID from Azure Active Directory:
-TENANT_ID=""
 # Subscription ID to host your deployments:
 SUBSCRIPTION_ID=""
 # Azure Region for your deployment:
 LOCATION=""
-
-USE_INTERACTIVE_LOGIN_FOR_AZURE="true"
-SP_APP_ID=""
-SP_APP_PWD=""
 
 USE_EXISTING_RESOURCES="true"
 INSTALL_REQUIRED_PACKAGES="true"

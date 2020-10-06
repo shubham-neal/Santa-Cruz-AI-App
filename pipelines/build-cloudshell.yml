@@ -1,14 +1,14 @@
 # This pipeline builds a zip for cloudshell-deployment and publishes this zip as an artifact.
 
-# Trigger build only for changes in specific folders
-# trigger:
-#   batch: true
-#   paths:
-#     include:
-#     - deployment/cloudshell
-#     - edge-solution
-#     - pipelines/build-cloudshell.yml
-#     - pipelines/deploy-cloudshell.yml
+Trigger build only for changes in specific folders
+trigger:
+  batch: true
+  paths:
+    include:
+    - deployment/cloudshell
+    - edge-solution
+    - pipelines/build-cloudshell.yml
+    - pipelines/deploy-cloudshell.yml
 
 # Build after completion of Release WebApp
 resources:
