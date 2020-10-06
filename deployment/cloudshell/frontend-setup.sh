@@ -136,9 +136,8 @@ fi
 
 echo "$(info) The required variables are defined and have a non-empty value"
 
-Log into Azure
 printf "\n%60s\n" " " | tr ' ' '-'
-echo "Logging into Azure Subscription"
+echo "Logging into Azure"
 printf "%60s\n" " " | tr ' ' '-'
 
 echo "Using existing CloudShell login for Azure CLI"
