@@ -1,6 +1,6 @@
 # This pipeline builds a zip for cloudshell-deployment and publishes this zip as an artifact.
 
-Trigger build only for changes in specific folders
+# Trigger build only for changes in specific folders
 trigger:
   batch: true
   paths:
