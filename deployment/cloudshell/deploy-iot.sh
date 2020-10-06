@@ -74,25 +74,12 @@ ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="true"
 ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
-IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
-fi
-
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "IOTHUB_NAME" "$IOTHUB_NAME"
 checkValue "DEVICE_NAME" "$DEVICE_NAME"
 
-#checkValue "CREATE_AZURE_MONITOR" "$CREATE_AZURE_MONITOR"
-
 checkValue "DETECTOR_MODULE_RUNTIME" "$DETECTOR_MODULE_RUNTIME"
 checkValue "EDGE_DEVICE_ARCHITECTURE" "$EDGE_DEVICE_ARCHITECTURE"
-
-if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
-    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
-    # Writing the updated value back to variables file
-    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-fi
 
 if [ -z "$LOCATION" ]; then
     LOCATION="West US 2"    
@@ -110,16 +97,6 @@ if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
     INSTALL_REQUIRED_PACKAGES="true"  
     # Writing the updated value back to variables file
     sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"'"$INSTALL_REQUIRED_PACKAGES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"  
-fi
-
-# Skip the variable checks for login variable if current environment is CloudShell
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
-    # Pass the name of the variable and it's value to the checkValue function
-    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
-        checkValue "SP_APP_ID" "$SP_APP_ID"
-        checkValue "SP_APP_PWD" "$SP_APP_PWD"
-        checkValue "TENANT_ID" "$TENANT_ID"
-    fi
 fi
 
 # Generating a random suffix that will create a unique resource name based on the resource group name.
@@ -159,12 +136,6 @@ if [ -z "$DEPLOYMENT_NAME" ]; then
     sed -i 's#^\(DEPLOYMENT_NAME[ ]*=\).*#\1\"'"$DEPLOYMENT_NAME"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 fi
 
-
-
-#if [ "$CREATE_AZURE_MONITOR" == "true" ]; then
-#    checkValue "AZURE_MONITOR_SP_NAME" "$AZURE_MONITOR_SP_NAME"
-#fi
-
 # Check if all the variables are set up correctly
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
     # Check if there are any required variables which are not defined
@@ -187,9 +158,9 @@ if [ ! -f "${MANIFEST_ENVIRONMENT_VARIABLES_FILENAME}" ] || [ ! -f "${MANIFEST_T
     exitWithError
 fi
 
-# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
+# Check value of INSTALL_REQUIRED_PACKAGES.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+if [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     INSTALL_IOTEDGEDEV="true"
     if [ ! -z "$(command -v iotedgedev)" ]; then
@@ -225,88 +196,13 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
     fi
 
     # jq and pip packages are pre-installed in the cloud shell
-
-elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
-
-    if [ ! -z "$(command -v apt)" ]; then
-        PACKAGE_MANAGER="apt"
-    elif [ ! -z "$(command -v dnf)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ ! -z "$(command -v zypper)" ]; then
-        PACKAGE_MANAGER="zypper"
-    fi
-
-    if [ -z "$PACKAGE_MANAGER" ]; then
-        echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
-        echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
-    else
-
-        echo "$(info) Installing required packages"
-
-        if [ -z "$(command -v jq)" ]; then
-
-            echo "$(info) Installing jq"
-            sudo "$PACKAGE_MANAGER" install -y jq
-        fi
-
-        if [ -z "$(command -v pip)" ]; then
-
-            echo "$(info) Installing pip"
-            sudo "$PACKAGE_MANAGER" install -y python-pip
-        fi
-
-        INSTALL_IOTEDGEDEV="true"
-        if [ ! -z "$(command -v iotedgedev)" ]; then
-            currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
-            requiredVersion="2.1.4"
-            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
-            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
-                # Current installed iotedgedev version is higher than required, no need to re-install
-                INSTALL_IOTEDGEDEV="false"
-            fi
-        fi
-
-        if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
-
-            echo "$(info) Installing iotedgedev"
-            sudo pip install iotedgedev==2.1.4
-        fi
-
-        if [ -z "$(command -v timeout)" ]; then
-            echo "$(info) Installing timeout"
-            sudo "$PACKAGE_MANAGER" install timeout
-            echo "$(info) Installed timeout"
-        fi
-
-        if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-iot extension"
-            az extension add --name azure-iot
-        fi
-
-        echo "$(info) Package Installation step is complete"
-    fi
 fi
 
-# Log into Azure
 printf "\n%60s\n" " " | tr ' ' '-'
-echo "Logging into Azure Subscription"
+echo "Logging into Azure"
 printf "%60s\n" " " | tr ' ' '-'
 
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
-    echo "Using existing CloudShell login for Azure CLI"
-elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    echo "$(info) Attempting login"
-    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
-    echo "$(info) Login successful"
-else
-    echo "$(info) Attempting login with Service Principal account"
-    # Using service principal as it will not require user interaction
-    az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-    echo "$(info) Login successful"
-fi
+echo "Using existing CloudShell login for Azure CLI"
 
 # Set Azure Subscription
 printf "\n%60s\n" " " | tr ' ' '-'
@@ -321,7 +217,7 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
     
     SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
     
-    if [ ${#subscriptions[*]} -gt 0 ]; then
+    if [ ${#subscriptions[*]} -gt 1 ]; then
         echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
     fi
 

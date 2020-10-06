@@ -58,7 +58,6 @@ stages:
           edge-solution/modules/CameraStream/camera-stream/video/staircase.mp4
           edge-solution/deployment.camera.template.json
           edge-solution/.env
-          deployment/cloudshell/cloudshell-deployment.sh
           deployment/cloudshell/eye-vm-setup.sh
           deployment/cloudshell/deploy-iot.sh
           deployment/cloudshell/variables.template
@@ -115,6 +114,10 @@ stages:
           SHELL_CHECK_RESULT_FRONTEND=$(shellcheck ./frontend-setup.sh -x)
           SHELL_CHECK_RESULT_EYE_VM=$(shellcheck ./eye-vm-setup.sh -x)
           SHELL_CHECK_RESULT_SMOKETEST=$(shellcheck ./smoketest.sh -x)
+
+          # Change directory location to cloudshell script
+          cd '/home/vsts/work/1/s/UnifiedEdge/deployment/cloudshell'
+
           SHELL_CHECK_RESULT_CLOUDSHELL=$(shellcheck ./cloudshell-deployment.sh -x)
           if [ -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_EYE_VM" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ] && [ -z "$SHELL_CHECK_RESULT_CLOUDSHELL" ]; then
               echo "Pass: There are no warnings from shellcheck"
@@ -157,4 +160,11 @@ stages:
       inputs:
         targetPath: '$(Build.ArtifactStagingDirectory)/deployment-bundle.zip'
         artifact: 'deployment-bundle'
+        publishLocation: 'pipeline'
+
+    # Publishing the pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/deployment/cloudshell/cloudshell-deployment.sh'
+        artifact: 'CloudshellDeployment-Script'
         publishLocation: 'pipeline'

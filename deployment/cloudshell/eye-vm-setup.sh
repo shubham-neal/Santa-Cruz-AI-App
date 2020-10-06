@@ -79,16 +79,9 @@ if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
     sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"'"$INSTALL_REQUIRED_PACKAGES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"  
 fi
 
-IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
-
-# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
-fi
-
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-# In Azure Cloud Shell, azcopy and jq are pre-installed so only install sshpass and azure-cli-iot-ext extension
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+# In Azure Cloud Shell, azcopy and jq are pre-installed so only install sshpass and azure-iot extension
+if [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
     if [ -z "$(command -v sshpass)" ]; then
 
@@ -118,94 +111,6 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
     fi
 
     # azcopy, jq and timeout are pre-installed on cloud shell.
-
-elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
-
-    if [ -n "$(command -v apt)" ]; then
-        PACKAGE_MANAGER="apt"
-    elif [ -n "$(command -v dnf)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ -n "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="yum"
-    elif [ -n "$(command -v zypper)" ]; then
-        PACKAGE_MANAGER="zypper"
-    fi
-
-    if [ -z "$PACKAGE_MANAGER" ]; then
-        echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
-        echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
-    else
-        echo "$(info) Installing required packages"
-
-        if [ -z "$(command -v sshpass)" ]; then
-
-            echo "$(info) Installing sshpass"
-            sudo "$PACKAGE_MANAGER" install -y sshpass
-        fi
-
-        if [ -z "$(command -v wget)" ]; then
-            echo "$(info) Installing wget"
-            sudo "$PACKAGE_MANAGER" install -y wget
-            echo "$(info) Installed wget"
-        fi
-
-        INSTALL_AZCOPY="true"
-        if [ -n "$(command -v azcopy)" ]; then
-            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
-            requiredVersion="10.5.1"
-            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
-            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
-                # Current installed azcopy version is higher than required, no need to re-install
-                INSTALL_AZCOPY="false"
-            fi
-        fi
-
-        if [ "$INSTALL_AZCOPY" == "true" ]; then
-
-            echo "$(info) Installing AzCopy"
-
-            CURRENT_DIRECTORY="$PWD"
-            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
-            # unzipping the downloaded archive
-            tar -xvf downloadazcopy-v10-linux
-            # changing directory to fetch the azcopy executable
-            cd azcopy_linux*/
-            # Add azcopy to /usr/bin directory
-            sudo cp azcopy /usr/bin/
-            # Return to original directory
-            cd "$CURRENT_DIRECTORY"
-            # Remove the downloaded files
-            rm azcopy_linux* -r
-            rm downloadazcopy-v10-linux
-
-            echo "$(info) Installed AzCopy "
-        fi
-
-        if [ -z "$(command -v jq)" ]; then
-
-            echo "$(info) Installing jq"
-            sudo "$PACKAGE_MANAGER" install -y jq
-            echo "$(info) Installed jq"
-        fi
-
-        if [ -z "$(command -v curl)" ]; then
-
-            echo "$(info) Installing curl"
-            sudo "$PACKAGE_MANAGER" install -y curl
-            echo "$(info) Installed curl"
-        fi
-
-        if [ -z "$(command -v timeout)" ]; then
-            echo "$(info) Installing timeout"
-            sudo "$PACKAGE_MANAGER" install -y timeout
-            echo "$(info) Installed timeout"
-        fi
-
-        if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-iot extension"
-            az extension add --name azure-iot
-        fi
-    fi
 fi
 
 printf "\n%60s\n" " " | tr ' ' '-'
@@ -223,28 +128,10 @@ ARRAY_NOT_DEFINED_VARIABLES=()
 checkValue "RESOURCE_GROUP_DEVICE" "$RESOURCE_GROUP_DEVICE"
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 
-
-if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
-    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
-    # Writing the updated value back to variables file
-    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-fi
-
 if [ -z "$USE_EXISTING_RESOURCES" ]; then
     USE_EXISTING_RESOURCES="false"    
     # Writing the updated value back to variables file
     sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-fi
-
-
-# Skip the variable checks for login variable if current environment is CloudShell
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
-    # Pass the name of the variable and it's value to the checkValue function
-    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
-        checkValue "SP_APP_ID" "$SP_APP_ID"
-        checkValue "SP_APP_PWD" "$SP_APP_PWD"
-        checkValue "TENANT_ID" "$TENANT_ID"
-    fi
 fi
 
 # Generating a random suffix that will create a unique resource name based on the resource group name.
@@ -336,19 +223,7 @@ VHD_URI="https://unifiededgescenarios.blob.core.windows.net/aedvhd/aedvhd-dev-1.
 #	RDP: Create an inbound security rule in NSG with priority 1000 for RDP port (3389)
 NSG_RULE="NONE"
 
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
-    echo "Using existing CloudShell login for Azure CLI"
-elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "false" ]; then
-    echo "$(info) Attempting login"
-    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
-    echo "$(info) Login successful"
-else
-    echo "$(info) Attempting login with Service Principal account"
-    # Using service principal as it will not require user interaction
-    az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-    echo "$(info) Login successful"
-fi
+echo "Using existing CloudShell login for Azure CLI"
 
 # Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
 if [ -z "$SUBSCRIPTION_ID" ]; then
@@ -358,7 +233,7 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
     
     SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
     
-    if [ ${#subscriptions[*]} -gt 0 ]; then
+    if [ ${#subscriptions[*]} -gt 1 ]; then
         echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
     fi
 
@@ -438,13 +313,8 @@ else
     echo "$(info) Retrieved the SAS Token"
 
     echo "$(info) Copying vhd file from source to destination"
-    # Run azcopy if current environment is CloudShell else run sudo azcopy.
-    # azcopy needs to run as superuser in non Cloud Shell environment to be able to create plans
-    if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-        azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
-    else
-        sudo azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
-    fi
+
+    azcopy copy "$VHD_URI" "$TOKEN" --blob-type PageBlob
     echo "$(info) Copy is complete"
 
     echo "$(info) Revoking SAS token access for the managed disk"

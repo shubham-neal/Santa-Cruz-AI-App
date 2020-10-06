@@ -194,7 +194,6 @@ Section 1: General configuration which applies to all components
 
 |Name | Description  |
 |---|---|
-|TENANT_ID| Provide tenant id of your organization here. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.   |
 |SUBSCRIPTION_ID| Provide subscription id here. If Empty, Script will use first subscription id from the list of subscriptions which user has access. |
 |LOCATION| Azure Data Centre location for the resource group and resources. Default value is 'west us 2' |
 
@@ -231,9 +230,6 @@ Section 1: General configurations
 
 |Name | Description  |
 |---|---|
-|USE_INTERACTIVE_LOGIN_FOR_AZURE| If value is set to "true", the script will prompt the user for authentication. If it is not set to true, non-interactive login with service principal will be used. This is not required for Azure Cloud Shell environment. Script will use existing login of Azure Cloud Shell.|
-|SP_APP_ID| ID of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
-|SP_APP_PWD| Secret of the service principal which will be used to log into Azure. This is required if USE_INTERACTIVE_LOGIN_FOR_AZURE is not set to "true" and current environment is not Azure Cloud Shell. Script will use existing login of Azure Cloud Shell.   |
 |USE_EXISTING_RESOURCES| If the value is set to "yes", the script will use an existing resources if they are already present in Azure. If it is not set to true, the script will fail for Resource Group if there is already an existing resource group with the given name in Azure. For other resources, it will create new resources by appending a random number to the given names|
 |INSTALL_REQUIRED_PACKAGES| Whether or not to install required packaged dependencies. This is useful if you are not running the setup from Azure Cloud Shell. Set to "true" to install the dependencies or "false" to skip installation. |
 

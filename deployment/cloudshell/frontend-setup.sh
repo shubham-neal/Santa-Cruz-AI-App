@@ -80,41 +80,6 @@ ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY="true"
 ARRAY_VARIABLES_WITHOUT_VALUES=()
 ARRAY_NOT_DEFINED_VARIABLES=()
 
-IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
-
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-    IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
-fi
-
-# timeout is pre-installed on CloudShell. Skip the installation step if current environment is CloudShell or Install Required Packages is not set to true
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ] && [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
-
-    if [ -n "$(command -v apt)" ]; then
-        PACKAGE_MANAGER="apt"
-    elif [ -n "$(command -v dnf)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ -n "$(command -v yum)" ]; then
-        PACKAGE_MANAGER="dnf"
-    elif [ -n "$(command -v zypper)" ]; then
-        PACKAGE_MANAGER="zypper"
-    fi
-
-    if [ -z "$PACKAGE_MANAGER" ]; then
-        echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
-        echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
-    else
-        echo "$(info) Installing required packages"
-
-        if [ -z "$(command -v timeout)" ]; then
-            echo "$(info) Installing timeout"
-            sudo "$PACKAGE_MANAGER" install -y timeout
-            echo "$(info) Installed timeout"
-        fi
-
-        echo "$(info) Package Installation step is complete"
-    fi
-fi
-
 # Pass the name of the variable and it's value to the checkValue function
 checkValue "RESOURCE_GROUP_IOT" "$RESOURCE_GROUP_IOT"
 checkValue "LOCATION" "$LOCATION"
@@ -125,26 +90,10 @@ checkValue "STORAGE_ACCOUNT_NAME" "$STORAGE_ACCOUNT_NAME"
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_IOT" | md5sum | cut -c1-4)"
 RANDOM_NUMBER="${RANDOM:0:3}"
 
-if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
-    USE_INTERACTIVE_LOGIN_FOR_AZURE="true"    
-    # Writing the updated value back to variables file
-    sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"'"$USE_INTERACTIVE_LOGIN_FOR_AZURE"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-fi
-
 if [ -z "$USE_EXISTING_RESOURCES" ]; then
     USE_EXISTING_RESOURCES="false"    
     # Writing the updated value back to variables file
     sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g' "$SETUP_VARIABLES_TEMPLATE_FILENAME"
-fi
-
-# Skip the variable checks for login variable if current environment is CloudShell
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" != "true" ]; then
-    # Pass the name of the variable and it's value to the checkValue function
-    if [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" != "true" ]; then
-        checkValue "SP_APP_ID" "$SP_APP_ID"
-        checkValue "SP_APP_PWD" "$SP_APP_PWD"
-        checkValue "TENANT_ID" "$TENANT_ID"
-    fi
 fi
 
 if [ -z "$APP_SERVICE_PLAN_SKU" ]; then
@@ -187,24 +136,11 @@ fi
 
 echo "$(info) The required variables are defined and have a non-empty value"
 
-# Log into Azure
 printf "\n%60s\n" " " | tr ' ' '-'
-echo "Logging into Azure Subscription"
+echo "Logging into Azure"
 printf "%60s\n" " " | tr ' ' '-'
 
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
-    echo "Using existing CloudShell login for Azure CLI"
-elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-    echo "$(info) Attempting login"
-    # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-    timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
-    echo "$(info) Login successful"
-else
-    echo "$(info) Attempting login with Service Principal account"
-    # Using service principal as it will not require user interaction
-    az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-    echo "$(info) Login successful"
-fi
+echo "Using existing CloudShell login for Azure CLI"
 
 # Set Azure Subscription
 printf "\n%60s\n" " " | tr ' ' '-'
@@ -219,7 +155,7 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
     
     SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
     
-    if [ ${#subscriptions[*]} -gt 0 ]; then
+    if [ ${#subscriptions[*]} -gt 1 ]; then
         echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
     fi
 

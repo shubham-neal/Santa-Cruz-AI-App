@@ -88,136 +88,172 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Unzip deployment bundle file from artifacts'
-      inputs:
-        targetType: 'inline'
-        script: |
-          # Exit the script on any errors
-          set -e
-          
-          DEPLOYMENT_BUNDLE_NAME="deployment-bundle.zip"
-          
-          if [ ! -f  "$DEPLOYMENT_BUNDLE_NAME" ]; then
-          echo "The artifact does not contain \"$DEPLOYMENT_BUNDLE_NAME\" file"
-          fi
-          
-          echo "Extracting file from deployment bundle zip"
-          # Extract files to current directory
-          unzip "$DEPLOYMENT_BUNDLE_NAME" -d .
-          
-          #TODO: Add steps to ensure the zip contains the required files
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Update values in variable.template file using pipeline variables'
+      displayName: 'Upload the cloudshell deployment scripts to temporary container in storage account'
       env:
-        SP_APP_PWD: $(SP_APP_PWD)
-        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
-        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
-      inputs:
-        targetType: 'inline'
-        script: |
-          # Exit the inline script on any errors
-          set -e
-          
-          VARIABLES_FILE_PATH="variables.template"
-          
-          echo "Updating variables in variables.template file"
-          
-          # The following steps check the existence of the variable in the file
-          # and replace the value with in the file with the pipeline variable value using sed
-          
-          [ -v USE_INTERACTIVE_LOGIN_FOR_AZURE ] && sed -i 's#^\(USE_INTERACTIVE_LOGIN_FOR_AZURE[ ]*=\).*#\1\"$USE_INTERACTIVE_LOGIN_FOR_AZURE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v SP_APP_ID ] && sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"$SP_APP_ID\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v SP_APP_PWD ] && sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"$SP_APP_PWD\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v TENANT_ID ] && sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"$TENANT_ID\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v RESOURCE_GROUP_DEVICE ] && sed -i 's#^\(RESOURCE_GROUP_DEVICE[ ]*=\).*#\1\"$RESOURCE_GROUP_DEVICE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v RESOURCE_GROUP_IOT ] && sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"$RESOURCE_GROUP_IOT\"#g' "$VARIABLES_FILE_PATH"
-
-          [ -v USE_EXISTING_RESOURCES ] && sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"$USE_EXISTING_RESOURCES\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v INSTALL_REQUIRED_PACKAGES ] && sed -i 's#^\(INSTALL_REQUIRED_PACKAGES[ ]*=\).*#\1\"$INSTALL_REQUIRED_PACKAGES\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v PASSWORD_FOR_WEBSITE_LOGIN ] && sed -i 's#^\(PASSWORD_FOR_WEBSITE_LOGIN[ ]*=\).*#\1\"$PASSWORD_FOR_WEBSITE_LOGIN\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v DETECTOR_MODULE_RUNTIME ] && sed -i 's#^\(DETECTOR_MODULE_RUNTIME[ ]*=\).*#\1\"$DETECTOR_MODULE_RUNTIME\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v EDGE_DEVICE_ARCHITECTURE ] && sed -i 's#^\(EDGE_DEVICE_ARCHITECTURE[ ]*=\).*#\1\"$EDGE_DEVICE_ARCHITECTURE\"#g' "$VARIABLES_FILE_PATH"
-          
-          [ -v CUSTOM_VIDEO_SOURCE ] && sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"$CUSTOM_VIDEO_SOURCE\"#g' "$VARIABLES_FILE_PATH"
-          
-          echo "Updates are complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Run eye-vm-setup.sh script'
-      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
         SP_APP_PWD: $(SP_APP_PWD)
       inputs:
         targetType: 'inline'
         script: |
-          echo "Starting task"
-          
-          # Exit the inline script on any erros
-          set -e
-          
-          echo "Running eye-vm-sh script"
-          
-          source "./eye-vm-setup.sh"
-          
-          echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Run deploy-iot.sh script'
-      env:
-        SP_APP_PWD: $(SP_APP_PWD)
-        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Starting task"
-          
-          # Exit the inline script on any error
-          set -e          
-          
-          echo "Running deploy-iot script"
-
-          source "./deploy-iot.sh"
-
-          echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Run frontend-setup.sh script'
-      env:
-        SP_APP_PWD: $(SP_APP_PWD)
-        PASSWORD_FOR_WEBSITE_LOGIN: $(PASSWORD_FOR_WEBSITE_LOGIN)
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Starting task"
-          
           # Exit the script on any error
           set -e
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          
+          if [ "$CONTAINER" == "False" ]; then
+            echo "Creating temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
+          
+            az storage container create \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
+          
+            az storage container set-permission \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --public-access blob
+          
+            echo "Created temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
+          fi
+          
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file deployment-bundle.zip \
+            --name deployment-bundle.zip
+          
+          unzip deployment-bundle.zip -d .
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+    
+    - task: Bash@3
+      enabled: true
+      displayName: 'Prerequisite software installation'
+      inputs:
+        targetType: 'inline'
+        script: |
+          sudo apt install -y curl
+          sudo apt install -y jq
+          sudo apt install -y timeout
+          sudo apt install -y wget
+          sudo apt install -y sshpass
+          sudo apt install -y python-pip
 
-          cd deployment-bundle
+          INSTALL_IOTEDGEDEV="true"
+          if [ ! -z "$(command -v iotedgedev)" ]; then
+            currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
+            requiredVersion="2.1.4"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+              # Current installed iotedgedev version is higher than required, no need to re-install
+              INSTALL_IOTEDGEDEV="false"
+            fi
+          fi
+
+          if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
+            echo "$(info) Installing iotedgedev"
+            sudo pip install iotedgedev==2.1.4
+          fi
+
+          if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+            echo "$(info) Installing azure-iot extension"
+            az extension add --name azure-iot
+          fi
+
+          INSTALL_AZCOPY="true"
+          if [ -n "$(command -v azcopy)" ]; then
+            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
+            requiredVersion="10.5.1"
+            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
+            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
+              # Current installed azcopy version is higher than required, no need to re-install
+              INSTALL_AZCOPY="false"
+            fi
+          fi
+  
+          if [ "$INSTALL_AZCOPY" == "true" ]; then
+  
+            echo "$(info) Installing AzCopy"
+
+            CURRENT_DIRECTORY="$PWD"
+            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
+            # unzipping the downloaded archive
+            tar -xvf downloadazcopy-v10-linux
+            # changing directory to fetch the azcopy executable
+            cd azcopy_linux*/
+            # Add azcopy to /usr/bin directory
+            sudo cp azcopy /usr/bin/
+            # Return to original directory
+            cd "$CURRENT_DIRECTORY"
+            # Remove the downloaded files
+            rm azcopy_linux* -r
+            rm downloadazcopy-v10-linux
+
+            echo "$(info) Installed AzCopy "
+          fi
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run cloudshell-deployment.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Starting task"
+
+          echo "Updating sas url for deployment bundle zip"
+          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle.zip"
+          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
+          echo "Updated sas url for deployment bundle zip"
+
+          # Exit the inline script on any erros
+          set -e
+
+          echo "Logging into Azure"
           
-          echo "Running frontend-setup script"
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+
+          echo "Setting the distribution envrionment to cloudshell for skipping login step"
+          export POWERSHELL_DISTRIBUTION_CHANNEL="CloudShell"
+
+          echo "Running cloudshell-deployment.sh script"
           
-          source "./frontend-setup.sh"
+          sudo bash ./cloudshell-deployment.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete temporary container for cloudshell deployment scripts in storage account'
+      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          
+          if [ "$CONTAINER" == "True" ]; then
+            echo "Deleting temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+            az storage container delete \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
+
+            echo "Deleted temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+          fi
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
       enabled: true
@@ -231,15 +267,19 @@ stages:
           # Exit the script on any error
           set -e
           
-          echo "Delaying execution of smoketest script by 15 minutes to allow IoTEdge modules to start"
-          sleep 15m
+          cd deployment-bundle-latest
           
+          echo "Delaying execution of smoketest script by 10 minutes to allow IoTEdge modules to start"
+          sleep 10m
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           echo "Running smoketest script"
           
           source "./smoketest.sh"
           
           echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
 - stage: Release
   jobs:
@@ -277,8 +317,10 @@ stages:
                 echo "Logging into Azure"
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+
+                CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
                 
-                if [ "$CREATE_NEW_CONTAINER" == "true" ];then
+                if [ "$CONTAINER" == "False" ];then
                   echo "Creating container \"RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME\" in storage account"
                   
                   az storage container create \
@@ -300,24 +342,21 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
-                  --name "deployment-bundle-$(buildSuffix).zip"
+                  --name "$(buildSuffix)/deployment-bundle.zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle.zip \
-                  --name deployment-bundle-latest.zip
+                  --name deployment-bundle.zip
                 
-                
-                unzip deployment-bundle.zip -d .
-                
-                az storage blob upload \
-                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
-                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
-                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file cloudshell-deployment.sh \
-                  --name "cloudshell-deployment-$(buildSuffix).sh"
+                cd '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
+
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
+                echo "Updated sas url for deployment bundle zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -325,6 +364,18 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file cloudshell-deployment.sh \
                   --name "cloudshell-deployment.sh"
+                
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
+                echo "Updated sas url for deployment bundle zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file cloudshell-deployment.sh \
+                  --name "$(buildSuffix)/cloudshell-deployment.sh"
               workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
 
           - task: Bash@3

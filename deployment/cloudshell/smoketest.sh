@@ -42,10 +42,6 @@ fi
 # Read variable values from variables.template file in current directory
 source "$SETUP_VARIABLES_TEMPLATE_FILENAME"
 
-if [ -z "$USE_INTERACTIVE_LOGIN_FOR_AZURE" ]; then
-  USE_INTERACTIVE_LOGIN_FOR_AZURE="true"
-fi
-
 if [ -z "$INSTALL_REQUIRED_PACKAGES" ]; then
   INSTALL_REQUIRED_PACKAGES="true" 
 fi
@@ -55,14 +51,9 @@ RUN_WEBAPP_CHECKS="true"
 # Set the variable value to decide, Whether to perform test for Mariner VM setup or not, Default is true.
 RUN_VM_CHECKS="true"
 
-IS_CURRENT_ENVIRONMENT_CLOUDSHELL="false"
-if [ "$POWERSHELL_DISTRIBUTION_CHANNEL" == "CloudShell" ]; then
-  IS_CURRENT_ENVIRONMENT_CLOUDSHELL="true"
-fi
-
-# Check value of POWERSHELL_DISTRIBUTION_CHANNEL. This variable is present in Azure Cloud Shell environment.
+# Check value of INSTALL_REQUIRED_PACKAGES.
 # There are different installation steps for Cloud Shell as it does not allow root access to the script
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
+if [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
 
   if [ -z "$(command -v sshpass)" ]; then
 
@@ -90,67 +81,9 @@ if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
   fi
 
   # jq and timeout are pre-installed in the cloud shell
-
-elif [ "$INSTALL_REQUIRED_PACKAGES" == "true" ]; then
-
-  if [ ! -z "$(command -v apt)" ]; then
-    PACKAGE_MANAGER="apt"
-  elif [ ! -z "$(command -v dnf)" ]; then
-    PACKAGE_MANAGER="dnf"
-  elif [ ! -z "$(command -v yum)" ]; then
-    PACKAGE_MANAGER="yum"
-  elif [ ! -z "$(command -v zypper)" ]; then
-    PACKAGE_MANAGER="zypper"
-  fi
-
-  if [ -z "$PACKAGE_MANAGER" ]; then
-    echo "[WARNING] The current machine does not have any of the following package managers installed: apt, yum, dnf, zypper."
-    echo "[WARNING] Package Installation step is being skipped. Please install the required packages manually"
-  else
-
-    echo "[INFO] Installing required packages"
-
-    if [ -z "$(command -v sshpass)" ]; then
-
-      echo "$(info) Installing sshpass"
-      sudo "$PACKAGE_MANAGER" install -y sshpass
-    fi
-
-    if [ -z "$(command -v jq)" ]; then
-
-      echo "$(info) Installing jq"
-      sudo "$PACKAGE_MANAGER" install -y jq
-    fi
-
-    if [ -z "$(command -v timeout)" ]; then
-
-      echo "$(info) Installing timeout"
-      sudo "$PACKAGE_MANAGER" install -y timeout
-      echo "$(info) Installed timeout"
-    fi
-
-    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-      echo "[INFO] Installing azure-iot extension"
-      az extension add --name azure-iot
-    fi
-
-    echo "[INFO] Package Installation step is complete"
-  fi
 fi
 
-if [ "$IS_CURRENT_ENVIRONMENT_CLOUDSHELL" == "true" ]; then
-  echo "Using existing CloudShell login for Azure CLI"
-elif [ "$USE_INTERACTIVE_LOGIN_FOR_AZURE" == "true" ]; then
-  echo "[INFO] Attempting login"
-  # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-  timeout --foreground 3m az login --output "none" || (printError "Interactive login timed out" && exit 1)
-  echo "[INFO] Login successful"
-else
-  echo "[INFO] Attempting login with Service Principal account"
-  # Using service principal as it will not require user interaction
-  az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-  echo "[INFO] Login successful"
-fi
+echo "Using existing CloudShell login for Azure CLI"
 
 # Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
 if [ -z "$SUBSCRIPTION_ID" ]; then
@@ -160,7 +93,7 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
     
     SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
     
-    if [ ${#subscriptions[*]} -gt 0 ]; then
+    if [ ${#subscriptions[*]} -gt 1 ]; then
         echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
     fi
 
