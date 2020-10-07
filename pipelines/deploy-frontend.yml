@@ -13,7 +13,7 @@ resources:
 
 
 pool:
-  vmImage: 'ubuntu-latest'
+  default
 
 variables:
   Variable_Group: 'FrontEnd_ReleaseEnvrionment'
@@ -41,7 +41,7 @@ stages:
       inputs:
         SourceFolder: '$(Pipeline.Workspace)'
         Contents: 'people-detection-app.zip'
-        TargetFolder: '/home/vsts/work/1/s'
+        TargetFolder: '/home/azureuser/myagent/_work/1/s'
        
     - task: Bash@3
       env:
