@@ -140,8 +140,9 @@ stages:
             --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
             --file deployment-bundle.zip \
             --name deployment-bundle.zip
-          
+          echo "Upload Completed"
           unzip deployment-bundle.zip -d .
+          exit 0
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
     
     - task: Bash@3
