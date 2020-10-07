@@ -67,7 +67,7 @@ stages:
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
           echo "Login successful"
           
-          IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
+          IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --hub-name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
           
           az webapp config connection-string set --connection-string-type Custom --name "$WEBAPP_NAME" --resource-group "$RESOURCE_GROUP" --settings "EventHub=$IOTHUB_CONNECTION_STRING" --output "none"
           # Turn on web sockets
