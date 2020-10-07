@@ -24,14 +24,6 @@ steps:
     versionSpec: '10.x'
   displayName: 'Install Node.js'
 
-- task: Bash@3
-  inputs:
-    targetType: 'inline'
-    script: |
-      # Write your commands here
-      echo $(pwd)
-      echo $(ls)
-      echo 'Hello world'
 
 # script for creating build in specific folder
 - script: |
@@ -43,9 +35,9 @@ steps:
 # copying the files from build folder to uesmessagesapp
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '$(pwd)/frontend-app/app/build'
+    SourceFolder: 'frontend-app/app/build'
     Contents: '**'
-    TargetFolder: '$(pwd)/frontend-app/api/public'
+    TargetFolder: 'frontend-app/api/public'
   displayName: 'npm install and build and copy'
 
 # install dependencies for api
