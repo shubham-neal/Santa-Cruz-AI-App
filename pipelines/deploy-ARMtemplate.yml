@@ -84,6 +84,7 @@ stages:
         targetPath: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
+      enabled: true
       displayName: 'Update ARM template and scripts with temporary blob container links'
       inputs:
         targetType: 'inline'
@@ -124,7 +125,6 @@ stages:
           
           echo "Updated Primary scripts Url for deploymentScript in arm template"
         workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle'
-
     - task: Bash@3
       enabled: true
       displayName: 'Upload the ARM template scripts to temporary container in storage account'
@@ -202,6 +202,7 @@ stages:
     
 
     - task: AzureResourceManagerTemplateDeployment@3
+      enabled: true
       inputs:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
@@ -211,7 +212,6 @@ stages:
         csmFile: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle/azuredeploy.json'
         overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -password "$(PASSWORD)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
         deploymentMode: 'Incremental'
-
     - task: Bash@3
       enabled: true
       displayName: 'Delete temporary container for arm template scripts in storage account'
@@ -238,7 +238,29 @@ stages:
             echo "Deleted temp container  \"$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME\" for arm template scripts"
           fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
+    
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run smoke test'
+      env:
+        TENANT_ID: $(TENANT_ID)
+        SP_APP_PWD: $(SP_APP_PWD)
+      inputs:
+        targetType: 'inline'
+        script: |
+           # Exit the script on any error
+           set -e
+           echo "Delaying execution of smoketest script by 5 minutes to allow IoTEdge modules to start"
+           sleep 5m
 
+           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+           
+           echo "Running smoketest script"
+           
+           sudo bash ./smoketest.sh --rg-iot "$RESOURCE_GROUP_IOT_ARM" --rg-vm "$RESOURCE_GROUP_DEVICE_ARM" 
+          
+           echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle'
 
 - stage: Release
   jobs:
@@ -418,8 +440,7 @@ stages:
                   --public-access blob
                 fi
                 
-                
-
+    
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -479,6 +500,26 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
                   --blob-name "$(buildSuffix)/deploy-modules.sh"
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file smoketest.sh \
+                  --name smoketest.sh
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --file smoketest.sh \
+                  --name "$(buildSuffix)/smoketest.sh"
+                
+                az storage blob lease acquire \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME" \
+                  --blob-name "$(buildSuffix)/smoketest.sh"  
 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
