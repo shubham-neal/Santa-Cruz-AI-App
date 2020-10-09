@@ -281,7 +281,7 @@
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
-                            "name": "Scriptforcopy",
+                            "name": "DiskSetup",
                             "dependsOn": [
                                 "[variables('diskName')]"
                             ],
@@ -390,7 +390,7 @@
                             "dependsOn": [
                                 "[variables('diskName')]",
                                 "[variables('nicName')]",
-                                "Scriptforcopy"
+                                "DiskSetup"
                             ],
                             "properties": {
                                 "hardwareProfile": {
@@ -537,7 +537,7 @@
         {
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2020-06-01",
-            "name": "ResourcesDeployment",
+            "name": "ModulesDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
                 "VMDeployment",
@@ -815,7 +815,7 @@
                         {
                             "type": "Microsoft.Resources/deploymentScripts",
                             "apiVersion": "2019-10-01-preview",
-                            "name": "ModuleDeployment",
+                            "name": "DeployModules",
                             "dependsOn": [
                                 "[parameters('iotHubName')]"
                             ],
@@ -897,7 +897,7 @@
             "name": "AppServicePlanDeployment",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/resourceGroups/', parameters('resourceGroupIot'))]",
-                "ResourcesDeployment"
+                "ModulesDeployment"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -992,7 +992,7 @@
                                     ],
                                     "properties": {
                                         "EventHub": {
-                                            "value": "[reference('ResourcesDeployment').outputs.IoTHubConnectionString.value]",
+                                            "value": "[reference('ModulesDeployment').outputs.IoTHubConnectionString.value]",
                                             "type": "Custom"
                                         }
                                     }
@@ -1012,7 +1012,7 @@
                                         "WEBSITE_NODE_DEFAULT_VERSION": "10.15.2",
                                         "STORAGE_BLOB_CONTAINER_NAME": "still-images",
                                         "STORAGE_BLOB_PATH": "Office/cam001",
-                                        "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE": "[reference('ResourcesDeployment').outputs.sasToken.value]"
+                                        "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE": "[reference('ModulesDeployment').outputs.sasToken.value]"
                                     }
                                 },
                                 {
