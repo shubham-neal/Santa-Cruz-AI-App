@@ -96,7 +96,7 @@
         "managedIdentityName": "[concat('Managed_Identity',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "managedIdentityResourceGroup": "[parameters('resourceGroupIot')]",
         "customVideoSource": "",
-        "applicationType": "[concat('People Tracking_opencv_F_', parameters('deviceArchitecture'), parameters('moduleRuntime'))]"
+        "applicationType": "[concat('people-tracking_opencv_', parameters('deviceArchitecture'), '_', parameters('moduleRuntime'))]"
     },
     "resources": [
         {
@@ -297,6 +297,9 @@
                                     "[concat(subscription().id,'/resourceGroups/', variables('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',variables('managedIdentityName'))]": {}
                                 }
                             },
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                            },                            
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
@@ -325,7 +328,7 @@
                             "location": "[variables('location')]",
                             "tags": {
                                 "type": "[variables('applicationType')]"
-                                  }
+                            }
                         },
                         {
                             "type": "Microsoft.Network/publicIPAddresses",
@@ -334,7 +337,7 @@
                             "location": "[variables('location')]",
                             "tags": {
                                 "type": "[variables('applicationType')]"
-                                },
+                            },
                             "properties": {
                                 "publicIPAllocationMethod": "Dynamic"
                             }
@@ -349,7 +352,7 @@
                             ],
                             "tags": {
                                 "type": "[variables('applicationType')]"
-                                },
+                            },
                             "properties": {
                                 "addressSpace": {
                                     "addressPrefixes": [
@@ -380,7 +383,7 @@
                             ],
                             "tags": {
                                 "type": "[variables('applicationType')]"
-                                },
+                            },
                             "properties": {
                                 "ipConfigurations": [
                                     {
@@ -410,7 +413,7 @@
                             ],
                             "tags": {
                                 "type": "[variables('applicationType')]"
-                                    },
+                            },
                             "properties": {
                                 "hardwareProfile": {
                                     "vmSize": "Standard_DS2_v2"
@@ -476,8 +479,8 @@
                                 "type": "None"
                             },
                             "tags": {
-                                   "type": "[variables('applicationType')]"
-                                    },
+                                "type": "[variables('applicationType')]"
+                            },
                             "properties": {
                                 "ipFilterRules": [],
                                 "eventHubEndpoints": {
@@ -516,6 +519,9 @@
                                     "[concat(subscription().id,'/resourceGroups/', variables('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',variables('managedIdentityName'))]": {}
                                 }
                             },
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                            },                            
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
@@ -692,7 +698,7 @@
                             "dependsOn": [],
                             "tags": {
                                 "type": "[parameters('applicationType')]"
-                                    },
+                            },
                             "sku": {
                                 "name": "[parameters('accountType')]"
                             },
@@ -790,7 +796,7 @@
                             },
                             "tags": {
                                 "type": "[parameters('applicationType')]"
-                                },
+                            },
                             "properties": {
                                 "ipFilterRules": [],
                                 "eventHubEndpoints": {
@@ -860,6 +866,9 @@
                                     "[concat(subscription().id,'/resourceGroups/', parameters('managedIdentityResourceGroup'),'/providers/Microsoft.ManagedIdentity/userAssignedIdentities/',parameters('managedIdentityName'))]": {}
                                 }
                             },
+                            "tags": {
+                                "type": "[parameters('applicationType')]"
+                            },                            
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
