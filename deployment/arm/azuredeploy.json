@@ -95,7 +95,8 @@
         "deploymentName": "[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "managedIdentityName": "[concat('Managed_Identity',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "managedIdentityResourceGroup": "[parameters('resourceGroupIot')]",
-        "customVideoSource": ""
+        "customVideoSource": "",
+        "applicationType": "[concat('edgeAIAppDeployment_', parameters('deviceArchitecture'), parameters('moduleRuntime'))]"
     },
     "resources": [
         {
@@ -264,6 +265,9 @@
                                 "name": "Premium_LRS",
                                 "tier": "Premium"
                             },
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                },
                             "properties": {
                                 "osType": "Linux",
                                 "hyperVGeneration": "V2",
@@ -318,13 +322,19 @@
                             "type": "Microsoft.Network/networkSecurityGroups",
                             "apiVersion": "2019-08-01",
                             "name": "[variables('networkSecurityGroupName')]",
-                            "location": "[variables('location')]"
+                            "location": "[variables('location')]",
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                  }
                         },
                         {
                             "type": "Microsoft.Network/publicIPAddresses",
                             "apiVersion": "2018-11-01",
                             "name": "[variables('publicIPAddressName')]",
                             "location": "[variables('location')]",
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                },
                             "properties": {
                                 "publicIPAllocationMethod": "Dynamic"
                             }
@@ -337,6 +347,9 @@
                             "dependsOn": [
                                 "[variables('networkSecurityGroupName')]"
                             ],
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                },
                             "properties": {
                                 "addressSpace": {
                                     "addressPrefixes": [
@@ -365,6 +378,9 @@
                                 "[variables('virtualNetworkName')]",
                                 "[variables('publicIPAddressName')]"
                             ],
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                },
                             "properties": {
                                 "ipConfigurations": [
                                     {
@@ -392,6 +408,9 @@
                                 "[variables('nicName')]",
                                 "DiskSetup"
                             ],
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                    },
                             "properties": {
                                 "hardwareProfile": {
                                     "vmSize": "Standard_DS2_v2"
@@ -456,6 +475,9 @@
                             "identity": {
                                 "type": "None"
                             },
+                            "tags": {
+                                   "type": "[variables('applicationType')]"
+                                    },
                             "properties": {
                                 "ipFilterRules": [],
                                 "eventHubEndpoints": {
@@ -598,6 +620,9 @@
                     },
                     "deploymentName": {
                         "value": "[variables('deploymentName')]"
+                    },
+                     "applicationType": {
+                        "value": "[variables('applicationType')]"
                     }
                 },
                 "template": {
@@ -649,6 +674,9 @@
                         "deploymentName": {
                             "type": "String"
                         },
+                        "applicationType": {
+                            "type": "String"
+                        },
                         "utcValue": {
                             "type": "string",
                             "defaultValue": "[utcNow()]"
@@ -662,7 +690,9 @@
                             "name": "[parameters('StorageAccountName')]",
                             "location": "[parameters('resourceGroupLocation')]",
                             "dependsOn": [],
-                            "tags": {},
+                            "tags": {
+                                "type": "[parameters('applicationType')]"
+                                    },
                             "sku": {
                                 "name": "[parameters('accountType')]"
                             },
@@ -758,6 +788,9 @@
                             "identity": {
                                 "type": "None"
                             },
+                            "tags": {
+                                "type": "[parameters('applicationType')]"
+                                },
                             "properties": {
                                 "ipFilterRules": [],
                                 "eventHubEndpoints": {
@@ -920,6 +953,9 @@
                                 "capacity": 1
                             },
                             "kind": "app",
+                            "tags": {
+                                "type": "[variables('applicationType')]"
+                                    },
                             "properties": {
                                 "perSiteScaling": false,
                                 "maximumElasticWorkerCount": 1,
@@ -939,6 +975,10 @@
                             "dependsOn": [
                                 "[variables('appServiceName')]"
                             ],
+                            "tags": {
+                                "edgeAIAppDeployment": "people-tracking-app",
+                                "type": "[variables('applicationType')]"
+                            },
                             "kind": "app",
                             "properties": {
                                 "enabled": true,
