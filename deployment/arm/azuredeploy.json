@@ -96,7 +96,7 @@
         "managedIdentityName": "[concat('Managed_Identity',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
         "managedIdentityResourceGroup": "[parameters('resourceGroupIot')]",
         "customVideoSource": "",
-        "applicationType": "[concat('edgeAIAppDeployment_', parameters('deviceArchitecture'), parameters('moduleRuntime'))]"
+        "applicationType": "[concat('People Tracking_opencv_F_', parameters('deviceArchitecture'), parameters('moduleRuntime'))]"
     },
     "resources": [
         {
