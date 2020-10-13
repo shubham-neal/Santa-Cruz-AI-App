@@ -15,9 +15,9 @@ pool:
 
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
-  ${{ if eq(variables['Build.SourceBranchName'], 'release') }}:
+  ${{ if startsWith(variables['Build.SourceBranchName'], 'release') }}:
     Variable_Group: 'ARMTemplate_ReleaseEnvironment'
-  ${{ if ne(variables['Build.SourceBranchName'], 'release') }}:
+  ${{ if not(startsWith(variables['Build.SourceBranchName'], 'release')) }}:
      Variable_Group: 'ARMTemplate_TestEnvironment'
 
 
