@@ -9,7 +9,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "$ACR_NAME/live-video-analytics:1.0.5rc-arm64v8",
+              "image": "mcr.microsoft.com/media/live-video-analytics:1",
               "createOptions": {
                 "HostConfig": {
                   "LogConfig": {
@@ -73,14 +73,14 @@
         "systemModules": {
           "edgeAgent": {
             "settings": {
-              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0.9.1",
               "createOptions": ""
             },
             "type": "docker"
           },
           "edgeHub": {
             "settings": {
-              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0.9.1",
               "createOptions": {
                 "HostConfig": {
                   "PortBindings": {
@@ -135,7 +135,7 @@
         "operationalEventsOutputName": "AmsOperational",
         "logLevel": "Information",
         "logCategories": "Application,Events",
-        "DebugLogsDirectory": "$LVA_LOGS_LOCATION",
+        "DebugLogsDirectory": "/var/lib/azuremediaservices/logs",
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
