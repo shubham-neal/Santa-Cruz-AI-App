@@ -44,7 +44,7 @@
                 "name": "assetSink",
                 "assetNamePattern": "sampleAsset-${System.GraphTopologyName}-${System.GraphInstanceName}",
                 "segmentLength": "PT30S",
-                "localMediaCacheMaximumSizeMiB": "2048",
+                "localMediaCacheMaximumSizeMiB": "204",
                 "localMediaCachePath": "/var/lib/azuremediaservices/tmp/",
                 "inputs": [
                     {

@@ -135,7 +135,7 @@
         "operationalEventsOutputName": "AmsOperational",
         "logLevel": "Information",
         "logCategories": "Application,Events",
-        "DebugLogsDirectory": "/var/lib/azuremediaservices/logs",
+        "DebugLogsDirectory": "",
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
