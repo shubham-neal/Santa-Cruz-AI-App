@@ -1,5 +1,5 @@
 {
-    "name": "CVRToAMSAsset",
+    "name": "LogCollection",
     "@apiVersion": "1.0",
     "properties": {
         "description": "Continuous video recording to an Azure Media Services Asset",
@@ -42,9 +42,9 @@
             {
                 "@type": "#Microsoft.Media.MediaGraphAssetSink",
                 "name": "assetSink",
-                "assetNamePattern": "sampleAsset-${System.GraphTopologyName}-${System.GraphInstanceName}",
+                "assetNamePattern": "${System.GraphTopologyName}-${System.GraphInstanceName}",
                 "segmentLength": "PT30S",
-                "localMediaCacheMaximumSizeMiB": "2048",
+                "localMediaCacheMaximumSizeMiB": "204",
                 "localMediaCachePath": "/var/lib/azuremediaservices/tmp/",
                 "inputs": [
                     {

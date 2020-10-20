@@ -32,7 +32,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.azureeyeh264module}",
+              "image": "$ACR_NAME/$PRELOAD_AZURE_EYE",
               "createOptions": {
                 "ExposedPorts": {
                   "8554/tcp": {}
@@ -133,9 +133,9 @@
         "armEndpoint": "https://management.azure.com/",
         "diagnosticsEventsOutputName": "AmsDiagnostics",
         "operationalEventsOutputName": "AmsOperational",
-        "logLevel": "Verbose",
-        "logCategories": "Application,Events,MediaPipeline",
-        "DebugLogsDirectory": "/var/lib/azuremediaservices/logs",
+        "logLevel": "Information",
+        "logCategories": "Application,Events",
+        "DebugLogsDirectory": "",
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }

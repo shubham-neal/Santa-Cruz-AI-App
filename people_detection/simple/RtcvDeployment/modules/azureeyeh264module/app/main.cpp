@@ -682,7 +682,8 @@ int main(int argc, char** argv)
                         snprintf(buf, 500, "bbox: [%.3f, %.3f, %.3f, %.3f]", rect_abs.x, rect_abs.y, rect_abs.x + rect_abs.width, rect_abs.y + rect_abs.height);
                         str.append(buf);
                     }
-                    str.append("\"label\": \"").append(get_label(out_labels.value()[i])).append("\", ")
+                    str.append(",")
+                        .append("\"label\": \"").append(get_label(out_labels.value()[i])).append("\", ")
                         .append("\"confidence\": ").append(std::to_string(out_confidences.value()[i])).append(", ")
                         .append("\"timestamp\": ").append(std::to_string(*out_nn_ts))
                         .append("}");
