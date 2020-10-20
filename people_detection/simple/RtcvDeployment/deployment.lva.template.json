@@ -133,9 +133,9 @@
         "armEndpoint": "https://management.azure.com/",
         "diagnosticsEventsOutputName": "AmsDiagnostics",
         "operationalEventsOutputName": "AmsOperational",
-        "logLevel": "Information",
-        "logCategories": "Application,Events",
-        "DebugLogsDirectory": "",
+        "logLevel": "Verbose",
+        "logCategories": "Application,Events,MediaPipeline",
+        "DebugLogsDirectory": "/var/lib/azuremediaservices/logs",
         "allowUnsecuredEndpoints": true,
         "telemetryOptOut": false
       }
