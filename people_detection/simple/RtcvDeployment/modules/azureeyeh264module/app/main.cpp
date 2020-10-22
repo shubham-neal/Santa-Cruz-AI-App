@@ -679,7 +679,7 @@ int main(int argc, char** argv)
                         cv::Rect2f rect_abs(ract.x / im_size.width, ract.y / im_size.height, ract.width / im_size.width, ract.height / im_size.height);
 
                         char buf[500];
-                        snprintf(buf, 500, "bbox: [%.3f, %.3f, %.3f, %.3f]", rect_abs.x, rect_abs.y, rect_abs.x + rect_abs.width, rect_abs.y + rect_abs.height);
+                        snprintf(buf, 500, "\"bbox\": [%.3f, %.3f, %.3f, %.3f]", rect_abs.x, rect_abs.y, rect_abs.x + rect_abs.width, rect_abs.y + rect_abs.height);
                         str.append(buf);
                     }
                     str.append(",")
