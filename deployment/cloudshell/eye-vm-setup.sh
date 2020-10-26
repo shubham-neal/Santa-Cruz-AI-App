@@ -196,6 +196,12 @@ fi
 
 # Generate NSG name by appending -nsg to VM name
 NSG_NAME="${VM_NAME}-nsg"
+# Generate Public IP name by appending PublicIP to VM name
+PUBLIC_IP_NAME="${VM_NAME}PublicIP"
+# Generate Vnet name by appending Vnet to VM name
+VNET_NAME="${VM_NAME}Vnet"
+# Generate Network interface name by appending NIC to VM name
+NIC_NAME="${VM_NAME}NIC"
 
 # Check if all the variables are set up correctly
 if [ "$ARE_ALL_VARIABLES_CONFIGURED_CORRECTLY" == "false" ]; then
@@ -329,6 +335,22 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Virtual machine \"$VM_NAME\" setup"
 printf "%60s\n" " " | tr ' ' '-'
 
+echo "$(info) Creating Network Security Group"
+az network nsg create -g "$RESOURCE_GROUP_DEVICE" -n "$NSG_NAME" --output "none"
+echo "$(info) Created Netwrok Security Group"
+
+echo "$(info) Creating Dynamic PublicIP address for VM"
+az network public-ip create -g "$RESOURCE_GROUP_DEVICE" -n "$PUBLIC_IP_NAME" --allocation-method "Dynamic" --output "none"
+echo "$(info) Created Dynamic PublicIP address for VM"
+
+echo "$(info) Creating Vnet"
+az network vnet create -g "$RESOURCE_GROUP_DEVICE" -n "$VNET_NAME" --address-prefix 10.0.0.0/16 --subnet-name "Subnet" --subnet-prefix 10.0.0.0/24 --network-security-group "$NSG_NAME" --output "none"
+echo "$(info) Created Vnet"
+
+echo "$(info) Creating Network interface"
+az network nic create --name "$NIC_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --vnet-name "$VNET_NAME" --subnet "Subnet" --public-ip-address "$PUBLIC_IP_NAME" --output "none"
+echo "$(info) Created Network interface"
+
 # We check whether the Virtual machine with the provided name exists or not in the current resource group.
 # If it doesn't exists, we will create a new virtual machine.
 # If it exists, we check the os disk name. If it is same as the disk name provided, we use the existing virtual machine.
@@ -337,7 +359,7 @@ EXISTING_VM=$(az vm list --resource-group "$RESOURCE_GROUP_DEVICE" --subscriptio
 
 if [ -z "$EXISTING_VM" ]; then
     echo "$(info) Creating virtual machine \"$VM_NAME\""
-    az vm create --name "$VM_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --attach-os-disk "$DISK_NAME" --os-type "linux" --location "$LOCATION" --nsg-rule "$NSG_RULE" --nsg "$NSG_NAME" --size "$VM_SIZE" --output "none"
+    az vm create --name "$VM_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --location "$LOCATION" --attach-os-disk "$DISK_NAME" --os-type "linux" --size "$VM_SIZE" --nsg-rule "$NSG_RULE" --nics "$NIC_NAME" --output "none"
     echo "$(info) Created virtual machine \"$VM_NAME\""
 else
     OS_DISK_NAME=$(az vm list --query "[?name=='$VM_NAME'].storageProfile.osDisk.name" --resource-group "$RESOURCE_GROUP_DEVICE" -o tsv)
