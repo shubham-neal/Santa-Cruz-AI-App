@@ -20,6 +20,8 @@ exitWithError() {
 
 SAS_URL="https://unifiededgescenarios.blob.core.windows.net/arm-template/manifest-bundle.zip"
 
+echo "Logging in with Managed Identity"
+az login --identity --output "none"
 
 # Download the latest manifest-bundle.zip from storage account
 wget -O manifest-bundle.zip "$SAS_URL"

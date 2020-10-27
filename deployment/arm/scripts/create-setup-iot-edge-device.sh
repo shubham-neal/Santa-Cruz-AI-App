@@ -7,6 +7,8 @@ info() {
     echo "$(date +"%Y-%m-%d %T") [INFO]"
 }
 
+echo "Logging in with Managed Identity"
+az login --identity --output "none"
 
 echo "Installing packages"
 
