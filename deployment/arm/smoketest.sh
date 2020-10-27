@@ -25,9 +25,6 @@ set -e
 
 ANY_FAILURES_OCCURRED="false"
 
-echo "Logging in with Managed Identity"
-az login --identity --output "none"
-
 #-----------------------------------------------------------------------------------------
 # Define helper function for logging. This will change the Error text color to red
 printError() {
