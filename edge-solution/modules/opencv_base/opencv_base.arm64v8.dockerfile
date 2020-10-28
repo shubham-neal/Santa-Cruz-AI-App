@@ -7,7 +7,7 @@ FROM arm64v8/ubuntu:18.04
 # ENV PATH /opt/conda/bin:$PATH
 
 # update the OS
-RUN apt-get upgrade && apt-get update && apt-get install -y  \
+RUN apt-get upgrade && apt-get update && apt-get install --no-install-recommends -y  \
         build-essential \
         unzip \
         pkg-config \
@@ -29,8 +29,24 @@ RUN apt-get upgrade && apt-get update && apt-get install -y  \
         wget \
         protobuf-compiler \
         cmake \
+       libopenblas-base \
+       libavutil-dev \
+        libopenblas-dev \
+        liblapack-dev \
         python3-dev \
-   && rm -rf /var/lib/apt/lists/*
+        libv4l-dev \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        libglew-dev \
+        libpostproc-dev \
+        libeigen3-dev \
+        libtbb-dev \
+        zlib1g-dev \
+         ffmpeg \
+        && \
+    apt-get autoremove -y && \
+    apt-get clean && \         
+    rm -rf /var/lib/apt/lists/*
 
 # download opencv
 RUN  wget -O opencv.zip https://github.com/opencv/opencv/archive/4.2.0.zip && unzip opencv.zip && mv opencv-4.2.0 opencv
@@ -61,6 +77,7 @@ RUN cd /opencv && mkdir build && cd build && \
         -D BUILD_TESTS=OFF \
         -D BUILD_PERF_TESTS=OFF \
         -D BUILD_opencv_python_tests=OFF \
+        -D WITH_FFMPEG=ON \
 	-D BUILD_EXAMPLES=OFF ..
 
-RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig      
+RUN cd /opencv/build && make -j $(nproc) && make install && ldconfig
