@@ -25,7 +25,6 @@ set -e
 
 ANY_FAILURES_OCCURRED="false"
 
-
 #-----------------------------------------------------------------------------------------
 # Define helper function for logging. This will change the Error text color to red
 printError() {
