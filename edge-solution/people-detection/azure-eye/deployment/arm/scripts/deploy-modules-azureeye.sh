@@ -23,16 +23,18 @@ exitWithError() {
 
 SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
 
+
+echo "Downloading manifest bundle zip"
+
 # Download the latest manifest-bundle.zip from storage account
 wget -O manifest-bundle.zip "$SAS_URL"
-
-echo "Downloading is done for latest files"
 
 # Extracts all the files from zip in curent directory;
 # overwrite existing ones
 echo "Unzipping the files"
 unzip -o manifest-bundle.zip -d "manifest-bundle"
 cd manifest-bundle
+
 echo "Unzipped the files in directory manifest-bundle"
 
 
@@ -48,10 +50,12 @@ pip install --upgrade azure-cli-telemetry
 echo "installing azure iot extension"
 az extension add --name azure-iot
 
+echo "installing sshpass, coreutils and jsonschema"
 pip3 install --upgrade jsonschema
 apk add coreutils
 apk add sshpass
-echo "Installation complete"
+
+echo "Packge installation is complete"
 
 # We're enabling exit on error after installation steps as there are some warnings and error thrown in installation steps which causes the script to fail
 set -e
@@ -60,25 +64,28 @@ set -e
 # and based on that either throw error or use the existing resources
 if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_IOT" -o tsv)" ]; then
     echo "$(error) IoT Hub \"$IOTHUB_NAME\" does not exist."
-    exit 1
+    exitWithError
 else
     echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
 fi
 
+echo "$(info) Retrieving IoT Hub connection string"
 IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --hub-name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
 
 if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
     echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
-    exit 1
+    exitWithError
 else
     echo "$(info) Using existing Edge Device \"$IOTHUB_NAME\""
 fi
 
+echo "$(info) Retrieving Edge Device connection string"
 EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
 
 MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
+echo "$(info) Updating variable values in environment file"
 # Update the value of RUNTIME variable in environment variable file
 sed -i 's#^\(AAD_SERVICE_PRINCIPAL_ID[ ]*=\).*#\1\"'"$SP_APP_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(AAD_SERVICE_PRINCIPAL_SECRET[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
@@ -130,16 +137,20 @@ fi
 # Check if a deployment with given name, already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, append a random number to user given deployment name and create a deployment.
 
+echo "Deploying manifest file to IoT Hub."
+
 az iot edge deployment create --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IOTHUB_NAME" --content "$PRE_GENERATED_MANIFEST_FILENAME" --target-condition "deviceId='$DEVICE_NAME'" --output "none"
 
 echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed to your device now. This may take some time."
 
+echo "$(info) Pausing execution of script for 8 minutes to allow manifest deployment to complete"
 sleep 8m
 
-echo "$(info) Setting LVA graph topology..."
+echo "$(info) Setting LVA graph topology"
+
 GRAPH_TOPOLOGY=$(
     cat cvr-topology.json | 
-    jq '.name = "CVRToAMSAsset"'
+    jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
 az iot hub invoke-module-method \
@@ -148,24 +159,21 @@ az iot hub invoke-module-method \
     -m lvaEdge \
     --mn GraphTopologySet \
     --mp "$GRAPH_TOPOLOGY"
-#     '
-#     {
-#         "@apiVersion": "1.0"
-#     }
-#     '
 
 
-echo "$(info) Creating new LVA graph instance..."
+echo "$(info) Creating new LVA graph instance"
 
 # Getting rtsp url from Manifest Environment variable file (.env) 
 RTSP_URL=$(grep -w "RTSP_URL" ".env" | cut -d'=' -f2)
 
 GRAPH_INSTANCE=$(
     cat cvr-topology-params.json | 
-    jq '.name = "AzureEyeSOM"' | 
-    jq '.properties.topologyName = "CVRToAMSAsset"' | 
+    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
+    jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"' | 
     jq --arg replace_value "$RTSP_URL" '.properties.parameters[0].value = $replace_value'
 )
+
+echo "$(info) Setting LVA graph instnce"
 
 az iot hub invoke-module-method \
     -n $IOTHUB_NAME \
@@ -174,9 +182,8 @@ az iot hub invoke-module-method \
     --mn GraphInstanceSet \
     --mp "$GRAPH_INSTANCE"
 
-#
 
-echo "$(info) Activating LVA graph instance..."
+echo "$(info) Activating LVA graph instance"
 az iot hub invoke-module-method \
     -n $IOTHUB_NAME \
     -d $DEVICE_NAME \
@@ -186,18 +193,6 @@ az iot hub invoke-module-method \
         '
             {
                 "@apiVersion" : "1.0",
-                "name" : "AzureEyeSOM"
+                "name" : "'"$GRAPH_INSTANCE_NAME"'"
             }
         '
-
-# 
-
-
-#creating streaming endpoint
-az ams streaming-endpoint create --account-name "$AMS_ACCOUNT_NAME" --name "endpoint-1" --resource-group "$RESOURCE_GROUP_IOT" --scale-units 0
-
-#starting streaming endpoint
-az ams streaming-endpoint start --account-name "$AMS_ACCOUNT_NAME" --name "endpoint-1" --resource-group "$RESOURCE_GROUP_IOT"
-
-#creating streaming locator for video playback
-az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "CVRToAMSAsset-AzureEyeSOM" --name "locator-1" --resource-group "$RESOURCE_GROUP_IOT" --streaming-policy-name "Predefined_ClearStreamingOnly"
