@@ -138,9 +138,3 @@ stages:
         targetPath: '$(Build.ArtifactStagingDirectory)/arm-deployment-bundle-eye.zip'
         artifact: 'arm-deployment-bundle-eye'
         publishLocation: 'pipeline'
-        
-    - task: PublishBuildArtifacts@1
-      inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: 'arm-deployment-bundle-eye'
-        publishLocation: 'Container'
