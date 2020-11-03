@@ -112,8 +112,7 @@ stages:
         Contents: |
           manifest-bundle-azureeye.zip
           ues_app/people-detection-app.zip
-          edge-solution/people-detection/azure-eye/deployment/arm/scripts/create-setup-iot-edge-device.sh
-          edge-solution/people-detection/azure-eye/deployment/arm/scripts/deploy-modules.sh
+          edge-solution/people-detection/azure-eye/deployment/arm/scripts/deploy-modules-azureeye.sh
           edge-solution/people-detection/azure-eye/deployment/arm/azuredeploy.json
           edge-solution/people-detection/azure-eye/cvr-topology.json
           edge-solution/people-detection/azure-eye/cvr-topology-params.json
