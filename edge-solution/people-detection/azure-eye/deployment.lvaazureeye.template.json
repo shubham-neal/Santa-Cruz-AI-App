@@ -39,6 +39,13 @@
                 },
                 "Name": "/rtspserver",
                 "HostConfig": {
+                  "LogConfig": {
+                    "Type": "",
+                    "Config": {
+                      "max-size": "10m",
+                      "max-file": "10"
+                    }
+                  },
                   "Binds": [
                     "/dev/bus/usb:/dev/bus/usb"
                   ],
