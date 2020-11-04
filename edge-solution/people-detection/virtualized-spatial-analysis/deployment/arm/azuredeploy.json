@@ -105,7 +105,7 @@
     "customRoleName": "[guid(subscription().id, 'LVAEdge User', 'Custom Role')]",
     "mediaServiceName": "[concat('livevideoanalysis',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
     "applicationType": "[concat('people-tracking_yolov3_', parameters('deviceArchitecture'), '_', parameters('moduleRuntime'))]",
-    "streamingLocator": "[concat('StreamingLocator',substring(uniqueString(subscription().id,variables('resourceGroupAMS')),1,4))]",
+    "streamingLocator": "[concat('StreamingLocator',substring(uniqueString(subscription().id,variables('resourceGroupIot')),1,4))]",
     "graphTopology": "CVRwithHttpExtension",
     "graphInstance": "CVRInstance"
   },
