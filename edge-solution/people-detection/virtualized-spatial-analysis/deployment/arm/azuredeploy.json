@@ -104,7 +104,10 @@
     "customVideoSource": "https://unifiededgescenariostest.blob.core.windows.net/test/lots_015.mkv",
     "customRoleName": "[guid(subscription().id, 'LVAEdge User', 'Custom Role')]",
     "mediaServiceName": "[concat('livevideoanalysis',substring(uniqueString(subscription().id,parameters('resourceGroupIot')),1,4))]",
-    "applicationType": "[concat('people-tracking_yolov3_', parameters('deviceArchitecture'), '_', parameters('moduleRuntime'))]"
+    "applicationType": "[concat('people-tracking_yolov3_', parameters('deviceArchitecture'), '_', parameters('moduleRuntime'))]",
+    "streamingLocator": "[concat('StreamingLocator',substring(uniqueString(subscription().id,variables('resourceGroupAMS')),1,4))]",
+    "graphTopology": "CVRwithHttpExtension",
+    "graphInstance": "CVRInstance"
   },
   "resources": [
     {
@@ -652,6 +655,15 @@
           },
           "applicationType": {
             "value": "[variables('applicationType')]"
+          },
+          "graphTopology": {
+            "value": "[variables('graphTopology')]"
+          },
+          "graphInstance": {
+            "value": "[variables('graphInstance')]"
+          },
+          "streamingLocator": {
+            "value": "[variables('streamingLocator')]"
           }
         },
         "template": {
@@ -723,6 +735,15 @@
               "type": "String"
             },
             "mediaServiceName": {
+              "type": "String"
+            },
+            "graphTopology": {
+              "type": "String"
+            },
+            "graphInstance": {
+              "type": "String"
+            },
+            "streamingLocator": {
               "type": "String"
             }
           },
@@ -939,10 +960,22 @@
                   {
                     "name": "AMS_ACCOUNT_NAME",
                     "value": "[parameters('mediaServiceName')]"
+                  },
+                  {
+                    "name": "GRAPH_TOPOLOGY_NAME",
+                    "value": "[parameters('graphTopology')]"
+                  },
+                  {
+                    "name": "GRAPH_INSTANCE_NAME",
+                    "value": "[parameters('graphInstance')]"
+                  },
+                  {
+                    "name": "STREAMING_LOCATOR",
+                    "value": "[parameters('streamingLocator')]"
                   }
                 ],
                 "retentionInterval": "P1D",
-                "timeout": "PT15M",
+                "timeout": "PT45M",
                 "containerSettings": {},
                 "cleanupPreference": "OnSuccess"
               }
