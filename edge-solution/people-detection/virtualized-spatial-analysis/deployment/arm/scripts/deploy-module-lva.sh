@@ -148,204 +148,84 @@ echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed
 
 sleep 8m
 
-echo "Setting up Topology"
-az iot hub invoke-module-method --method-name 'GraphTopologySet' -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m 'lvaEdge' --method-payload \
-'
-   {
-    "@apiVersion": "1.0",
-    "name": "CVRWithHttpExtension",
-    "properties": {
-      "description": "Continuous video recording and inferencing using HTTP Graph Extension",
-  
-      "parameters": [
-          {
-              "name": "rtspUserName",
-              "type": "String",
-              "description": "rtsp source user name.",
-              "default": "root"
-          },
-          {
-              "name": "rtspPassword",
-              "type": "String",
-              "description": "rtsp source password.",
-              "default" : "p@ssw0rd"
-          },
-          {
-              "name": "rtspUrl",
-              "type": "String",
-              "description": "rtsp Url"
-          },
-          {
-            "name": "inferencingUrl",
-            "type": "String",
-            "description": "inferencing Url",
-            "default" : "http://yolov3/score"
-        },
-        {
-            "name": "inferencingUserName",
-            "type": "String",
-            "description": "inferencing endpoint user name.",
-            "default": "root"
-        },
-        {
-            "name": "inferencingPassword",
-            "type": "String",
-            "description": "inferencing endpoint password.",
-            "default" : "p@ssw0rd"
-        },              
-        {
-          "name" : "imageEncoding",
-          "type" : "String",
-          "description" : "image encoding for frames",
-          "default" : "bmp"
-      },          
-      {
-          "name": "hubSinkOutputName",
-          "type": "String",
-          "description": "hub sink output name",
-          "default" : "inferenceOutput"
-      },
-      {
-        "name" : "assetName",
-        "type" : "String",
-        "description" : "asset name",
-        "default" : "AssetFromCVR-LVAEdge-"
-      }                             
-    ],         
+echo "$(info) Setting LVA graph topology"
 
-      "sources": [
+GRAPH_TOPOLOGY=$(
+    cat cvr-topology.json | 
+    jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
+)
 
-        {
-          "@type": "#Microsoft.Media.MediaGraphRtspSource",
-          "name": "rtspSource",
-          "transport": "tcp",
-          "endpoint": {
-            "@type": "#Microsoft.Media.MediaGraphUnsecuredEndpoint",
-            "url": "${rtspUrl}",
-            "credentials": {
-              "@type": "#Microsoft.Media.MediaGraphUsernamePasswordCredentials",
-              "username": "${rtspUserName}",
-              "password": "${rtspPassword}"            }
-          }
-        }
-      ],
-  
-      "processors": [
-        {
-          "@type": "#Microsoft.Media.MediaGraphFrameRateFilterProcessor",
-          "name": "frameRateFilter",
-          "inputs": [
-            {
-              "nodeName": "rtspSource"
-            }
-          ],
-          "maximumFps": 1
-        },
-        {
+az iot hub invoke-module-method \
+    -n $IOTHUB_NAME \
+    -d $DEVICE_NAME \
+    -m lvaEdge \
+    --mn GraphTopologySet \
+    --mp "$GRAPH_TOPOLOGY" \
+    --output "none"
 
-          "@type": "#Microsoft.Media.MediaGraphHttpExtension",
-          "name": "httpExtension",
-          "endpoint": {
-            "@type": "#Microsoft.Media.MediaGraphUnsecuredEndpoint",
-            "url": "${inferencingUrl}",
-            "credentials": {
-             "@type": "#Microsoft.Media.MediaGraphUsernamePasswordCredentials",
-             "username": "${inferencingUserName}",
-             "password": "${inferencingPassword}"
-            }
-          },
-          "image": {
-            "scale": {
-              "mode": "preserveAspectRatio",
-              "width": "416",
-              "height": "416"
-            },
-            "format": {
-              "@type": "#Microsoft.Media.MediaGraphImageFormatEncoded",
-              "encoding": "${imageEncoding}"
-            }
-          },
-          "inputs": [
-            {
-              "nodeName": "frameRateFilter"
-            }
-          ]
-        }
-      ],
 
-      "sinks": [
-        {
-          "@type": "#Microsoft.Media.MediaGraphIoTHubMessageSink",
-          "name": "hubSink",
-          "hubOutputName": "${hubSinkOutputName}",
-          "inputs": [
-            {
-              "nodeName": "httpExtension"
-            }
-          ]
-        },
-        {
-            "@type": "#Microsoft.Media.MediaGraphAssetSink",
-            "name": "assetSink",
-            "assetNamePattern": "sampleAsset-${System.GraphTopologyName}-${System.GraphInstanceName}",
-            "segmentLength": "PT30S",
-            "localMediaCacheMaximumSizeMiB": "2048",
-            "localMediaCachePath": "/var/lib/azuremediaservices/tmp/",
-            "inputs": [
-                {
-                    "nodeName": "rtspSource"
-                }
-            ]
-        }                    
-      ]
-    }
-  }
-'
+echo "$(info) Getting LVA graph topology status..."
+TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphTopologyList \
+    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_TOPOLOGY_NAME"'"}')
 
-echo "Setting up Instance"
-az iot hub invoke-module-method --method-name 'GraphInstanceSet' -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m 'lvaEdge' --method-payload \
-'
- {
-  "@apiVersion": "1.0",
-  "name": "Sample-1",
-  "properties": {
-    "topologyName": "CVRWithHttpExtension",
-    "description": "Sample graph description",
-    "parameters": [
-      {
-        "name": "rtspUrl",
-        "value": "rtsp://rtspsim:554/media/lots_015.mkv"
-      },
-      {
-        "name": "rtspUserName",
-        "value": "testuser"
-      },
-      {
-        "name": "inferencingUrl",
-        "value": "http://lvaYolov3/score"
-      },
-      {
-        "name": "rtspPassword",
-        "value": "testpassword"
-      }
-    ]
-  }
-}
-'
-echo "Activating Instance"
-az iot hub invoke-module-method --method-name 'GraphInstanceActivate' -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m 'lvaEdge' --method-payload \
-'
-{
-    "@apiVersion" : "1.0",
-    "name" : "Sample-1"
-}
-'
+if [ "$(echo $TOPOLOGY_STATUS | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Topology has been set on device"
+else
+    echo "$(error) Graph Topology has not been set on device"
+    exitWithError
+fi
 
-#creating streaming endpoint
-az ams streaming-endpoint create --account-name "$AMS_ACCOUNT_NAME" --name "endpoint-1" --resource-group "$RESOURCE_GROUP_IOT" --scale-units 0
 
-#starting streaming endpoint
-az ams streaming-endpoint start --account-name "$AMS_ACCOUNT_NAME" --name "endpoint-1" --resource-group "$RESOURCE_GROUP_IOT"
+echo "$(info) Creating a new LVA graph instance"
 
+GRAPH_INSTANCE=$(
+    cat cvr-topology-params.json | 
+    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
+    jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
+)
+
+echo "$(info) Setting LVA graph instance"
+
+az iot hub invoke-module-method \
+    -n $IOTHUB_NAME \
+    -d $DEVICE_NAME \
+    -m lvaEdge \
+    --mn GraphInstanceSet \
+    --mp "$GRAPH_INSTANCE" \
+    --output "none"
+
+
+echo "$(info) Getting LVA graph instance status..."
+INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
+
+if [ "$(echo $INSTANCE_STATUS | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Instance has been created on device."
+else
+    echo "$(error) Graph Instance has not been created on device"
+    exitWithError
+fi
+
+
+echo "$(info) Activating LVA graph instance"
+INSTANCE_RESPONSE=$(az iot hub invoke-module-method \
+    -n $IOTHUB_NAME \
+    -d $DEVICE_NAME \
+    -m lvaEdge \
+    --mn GraphInstanceActivate \
+    --mp '{"@apiVersion" : "1.0","name" : "'"$GRAPH_INSTANCE_NAME"'"}')
+
+
+if [ "$(echo $INSTANCE_RESPONSE | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Instance has been activated on device."
+else
+    echo "$(error) Failed to activate Graph Instance on device."
+    echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
+    exitWithError
+fi
+
+sleep 5m
 #creating streaming locator for video playback
-az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "sampleAsset-CVRWithHttpExtension-Sample-1" --name "locator-1" --resource-group "$RESOURCE_GROUP_IOT" --streaming-policy-name "Predefined_ClearStreamingOnly"
+echo "$(info) Creating Streaming Locator..."
+az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
