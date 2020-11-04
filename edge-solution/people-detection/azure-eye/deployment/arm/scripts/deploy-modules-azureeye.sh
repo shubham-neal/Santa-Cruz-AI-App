@@ -55,14 +55,14 @@ pip3 install --upgrade jsonschema
 apk add coreutils
 apk add sshpass
 
-echo "Packge installation is complete"
+echo "package installation is complete"
 
 # We're enabling exit on error after installation steps as there are some warnings and error thrown in installation steps which causes the script to fail
 set -e
 
 # Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,
 # and based on that either throw error or use the existing resources
-if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_IOT" -o tsv)" ]; then
+if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_DEVICE" -o tsv)" ]; then
     echo "$(error) IoT Hub \"$IOTHUB_NAME\" does not exist."
     exitWithError
 else
@@ -72,7 +72,7 @@ fi
 echo "$(info) Retrieving IoT Hub connection string"
 IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --hub-name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
 
-if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
+if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
     echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
     exitWithError
 else
@@ -92,7 +92,7 @@ sed -i 's#^\(AAD_SERVICE_PRINCIPAL_SECRET[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MA
 sed -i 's#^\(AAD_TENANT_ID[ ]*=\).*#\1\"'"$TENANT_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(AMS_ACCOUNT[ ]*=\).*#\1\"'"$AMS_ACCOUNT_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"'"$RESOURCE_GROUP_IOT"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"'"$RESOURCE_GROUP_AMS"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(IOT_DEVICE_ID[ ]*=\).*#\1\"'"$DEVICE_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(IOT_HUB_CONN_STRING[ ]*=\).*#\1\"'"$IOTHUB_CONNECTION_STRING"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(IOT_EDGE_DEVICE_CONN_STRING[ ]*=\).*#\1\"'"$EDGE_DEVICE_CONNECTION_STRING"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
@@ -158,10 +158,23 @@ az iot hub invoke-module-method \
     -d $DEVICE_NAME \
     -m lvaEdge \
     --mn GraphTopologySet \
-    --mp "$GRAPH_TOPOLOGY"
+    --mp "$GRAPH_TOPOLOGY" \
+    --output "none"
 
 
-echo "$(info) Creating new LVA graph instance"
+echo "$(info) Getting LVA graph topology status..."
+TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphTopologyList \
+    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_TOPOLOGY_NAME"'"}')
+
+if [ "$(echo $TOPOLOGY_STATUS | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Topology has been set on device"
+else
+    echo "$(error) Graph Topology has not been set on device"
+    exitWithError
+fi
+
+
+echo "$(info) Creating a new LVA graph instance"
 
 # Getting rtsp url from Manifest Environment variable file (.env) 
 RTSP_URL=$(grep -w "RTSP_URL" ".env" | cut -d'=' -f2)
@@ -173,26 +186,47 @@ GRAPH_INSTANCE=$(
     jq --arg replace_value "$RTSP_URL" '.properties.parameters[0].value = $replace_value'
 )
 
-echo "$(info) Setting LVA graph instnce"
+echo "$(info) Setting LVA graph instance"
 
 az iot hub invoke-module-method \
     -n $IOTHUB_NAME \
     -d $DEVICE_NAME \
     -m lvaEdge \
     --mn GraphInstanceSet \
-    --mp "$GRAPH_INSTANCE"
+    --mp "$GRAPH_INSTANCE" \
+    --output "none"
+
+
+echo "$(info) Getting LVA graph instance status..."
+INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
+
+if [ "$(echo $INSTANCE_STATUS | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Instance has been created on device."
+else
+    echo "$(error) Graph Instance has not been created on device"
+    exitWithError
+fi
 
 
 echo "$(info) Activating LVA graph instance"
-az iot hub invoke-module-method \
+INSTANCE_RESPONSE=$(az iot hub invoke-module-method \
     -n $IOTHUB_NAME \
     -d $DEVICE_NAME \
     -m lvaEdge \
     --mn GraphInstanceActivate \
-    --mp \
-        '
-            {
-                "@apiVersion" : "1.0",
-                "name" : "'"$GRAPH_INSTANCE_NAME"'"
-            }
-        '
+    --mp '{"@apiVersion" : "1.0","name" : "'"$GRAPH_INSTANCE_NAME"'"}')
+
+
+if [ "$(echo $INSTANCE_RESPONSE | jq '.status')" == 200 ]; then
+    echo "$(info) Graph Instance has been activated on device."
+else
+    echo "$(error) Failed to activate Graph Instance on device."
+    echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
+    exitWithError
+fi
+
+#creating streaming locator for video playback
+echo "$(info) Creating Streaming Locator..."
+az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
