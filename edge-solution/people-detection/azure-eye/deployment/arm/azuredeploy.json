@@ -460,12 +460,21 @@
               }
             }
           ],
-          "outputs": {}
+          "outputs": {
+            "STREAMING_URL": {
+              "type": "String",
+              "value": "[reference('ModuleDeployment').outputs.STREAMING_URL]"
+            }
+          }
         }
       },
       "resourceGroup": "[variables('resourceGroupAMS')]"
     }
   ],
   "outputs": {
+    "STREAMING_URL": {
+      "type": "String",
+      "value": "[reference('AzureEyeDeployment').outputs.STREAMING_URL.value]"
+    }
   }
 }

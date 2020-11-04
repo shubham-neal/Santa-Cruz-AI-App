@@ -227,6 +227,34 @@ else
     exitWithError
 fi
 
-#creating streaming locator for video playback
-echo "$(info) Creating Streaming Locator..."
-az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
+# Checking the existence of Asset on Media Service
+# till Max 15 minutes
+for ((i=1; i<=60; i++)); do
+    ASSET=$(az ams asset list --account-name "$AMS_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_AMS" --query "[?name=='$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME'].name" -o tsv)
+
+    if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
+        break
+    else
+        sleep 15s
+    fi
+done
+
+if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
+
+    #creating streaming locator for video playback
+    echo "$(info) Creating Streaming Locator..."
+    az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
+
+else
+    echo "$(error) AMS Asset not found"
+    exitWithError
+fi    
+
+# Passing Streaming url to script output for video playback
+STREAMING_PATH=$(az ams streaming-locator get-paths -a "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='Dash'].paths[0]" -o tsv)
+
+STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$AMS_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
+
+STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
+
+echo "{STREAMING_URL:\"$STREAMING_URL\"}" > $AZ_SCRIPTS_OUTPUT_PATH;
