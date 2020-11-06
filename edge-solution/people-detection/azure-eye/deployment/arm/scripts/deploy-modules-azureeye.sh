@@ -186,6 +186,20 @@ GRAPH_INSTANCE=$(
     jq --arg replace_value "$RTSP_URL" '.properties.parameters[0].value = $replace_value'
 )
 
+INSTANCE_LIST=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
+
+if [ "$(echo $INSTANCE_LIST | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
+    echo "$(info) Graph Instance already exist"
+    echo "$(info) Deactivating LVA graph instance..."
+    az iot hub invoke-module-method \
+        -n $IOTHUB_NAME \
+        -d $DEVICE_NAME \
+        -m lvaEdge \
+        --mn GraphInstanceDeactivate \
+        --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}'
+fi
+
 echo "$(info) Setting LVA graph instance"
 
 az iot hub invoke-module-method \
@@ -201,7 +215,7 @@ echo "$(info) Getting LVA graph instance status..."
 INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
-if [ "$(echo $INSTANCE_STATUS | jq '.status')" == 200 ]; then
+if [ "$(echo $INSTANCE_STATUS | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
     echo "$(info) Graph Instance has been created on device."
 else
     echo "$(error) Graph Instance has not been created on device"
@@ -241,6 +255,12 @@ done
 
 if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
 
+    if [ "$(az ams streaming-locator show --account-name "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --query "name" -o tsv)" == "$STREAMING_LOCATOR" ]; then
+        echo "$(info) Streaming Locator already exist"
+        echo "$(info) Deleting the existing Streaming Locator..."
+        az ams streaming-locator delete --account-name "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR"
+    fi
+    
     #creating streaming locator for video playback
     echo "$(info) Creating Streaming Locator..."
     az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
@@ -248,12 +268,17 @@ if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
 else
     echo "$(error) AMS Asset not found"
     exitWithError
-fi    
+fi
+
+# Start the Streaming Endpoint of media service
+echo "$(info) Starting the Streaming endpoint..."
+az ams streaming-endpoint start --account-name "$AMS_ACCOUNT_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS"
+
 
 # Passing Streaming url to script output for video playback
-STREAMING_PATH=$(az ams streaming-locator get-paths -a "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='Dash'].paths[0]" -o tsv)
-
 STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$AMS_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
+
+STREAMING_PATH=$(az ams streaming-locator get-paths -a "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='Dash'].paths[0]" -o tsv)
 
 STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 
