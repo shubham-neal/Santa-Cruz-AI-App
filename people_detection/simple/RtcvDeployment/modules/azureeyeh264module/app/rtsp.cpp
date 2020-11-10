@@ -135,30 +135,36 @@ void need_data_h264(GstElement* appsrc, guint unused, MyContext* ctx)
 {
     GstBuffer* buffer;
     GstFlowReturn ret;
-    
-    H264 frame = h264_queue.front();
-    // frame.data = *out_h264;
-    // frame.timestamp = *out_h264_ts;
 
-    // std::vector<uint8_t> vec = h264_queue.front();
-    guint size = frame.data.size();
+    while (!h264_queue.empty()) {
+        H264 frame = h264_queue.front();
+        // frame.data = *out_h264;
+        // frame.timestamp = *out_h264_ts;
 
-    buffer = gst_buffer_new_allocate(NULL, size, NULL);
-    gst_buffer_fill(buffer, 0, frame.data.data(), size);
+        // std::vector<uint8_t> vec = h264_queue.front();
+        guint size = frame.data.size();
 
-    /* increment the timestamp */
-    GST_BUFFER_PTS(buffer) = frame.timestamp;
-    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, H264_FPS);
+        buffer = gst_buffer_new_allocate(NULL, size, NULL);
+        gst_buffer_fill(buffer, 0, frame.data.data(), size);
 
-    g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
-    gst_buffer_unref(buffer);
+        /* increment the timestamp */
+        GST_BUFFER_PTS(buffer) = frame.timestamp;
+        GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, H264_FPS);
 
-    if (h264_queue.size() > 1)
-    {
+        g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+        gst_buffer_unref(buffer);
+
+        if (ret != GstFlowReturn::Ok)
+        {
+            // push failed. stop for now.
+            break;
+        }
+
         h264_queue.pop();
-    }
+        log_debug("RTSP buffer pushed to h264 with size " + std::to_string(size) + " and timestamp " + std::to_string(frame.timestamp));
 
-    log_debug("RTSP buffer pushed to h264 with size " + std::to_string(size) + " and timestamp " + std::to_string(frame.timestamp));
+    }
+    
 }
 
 /* called when a new media pipeline is constructed. We can query the
