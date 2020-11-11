@@ -61,14 +61,13 @@ RANDOM_NUMBER="${RANDOM:0:3}"
 IOTHUB_NAME="azureeye"
 IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
 DEVICE_NAME="azureeye"
+MEDIA_SERVICE_NAME="livevideoanalysis"
+MEDIA_SERVICE_NAME=${MEDIA_SERVICE_NAME}${RANDOM_SUFFIX}
 USE_EXISTING_RESOURCES="true"
 LOCATION="westus2"
 
 
-
-
 # Check if already logged in using az ad signed-in-user 
-
 IS_LOGGED_IN=$(az account show)
 
 if [ -z "$IS_LOGGED_IN" ]; then
@@ -98,55 +97,18 @@ echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
 az account set --subscription "$SUBSCRIPTION_ID"
 echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
+# Download ARM template and run from Az CLI
 
-if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
-    echo "$(info) Creating a new Resource Group: \"$RESOURCE_GROUP_DEVICE\""
-    az group create --name "$RESOURCE_GROUP_DEVICE" --location "$LOCATION" --output "none"
-    echo "$(info) Successfully created resource group"
-else
-    if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-        echo "$(info) Using Existing Resource Group: \"$RESOURCE_GROUP_DEVICE\" for IoT Hub"
-    else
-        echo "$(error) Resource Group \"$RESOURCE_GROUP_DEVICE\" already exists"
-        exitWithError
-    fi
-fi
+ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/resources-deploy-bbox.json"
 
+echo "Downloading ARM template"
+wget -O resources-deploy-bbox.json "$ARM_TEMPLATE_URL"
 
-printf "\n%60s\n" " " | tr ' ' '-'
-echo "Configuring IoT Hub"
-printf "%60s\n" " " | tr ' ' '-'
+echo "Running ARM template"
 
-# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
-# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
-# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub.
-EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-
-if [ -z "$EXISTING_IOTHUB" ]; then
-    echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
-    az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_DEVICE" --output "none"
-    echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
-else
-    # Check if IoT Hub exists in current resource group. If it exist, we will use the existing IoT Hub.
-    EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_DEVICE" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-    if [ "$USE_EXISTING_RESOURCES" == "true" ] && [ -n "$EXISTING_IOTHUB" ]; then
-        echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
-    else
-        if [ "$USE_EXISTING_RESOURCES" == "true" ]; then
-            echo "$(info) \"$IOTHUB_NAME\" already exists in current subscription but it does not exist in resource group \"$RESOURCE_GROUP_DEVICE\""
-        else
-            echo "$(info) \"$IOTHUB_NAME\" already exists"
-        fi
-        echo "$(info) Appending a random number \"$RANDOM_NUMBER\" to \"$IOTHUB_NAME\""
-        IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_NUMBER}
-        # Writing the updated value back to variables file
-
-        echo "$(info) Creating a new IoT Hub \"$IOTHUB_NAME\""
-        az iot hub create --name "$IOTHUB_NAME" --sku S1 --resource-group "$RESOURCE_GROUP_DEVICE" --output "none"
-        echo "$(info) Created a new IoT hub \"$IOTHUB_NAME\""
-    fi
-fi
-
+az deployment sub create --location "$LOCATION" --template-file "resources-deploy-bbox.json" --no-prompt \
+	--parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS iotHubName=$IOTHUB_NAME mediaServiceName=$MEDIA_SERVICE_NAME
+    
 # This step creates a new edge device in the IoT Hub account or will use an existing edge device
 # if the USE_EXISTING_RESOURCES configuration variable is set to true.
 printf "\n%60s\n" " " | tr ' ' '-'
@@ -155,6 +117,7 @@ printf "%60s\n" " " | tr ' ' '-'
 
 # Check if a Edge Device with given name already exists in IoT Hub. Create a new one if it doesn't exist already.
 EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
+
 if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
     echo "$(info) Creating an Edge device \"$DEVICE_NAME\" in IoT Hub \"$IOTHUB_NAME\""
     az iot hub device-identity create --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME" --edge-enabled --output "none"
@@ -169,38 +132,34 @@ fi
 # network and is accepting ssh requests.
 echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
 EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
-
 echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
 CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
-# Replace placeholder connection string with actual value for Edge device
-# Using sshpass and ssh to update the value on Edge device
-Command=$(echo "sudo sed -i -e '/device_connection_string:/ s#\"[^\"][^\"]*\"#\"$EDGE_DEVICE_CONNECTION_STRING\"#' $CONFIG_FILE_PATH")
-$Command
-echo "$(info) Config.yaml update is complete"
+SCRIPT_PATH="/etc/iotedge/configedge.sh"
+# Replace placeholder connection string with actual value for Edge device using the 'configedge.sh' script
 
-echo "$(info) Restarting IoT Edge service"
-# Restart the service on Edge device
-sudo systemctl restart iotedge
-echo "$(info) IoT Edge service restart is complete"
+source "$SCRIPT_PATH" "$EDGE_DEVICE_CONNECTION_STRING"
 
+echo "$(info) Updated Config.yaml"
 
+# creating the AMS account creates a service principal, so we'll just reset it to get the credentials
+# echo "setting up service principal..."
+# SPN="$MEDIA_SERVICE_NAME-access-sp" # this is the default naming convention used by `az ams account sp`
 
-AMS_RG_SCOPE="/subscription/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP_AMS}"
+# if test -z "$(az ad sp list --display-name $SPN --query="[].displayName" -o tsv)"; then
+    # AMS_CONNECTION=$(az ams account sp create -o yaml --resource-group $RESOURCE_GROUP_AMS --account-name $MEDIA_SERVICE_NAME)
+# else
+    # AMS_CONNECTION=$(az ams account sp reset-credentials -o yaml --resource-group $RESOURCE_GROUP_AMS --account-name $MEDIA_SERVICE_NAME)
+# fi
 
-echo "Creating service principal for Azure Media Service"
-AMS_SP=$(az ad sp create-for-rbac --name "AMS-SP-$RESOURCE_GROUP_AMS" --role "contributor" --scope "${AMS_RG_SCOPE}")
-AMS_SP_ID=$(echo "$AMS_SP" | jq -r '.appId')
-AMS_SP_Password=$(echo "$AMS_SP" | jq -r '.password')
+#capture config information
+# re="AadTenantId:\s([0-9a-z\-]*)"
+# AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-# Download ARM template and run from Az CLI
+# re="AadClientId:\s([0-9a-z\-]*)"
+# AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/azuredeploylva.json"
+# re="AadSecret:\s([0-9a-z\-]*)"
+# AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-echo "Downloading ARM template"
-wget -O azuredeploylva.json "$ARM_TEMPLATE_URL"
-
-echo "Running ARM template"
-
-az deployment sub create --location "$LOCATION" --template-file "azuredeploylva.json" --no-prompt \
-	--parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS existingIotHubName=$IOTHUB_NAME existingDeviceName=$DEVICE_NAME servicePrincipalId=$AMS_SP_ID servicePrincipalSecret=$AMS_SP_Password
-
+# re="SubscriptionId:\s([0-9a-z\-]*)"
+# SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
