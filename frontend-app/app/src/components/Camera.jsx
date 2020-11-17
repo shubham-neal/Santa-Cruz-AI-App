@@ -14,18 +14,40 @@ export class Camera extends React.Component {
         frame: {
             detections: []
         },
-        image: new Image()
+        image: new Image(),
+        ampStreamingUrl: null
     }
     constructor(props) {
         super(props);
         this.state = {
             aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
+            ampStreamingUrl: null
         };
 
         this.canvasRef = React.createRef();
+        this.videoRef = React.createRef();
+        this.amp = null;
     }
 
     componentDidMount() {
+        if(this.props.ampStreamingUrl) {
+            this.setState({
+                ampStreamingUrl: this.props.ampStreamingUrl
+            }, () => {
+                this.amp = window.amp(this.videoRef.current, {
+                    "nativeControlsForTouch": false,
+                    autoplay: true,
+                    width: this.props.width,
+                    height: this.props.height,
+                });
+                this.amp.src([
+                    {
+                        "src": this.state.ampStreamingUrl,
+                        "type": "application/vnd.ms-sstr+xml"
+                    }
+                ]);
+            });
+        }
         setInterval(() => {
             this.draw();
         }, 1000 / this.props.fps);
@@ -35,7 +57,19 @@ export class Camera extends React.Component {
         if (prevProps.aggregator !== this.props.aggregator) {
             this.setState({
                 aggregator: this.props.aggregator
-            })
+            });
+        }
+        if (prevProps.ampStreamingUrl !== this.props.ampStreamingUrl) {
+            this.setState({
+                ampStreamingUrl: this.props.ampStreamingUrl
+            }, () => {
+                this.amp.src([
+                    {
+                        "src": this.state.ampStreamingUrl,
+                        "type": "application/vnd.ms-sstr+xml"
+                    }
+                ]);
+            });
         }
     }
 
@@ -50,6 +84,21 @@ export class Camera extends React.Component {
                         position: 'relative'
                     }}
                 >
+                    {
+                        this.state.ampStreamingUrl ? (
+                            <video
+                                ref={this.videoRef}
+                                className="azuremediaplayer amp-default-skin amp-big-play-centered"
+                                tabIndex={0}
+                                style={{
+                                    position: 'absolute',
+                                    zIndex: 1
+                                }}
+                                tabIndex={2}
+                            />
+                        ) : null
+                    }
+
                     <canvas
                         ref={this.canvasRef}
                         width={this.props.width}

@@ -55,6 +55,7 @@ class App extends React.Component {
             collisions: 0,
             detections: 0,
             image: new Image(),
+            ampStreamingUrl: null,
             accessGranted: isAdmin,
             blobServiceClient: blobServiceClient,
             realTimeChart: true,
@@ -74,7 +75,8 @@ class App extends React.Component {
                 containerName: process.env.REACT_APP_containerName ?? "",
                 blobPath: process.env.REACT_APP_blobPath ?? "",
                 sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
-                socketUrl: process.env.REACT_APP_socketUrl ?? ""
+                socketUrl: process.env.REACT_APP_socketUrl ?? "",
+                ampStreamingUrl: process.env.REACT_APP_amp_streaming_url ?? ""
             });
         } else {
             axios.get(`./settings`)
@@ -92,7 +94,8 @@ class App extends React.Component {
                         containerName: process.env.REACT_APP_containerName ?? "",
                         blobPath: process.env.REACT_APP_blobPath ?? "",
                         sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
-                        socketUrl: process.env.REACT_APP_socketUrl ?? ""
+                        socketUrl: process.env.REACT_APP_socketUrl ?? "",
+                        ampStreamingUrl: process.env.REACT_APP_amp_streaming_url ?? ""
                     });
                 });
         }
@@ -149,6 +152,7 @@ class App extends React.Component {
                                 image={this.state.image}
                                 updateAggregator={this.updateAggregator}
                                 collision={collision}
+                                ampStreamingUrl={this.state.ampStreamingUrl}
                             />
                             <Pivot
                                 onLinkClick={(item) => {
@@ -232,6 +236,9 @@ class App extends React.Component {
         sharedAccessSignature = data.sharedAccessSignature;
         blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
         socketUrl = data.socketUrl;
+        this.setState({
+            ampStreamingUrl: data.ampStreamingUrl
+        });
 
         // messages
         socket = io(`wss://${socketUrl}`, { transports: ['websocket'] });
