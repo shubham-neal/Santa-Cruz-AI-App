@@ -69,12 +69,12 @@ class App extends React.Component {
     componentDidMount() {
         if(process.env.NODE_ENV === 'development') {
             this.setup({
-                account: process.env.REACT_APP_account,
-                eventHub: process.env.REACT_APP_eventHub,
-                containerName: process.env.REACT_APP_containerName,
-                blobPath: process.env.REACT_APP_blobPath,
-                sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature,
-                socketUrl: process.env.REACT_APP_socketUrl
+                account: process.env.REACT_APP_account ?? "",
+                eventHub: process.env.REACT_APP_eventHub ?? "",
+                containerName: process.env.REACT_APP_containerName ?? "",
+                blobPath: process.env.REACT_APP_blobPath ?? "",
+                sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
+                socketUrl: process.env.REACT_APP_socketUrl ?? ""
             });
         } else {
             axios.get(`./settings`)
@@ -87,12 +87,12 @@ class App extends React.Component {
                 })
                 .catch((e) => {
                     this.setup({
-                        account: process.env.REACT_APP_account,
-                        eventHub: process.env.REACT_APP_eventHub,
-                        containerName: process.env.REACT_APP_containerName,
-                        blobPath: process.env.REACT_APP_blobPath,
-                        sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature,
-                        socketUrl: process.env.REACT_APP_socketUrl
+                        account: process.env.REACT_APP_account ?? "",
+                        eventHub: process.env.REACT_APP_eventHub ?? "",
+                        containerName: process.env.REACT_APP_containerName ?? "",
+                        blobPath: process.env.REACT_APP_blobPath ?? "",
+                        sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
+                        socketUrl: process.env.REACT_APP_socketUrl ?? ""
                     });
                 });
         }
