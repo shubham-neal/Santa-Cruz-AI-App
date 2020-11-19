@@ -45,7 +45,7 @@ elif [ -z "$RESOURCE_GROUP_AMS" ]; then
 elif [ -z "$RESOURCE_GROUP_DEVICE" ]; then
 	RESOURCE_GROUP_DEVICE="$RESOURCE_GROUP_AMS"
 fi
-
+RESOURCE_GROUP_IOT="$RESOURCE_GROUP_DEVICE"
 # Check if required packages are installed
 checkPackageInstallation
 
@@ -71,7 +71,7 @@ STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
 DEPLOYMENT_NAME="eye-deployment"
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_SUFFIX}
-
+WEBAPP_PASSWORD=""
 
 
 # Check if already logged in using az ad signed-in-user 
@@ -106,14 +106,10 @@ echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
 # Download ARM template and run from Az CLI
 
-ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/resources-deploybb.json"
-
-echo "Downloading ARM template"
-wget -O resources-deploy-bbox.json "$ARM_TEMPLATE_URL"
-
+ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/resources-deploy-bbox.json"
 echo "Running ARM template"
 
-az deployment sub create --location "$LOCATION" --template-file "resources-deploy-bbox.json" --no-prompt \
+az deployment sub create --location "$LOCATION" --template-uri "" --no-prompt \
 	--parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS iotHubName=$IOTHUB_NAME mediaServiceName=$MEDIA_SERVICE_NAME
     
 #printf "\n%60s\n" " " | tr ' ' '-'
@@ -185,6 +181,10 @@ echo "$(info) Updated Config.yaml"
 
 # Download ARM template and run from Az CLI
 
+SP_APP_ID="bdc49371-c353-4de5-8658-3d9f1300068f"
+OBJECT_ID="78181709-6735-42f7-abad-4c3f99f7c5b7"
+SP_APP_PWD="QYnR66uO0cMg8-WPigJ5~fJn_..3su4n_x"
+
 ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/custom-role-creation.json"
 
 echo "Downloading ARM template"
@@ -196,7 +196,8 @@ az deployment sub create --location "$LOCATION" --template-file "custom-role-cre
 	--parameters servicePrincipalObjectId=$OBJECT_ID resourceGroupAMS=$RESOURCE_GROUP_AMS 
 
 # Deploying Manifest   
-SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
+#SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
+SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-lva.zip"
 echo "Downloading manifest bundle zip"
 
 # Download the latest manifest-bundle.zip from storage account
@@ -218,39 +219,42 @@ pip install iotedgedev==2.1.4
 echo "installing azure iot extension"
 az extension add --name azure-iot
 
-echo "installing sshpass, coreutils and jsonschema"
-pip3 install --upgrade jsonschema
-#apk add coreutils
-
 
 echo "package installation is complete"
-
-
-# IOTHUB_CONNECTION_STRING="$(az iot hub connection-string show --hub-name "$IOTHUB_NAME" --query "connectionString" --output tsv)"
-# if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
-    # echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
-    # exitWithError
-# else
-    # echo "$(info) Using existing Edge Device \"$IOTHUB_NAME\""
-# fi
-
-# echo "$(info) Retrieving Edge Device connection string"
-# EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
 
 MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
-echo "$(info) Updating variable values in environment file"
+CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test/lots_015.mkv"
+sudo wget \"$CUSTOM_VIDEO_SOURCE\" -P /home/lvaadmin/samples/input/
+
+
+# Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,
+# and based on that either throw error or use the existing resources
+if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_IOT" -o tsv)" ]; then
+    echo "$(error) IoT Hub \"$IOTHUB_NAME\" does not exist."
+    exit 1
+else
+    echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
+fi
+
+if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
+    echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
+    exit 1
+else
+    echo "$(info) Using existing Edge Device \"$IOTHUB_NAME\""
+fi
+
+MANIFEST_TEMPLATE_NAME="deployment.lvaedge.template.json"
+MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
+
 # Update the value of RUNTIME variable in environment variable file
-sed -i 's#^\(AAD_SERVICE_PRINCIPAL_ID[ ]*=\).*#\1\"'"$SP_APP_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(AAD_SERVICE_PRINCIPAL_SECRET[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(AAD_TENANT_ID[ ]*=\).*#\1\"'"$TENANT_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"'"$SP_APP_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"'"$TENANT_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(AMS_ACCOUNT[ ]*=\).*#\1\"'"$MEDIA_SERVICE_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(RESOURCE_GROUP[ ]*=\).*#\1\"'"$RESOURCE_GROUP_AMS"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(IOT_DEVICE_ID[ ]*=\).*#\1\"'"$DEVICE_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(IOT_HUB_CONN_STRING[ ]*=\).*#\1\"'"$IOTHUB_CONNECTION_STRING"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(IOT_EDGE_DEVICE_CONN_STRING[ ]*=\).*#\1\"'"$EDGE_DEVICE_CONNECTION_STRING"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(AMS_ACCOUNT_NAME[ ]*=\).*#\1\"'"$AMS_ACCOUNT_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"'"$RESOURCE_GROUP_IOT"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
 
 echo "$(info) Generating manifest file from template file"
@@ -285,19 +289,17 @@ if [ ! -f "$PRE_GENERATED_MANIFEST_FILENAME" ]; then
     echo "$(error) Manifest file \"$PRE_GENERATED_MANIFEST_FILENAME\" does not exist. Please check config folder under current directory: \"$PWD\" to see if manifest file is generated or not"
 fi
 
+
 # This step deploys the configured deployment manifest to the edge device. After completed,
 # the device will begin to pull edge modules and begin executing workloads (including sending
 # messages to the cloud for further processing, visualization, etc).
 # Check if a deployment with given name, already exists in IoT Hub. If it doesn't exist create a new one.
 # If it exists, append a random number to user given deployment name and create a deployment.
 
-echo "Deploying manifest file to IoT Hub."
-
 az iot edge deployment create --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IOTHUB_NAME" --content "$PRE_GENERATED_MANIFEST_FILENAME" --target-condition "deviceId='$DEVICE_NAME'" --output "none"
 
 echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed to your device now. This may take some time."
 
-echo "$(info) Pausing execution of script for 8 minutes to allow manifest deployment to complete"
 sleep 8m
 
 echo "$(info) Setting LVA graph topology"
@@ -330,30 +332,11 @@ fi
 
 echo "$(info) Creating a new LVA graph instance"
 
-# Getting rtsp url from Manifest Environment variable file (.env) 
-RTSP_URL=$(grep -w "RTSP_URL" ".env" | cut -d'=' -f2)
-
 GRAPH_INSTANCE=$(
     cat cvr-topology-params.json | 
     jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
-    jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"' | 
-    jq --arg replace_value "$RTSP_URL" '.properties.parameters[0].value = $replace_value'
+    jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
-
-INSTANCE_LIST=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
-    --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
-
-if [ "$(echo $INSTANCE_LIST | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
-    echo "$(info) Graph Instance already exist"
-    echo "$(info) Deactivating LVA graph instance..."
-    az iot hub invoke-module-method \
-        -n $IOTHUB_NAME \
-        -d $DEVICE_NAME \
-        -m lvaEdge \
-        --mn GraphInstanceDeactivate \
-        --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}' \
-		--output "none"
-fi
 
 echo "$(info) Setting LVA graph instance"
 
@@ -370,7 +353,7 @@ echo "$(info) Getting LVA graph instance status..."
 INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
-if [ "$(echo $INSTANCE_STATUS | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
+if [ "$(echo $INSTANCE_STATUS | jq '.status')" == 200 ]; then
     echo "$(info) Graph Instance has been created on device."
 else
     echo "$(error) Graph Instance has not been created on device"
@@ -395,6 +378,11 @@ else
     echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
     exitWithError
 fi
+
+sleep 5m
+#creating streaming locator for video playback
+echo "$(info) Creating Streaming Locator..."
+az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
 
 # Restart the lvaEdge Module on device to update it's properties
 echo "$(info) Restarting the lvaEdge module on edge device..."
@@ -460,16 +448,13 @@ STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g 
 
 STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 
-echo "{STREAMING_URL:\"$STREAMING_URL\"}" > $AZ_SCRIPTS_OUTPUT_PATH;
+echo "STREAMING_URL: \"$STREAMING_URL\" "
 
 
 
-# ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/custom-role-creation.json"
 
-# echo "Downloading ARM template"
-# wget -O custom-role-creation.json "$ARM_TEMPLATE_URL"
 
-# echo "Running ARM template"
+WEBAPP_TEMPLATE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/webapp.json"
 
-# az deployment sub create --location "$LOCATION" --template-file "custom-role-creation.json" --no-prompt \
-	# --parameters servicePrincipalObjectId=$OBJECT_ID resourceGroupAMS=$RESOURCE_GROUP_AMS 
+az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt \
+    --parameters password=$WEBAPP_PASSWORD existingIotHubName=$IOTHUB_NAME AMP_STREAMING_URL=$STREAMING_URL
