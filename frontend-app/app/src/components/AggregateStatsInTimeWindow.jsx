@@ -196,13 +196,13 @@ export class AggregateStatsInTimeWindow extends React.Component {
         let frames = [];
         const cl = containerNames.length;
         for (let i = 0; i < cl; i++) {
+            // TODO: container/path/partition (0-3) 
             const containerNameHour = `${this.props.iotHubName}/00/${containerNames[i].hour}`;
             const containerNameMinute = `${this.props.iotHubName}/00/${containerNames[i].minute}`;
             const exists = await this.blobExists("detectoroutput", containerNameHour);
             if (exists) {
                 const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
                 let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerNameMinute });
-                // console.log(containerNameMinute);
                 const blobs = [];
                 for await (const item of iter) {
                     const blob = await this.downloadBlob("detectoroutput", item.name);
