@@ -161,10 +161,6 @@ export class AggregateStatsInTimeWindow extends React.Component {
         );
     }
 
-    parseEventHub = (eventHub) => {
-        return eventHub.split('=')[1].split('.')[0];
-    }
-
     async calculate() {
         // for chart
         const metrics = {
@@ -196,14 +192,12 @@ export class AggregateStatsInTimeWindow extends React.Component {
             startDateTime.setMinutes(startDateTime.getMinutes() + 1);
         }
 
-        const parsedEventHub = this.parseEventHub(this.props.eventHub);
-
         // calculate the frames for all of the blobs
         let frames = [];
         const cl = containerNames.length;
         for (let i = 0; i < cl; i++) {
-            const containerNameHour = `${parsedEventHub}/00/${containerNames[i].hour}`;
-            const containerNameMinute = `${parsedEventHub}/00/${containerNames[i].minute}`;
+            const containerNameHour = `${this.props.iotHubName}/00/${containerNames[i].hour}`;
+            const containerNameMinute = `${this.props.iotHubName}/00/${containerNames[i].minute}`;
             const exists = await this.blobExists("detectoroutput", containerNameHour);
             if (exists) {
                 const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");

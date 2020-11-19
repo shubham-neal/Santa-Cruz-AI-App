@@ -23,11 +23,9 @@ const blobImage = new BlobImage();
 const { BlobServiceClient } = require("@azure/storage-blob");
 const isAdmin = false;
 
-let account = null;
-let eventHub = null;
-let containerName = null;
-let blobPath = null;
-let sharedAccessSignature = null;
+let iotHubName = null;
+let storageBlobAccount = null;
+let storageBlobSharedAccessSignature = null;
 let blobServiceClient = null;
 let socket = null;
 let socketUrl = null;
@@ -70,13 +68,11 @@ class App extends React.Component {
     componentDidMount() {
         if(process.env.NODE_ENV === 'development') {
             this.setup({
-                account: process.env.REACT_APP_account ?? "",
-                eventHub: process.env.REACT_APP_eventHub ?? "",
-                containerName: process.env.REACT_APP_containerName ?? "",
-                blobPath: process.env.REACT_APP_blobPath ?? "",
-                sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
-                socketUrl: process.env.REACT_APP_socketUrl ?? "",
-                ampStreamingUrl: process.env.REACT_APP_amp_streaming_url ?? ""
+                ampStreamingUrl: process.env.REACT_APP_amp_streaming_url,
+                iotHubName: process.env.REACT_APP_iotHubName,
+                storageBlobAccount: process.env.REACT_APP_storageBlobAccount,
+                storageBlobSharedAccessSignature: process.env.REACT_APP_storageBlobSharedAccessSignature,
+                socketUrl: process.env.REACT_APP_socketUrl
             });
         } else {
             axios.get(`./settings`)
@@ -89,13 +85,11 @@ class App extends React.Component {
                 })
                 .catch((e) => {
                     this.setup({
-                        account: process.env.REACT_APP_account ?? "",
-                        eventHub: process.env.REACT_APP_eventHub ?? "",
-                        containerName: process.env.REACT_APP_containerName ?? "",
-                        blobPath: process.env.REACT_APP_blobPath ?? "",
-                        sharedAccessSignature: process.env.REACT_APP_sharedAccessSignature ?? "",
-                        socketUrl: process.env.REACT_APP_socketUrl ?? "",
-                        ampStreamingUrl: process.env.REACT_APP_amp_streaming_url ?? ""
+                        ampStreamingUrl: process.env.REACT_APP_amp_streaming_url,
+                        iotHubName: process.env.REACT_APP_iotHubName,
+                        storageBlobAccount: process.env.REACT_APP_storageBlobAccount,
+                        storageBlobSharedAccessSignature: process.env.REACT_APP_storageBlobSharedAccessSignature,
+                        socketUrl: process.env.REACT_APP_socketUrl,
                     });
                 });
         }
@@ -205,7 +199,7 @@ class App extends React.Component {
                             <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={collision.isBBoxInZones}
-                                eventHub={eventHub}
+                                iotHubName={iotHubName}
                                 blobServiceClient={blobServiceClient}
                                 updateAggregateChartMetrics={this.updateAggregateChartMetrics}
                             />
@@ -228,14 +222,12 @@ class App extends React.Component {
     }
 
     setup(data) {
-        // blob storage
-        account = data.account;
-        eventHub = data.eventHub;
-        containerName = data.containerName;
-        blobPath = data.blobPath;
-        sharedAccessSignature = data.sharedAccessSignature;
-        blobServiceClient = new BlobServiceClient(`https://${account}.blob.core.windows.net?${sharedAccessSignature}`);
+        iotHubName = data.iotHubName;
+        storageBlobAccount = data.storageBlobAccount;
+        storageBlobSharedAccessSignature = data.storageBlobSharedAccessSignature;
+        blobServiceClient = new BlobServiceClient(`https://${storageBlobAccount}.blob.core.windows.net?${storageBlobSharedAccessSignature}`);
         socketUrl = data.socketUrl;
+
         this.setState({
             ampStreamingUrl: data.ampStreamingUrl
         });
@@ -246,10 +238,7 @@ class App extends React.Component {
         socket.on('connect', function () {
             console.log('connected!');
         });
-        socket.on('message', (message) => {
-            const data = JSON.parse(message);
-            this.updateData(data);
-        });
+        
         socket.on('passwordchecked', (message) => {
             const data = JSON.parse(message);
             if (data.success) {
@@ -308,43 +297,6 @@ class App extends React.Component {
 
     checkPassword = (value) => {
         socket.emit("checkpassword", value);
-    }
-
-    async updateData(data) {
-        if (data && data.hasOwnProperty('body')) {
-            const frame = data.body;
-            if (frame.hasOwnProperty("cameraId")) {
-                if (frame.hasOwnProperty('detections') && !this.state.rtcv) {
-                    let collisions = 0;
-                    let detections = 0;
-                    const l = frame.detections.length;
-                    for (let i = 0; i < l; i++) {
-                        const detection = frame.detections[i];
-                        if (detection.bbox) {
-                            if (collision.isBBoxInZones(detection.bbox, this.state.aggregator.zones)) {
-                                detection.collides = true;
-                                collisions = collisions + 1;
-                            } else {
-                                detection.collides = false;
-                            }
-                        }
-                        detections = detections + 1;
-                    }
-                    this.setState({
-                        frame: frame,
-                        collisions: collisions,
-                        detections: detections
-                    });
-                }
-                if (frame.hasOwnProperty("image_name")) {
-                    const image = new Image();
-                    image.src = await blobImage.updateImage(blobServiceClient, containerName, blobPath, frame.image_name);
-                    this.setState({
-                        image: image
-                    });
-                }
-            }
-        }
     }
 }
 
