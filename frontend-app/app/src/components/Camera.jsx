@@ -42,7 +42,7 @@ export class Camera extends React.Component {
                 });
                 this.amp.src([
                     {
-                        "src": this.state.ampStreamingUrl,
+                        "src": `https://${this.state.ampStreamingUrl}`,
                         "type": "application/vnd.ms-sstr+xml"
                     }
                 ]);

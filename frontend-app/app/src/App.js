@@ -67,13 +67,15 @@ class App extends React.Component {
 
     componentDidMount() {
         if(process.env.NODE_ENV === 'development') {
-            this.setup({
-                ampStreamingUrl: process.env.REACT_APP_amp_streaming_url,
+            const data = {
+                ampStreamingUrl: process.env.REACT_APP_ampStreamingUrl,
                 iotHubName: process.env.REACT_APP_iotHubName,
                 storageBlobAccount: process.env.REACT_APP_storageBlobAccount,
                 storageBlobSharedAccessSignature: process.env.REACT_APP_storageBlobSharedAccessSignature,
                 socketUrl: process.env.REACT_APP_socketUrl
-            });
+            };
+            console.log(data);
+            this.setup(data);
         } else {
             axios.get(`./settings`)
                 .then((response) => {
