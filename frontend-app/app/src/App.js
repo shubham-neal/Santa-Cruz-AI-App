@@ -40,8 +40,15 @@ class App extends React.Component {
             aggregator: {
                 lines: [],
                 zones: [{
-                    name: "queue",
-                    polygon: [],
+                    name: "threshold",
+                    polygon: [[
+                        0,
+                        0.5
+                    ],
+                    [
+                        0.9,
+                        0.5
+                    ]],
                     threshold: 10.0
                 }]
             },
@@ -52,7 +59,6 @@ class App extends React.Component {
             frames: [],
             collisions: 0,
             detections: 0,
-            image: new Image(),
             ampStreamingUrl: null,
             accessGranted: isAdmin,
             blobServiceClient: blobServiceClient,
@@ -67,15 +73,13 @@ class App extends React.Component {
 
     componentDidMount() {
         if(process.env.NODE_ENV === 'development') {
-            const data = {
+            this.setup({
                 ampStreamingUrl: process.env.REACT_APP_ampStreamingUrl,
                 iotHubName: process.env.REACT_APP_iotHubName,
                 storageBlobAccount: process.env.REACT_APP_storageBlobAccount,
                 storageBlobSharedAccessSignature: process.env.REACT_APP_storageBlobSharedAccessSignature,
                 socketUrl: process.env.REACT_APP_socketUrl
-            };
-            console.log(data);
-            this.setup(data);
+            });
         } else {
             axios.get(`./settings`)
                 .then((response) => {
@@ -145,10 +149,10 @@ class App extends React.Component {
                                 selectedZoneIndex={this.state.selectedZoneIndex}
                                 updateSelectedZoneIndex={this.updateSelectedZoneIndex}
                                 frame={this.state.frame}
-                                image={this.state.image}
                                 updateAggregator={this.updateAggregator}
                                 collision={collision}
                                 ampStreamingUrl={this.state.ampStreamingUrl}
+                                blobServiceClient={blobServiceClient}
                             />
                             <Pivot
                                 onLinkClick={(item) => {
@@ -205,12 +209,12 @@ class App extends React.Component {
                                 blobServiceClient={blobServiceClient}
                                 updateAggregateChartMetrics={this.updateAggregateChartMetrics}
                             />
-                            <EditZones
+                            {/* <EditZones
                                 aggregator={this.state.aggregator}
                                 selectedZoneIndex={this.state.selectedZoneIndex}
                                 updateAggregator={this.updateAggregator}
                                 updateSelectedZoneIndex={this.updateSelectedZoneIndex}
-                            />
+                            /> */}
                         </div>
                     </div>
                 </div>
@@ -262,15 +266,15 @@ class App extends React.Component {
         }
 
         // aggregator
-        let aggregator = this.state.aggregator;
-        const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
-        if (aggregatorEncoded !== "") {
-            const aggregatorDecoded = atob(aggregatorEncoded);
-            aggregator = JSON.parse(aggregatorDecoded);
-            this.setState({
-                aggregator: aggregator
-            });
-        }
+        // let aggregator = this.state.aggregator;
+        // const aggregatorEncoded = localStorage.getItem("UES-APP-AGGREGATOR") || "";
+        // if (aggregatorEncoded !== "") {
+        //     const aggregatorDecoded = atob(aggregatorEncoded);
+        //     aggregator = JSON.parse(aggregatorDecoded);
+        //     this.setState({
+        //         aggregator: aggregator
+        //     });
+        // }
     }
 
     updateAggregateChartMetrics = (metrics) => {

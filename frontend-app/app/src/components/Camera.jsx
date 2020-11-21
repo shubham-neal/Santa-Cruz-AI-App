@@ -9,34 +9,52 @@ export class Camera extends React.Component {
         fps: 30,
         aggregator: {
             lines: [],
-            zones: []
+            zones: [{
+                name: "threshold",
+                polygon: [[
+                    0,
+                    0.5
+                ],
+                [
+                    0.9,
+                    0.5
+                ]],
+                threshold: 10.0
+            }]
         },
         frame: {
             detections: []
         },
-        image: new Image(),
         ampStreamingUrl: null
     }
     constructor(props) {
         super(props);
         this.state = {
             aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
-            ampStreamingUrl: null
+            ampStreamingUrl: null,
+            syncOffset: -1000,
+            syncBuffer: 0.1,
+            editingAllowed: false
         };
 
         this.canvasRef = React.createRef();
         this.videoRef = React.createRef();
         this.amp = null;
+
+        this.currentMediaTime = null;
+        this.inferences = {};
+        this.detections = [];
     }
 
     componentDidMount() {
-        if(this.props.ampStreamingUrl) {
+        if (this.props.ampStreamingUrl) {
             this.setState({
                 ampStreamingUrl: this.props.ampStreamingUrl
             }, () => {
                 this.amp = window.amp(this.videoRef.current, {
                     "nativeControlsForTouch": false,
                     autoplay: true,
+                    controls: true,
                     width: this.props.width,
                     height: this.props.height,
                 });
@@ -50,6 +68,18 @@ export class Camera extends React.Component {
         }
         setInterval(() => {
             this.draw();
+        }, 1000 / this.props.fps);
+
+        setInterval(() => {
+            this.sync();
+        }, 1000);
+
+        setInterval(() => {
+            this.updateCurrentMediaTime();
+        }, 1000 / this.props.fps);
+
+        setInterval(() => {
+            this.updateDetections();
         }, 1000 / this.props.fps);
     }
 
@@ -76,6 +106,59 @@ export class Camera extends React.Component {
     render() {
         return (
             <React.Fragment>
+                {
+                    // temp dev tools
+                }
+                <div
+                    style={{
+                        margin: 10,
+                        padding: 5,
+                        backgroundColor: '#d3d3d3',
+                        position: 'relative'
+                    }}>
+
+                    <label
+                        style={{ marginLeft: 5 }}>
+                        Editing
+                    </label>
+                    <input
+                        type="checkbox"
+                        style={{ marginLeft: 5 }}
+                        defaultChecked={this.state.editingAllowed}
+                        onChange={(e) => this.setState({ editingAllowed: e.target.checked })}
+                    />
+                    <label
+                        style={{ marginLeft: 5 }}>
+                        Offset
+                    </label>
+                    <input
+                        type="number"
+                        step="250"
+                        style={{ marginLeft: 5 }}
+                        defaultValue={this.state.syncOffset}
+                        onChange={(e) => this.setState({ syncOffset: +e.target.value })}
+                    />
+
+                    <label
+                        style={{ marginLeft: 5 }}>
+                        Buffer
+                    </label>
+                    <input
+                        type="number"
+                        step="0.1"
+                        style={{ marginLeft: 5 }}
+                        defaultValue={this.state.syncBuffer}
+                        onChange={(e) => this.setState({ syncBuffer: +e.target.value })}
+                    />
+                    <input
+                        type="button"
+                        value="replay"
+                        style={{ marginLeft: 5 }}
+                        onClick={(e) => {
+                            this.amp.currentTime = 0;
+                            this.amp.play();
+                        }} />
+                </div>
                 <div
                     style={{
                         margin: 10,
@@ -106,7 +189,7 @@ export class Camera extends React.Component {
                         style={{
                             border: this.props.border,
                             position: 'absolute',
-                            zIndex: 0
+                            zIndex: 2
                         }}
                         tabIndex={1}
                     />
@@ -119,10 +202,140 @@ export class Camera extends React.Component {
                         selectedZoneIndex={this.props.selectedZoneIndex}
                         updateSelectedZoneIndex={this.props.updateSelectedZoneIndex}
                         collision={this.props.collision}
+                        editingAllowed={this.state.editingAllowed}
                     />
                 </div>
             </React.Fragment>
         );
+    }
+
+
+    updateDetections = () => {
+        if (this.currentMediaTime && !this.paused) {
+            const detections = [];
+            for (const inference in this.inferences) {
+                const currentMediaTime = new Date(this.currentMediaTime * 1000);
+                const inferenceTime = new Date(this.inferences[inference].timestamp / 1000 / 1000);
+
+                const cmTime = currentMediaTime.getTime() + this.state.syncOffset;
+                const iTime = inferenceTime.getTime();
+                const difference = cmTime - iTime;
+                const seconds = Math.abs(difference / 1000);
+                if (seconds <= this.state.syncBuffer && this.inferences[inference].label === "person") {
+                    detections.push(this.inferences[inference]);
+                }
+            }
+            this.detections = detections;
+        }
+    }
+
+    updateCurrentMediaTime = () => {
+        if (this.amp && this.amp.currentMediaTime) {
+            this.currentMediaTime = this.amp.currentMediaTime();
+        }
+    }
+
+    async sync() {
+        if (this.amp && this.amp.currentMediaTime && !this.paused) {
+            const dates = [
+                new Date(this.currentMediaTime * 1000),
+                new Date(this.currentMediaTime * 1000),
+                new Date(this.currentMediaTime * 1000)
+            ];
+            dates[0].setMinutes(dates[0].getMinutes() - 1);
+            dates[2].setMinutes(dates[2].getMinutes() + 1);
+            for (let d = 0; d < 3; d++) {
+
+                // TODO: account for daylight saving
+                let containerName = `iot-perf-metrics-vm/03/${dates[d].toLocaleDateString('fr-CA', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).replace(/-/g, '/')}/${dates[d].getUTCHours()}/${dates[d].getMinutes()}`;
+
+                const exists = await this.blobExists("detectoroutput", containerName);
+                if (exists) {
+                    const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
+                    let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerName });
+                    const blobs = [];
+                    for await (const item of iter) {
+                        const blob = await this.downloadBlob("detectoroutput", item.name);
+                        for (let i = 0; i < blob.length; i++) {
+                            const view = blob[i];
+                            const inferences = view.inferences;
+                            for (let j = 0; j < inferences.length; j++) {
+                                const inference = inferences[j];
+                                if (inference.label === "person" && (view.out === 1)) {
+                                    inference.in = true;
+                                }
+                                const time = inference.timestamp;
+                                if (!this.inferences.hasOwnProperty(time)) {
+                                    this.inferences[time] = inference;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    async blobExists(containerName, blobName) {
+        const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
+        const blobClient = containerClient.getBlobClient(blobName);
+        const exists = blobClient.exists();
+        return exists;
+    }
+
+    async downloadBlob(containerName, blobName) {
+        const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
+        const blobClient = containerClient.getBlobClient(blobName);
+        const downloadBlockBlobResponse = await blobClient.download();
+
+        const downloaded = await this.blobToString(await downloadBlockBlobResponse.blobBody);
+        const views = downloaded.replace(/\\"/g, /'/).split('\r\n');
+
+        const frames = [];
+        const l = views.length;
+        for (let i = 0; i < l; i++) {
+            const view = views[i];
+            if (view && view !== undefined && view !== "") {
+                let parsedView = JSON.parse(view);
+                if (parsedView.hasOwnProperty('Body')) {
+                    let body = parsedView.Body;
+                    if (body && body !== undefined && body !== "") {
+                        let decodedBody = atob(body);
+                        if (decodedBody && decodedBody !== undefined && decodedBody !== "") {
+                            try {
+                                let parsedBody = JSON.parse(decodedBody.replace(/bbox:/g, '"bbox:"'));
+                                if (parsedBody && parsedBody !== undefined && parsedBody !== "") {
+                                    if (parsedBody.hasOwnProperty('inferences')) {
+                                        if (parsedBody.inferences.length > 0) {
+                                            frames.push(parsedBody);
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.log(e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return frames;
+    }
+
+    async blobToString(blob) {
+        const fileReader = new FileReader();
+        return new Promise((resolve, reject) => {
+            fileReader.onloadend = (ev) => {
+                resolve(ev.target.result);
+            };
+            fileReader.onerror = reject;
+            fileReader.readAsText(blob);
+        });
     }
 
     clamp = (value, min, max) => {
@@ -133,8 +346,8 @@ export class Camera extends React.Component {
         const canvasContext = this.canvasRef.current?.getContext("2d");
         if (canvasContext) {
             canvasContext.clearRect(0, 0, this.props.width, this.props.height);
-            canvasContext.drawImage(this.props.image, 0, 0, this.props.width, this.props.height);
-            this.drawDetections(canvasContext, this.props.frame.detections);
+            // this.drawDetections(canvasContext, this.props.frame.detections);
+            this.drawDetections(canvasContext, this.detections);
         }
     }
 
@@ -147,27 +360,44 @@ export class Camera extends React.Component {
     }
 
     drawDetection(canvasContext, detection) {
-        if (detection.bbox) {
-            if (detection.collides) {
-                canvasContext.strokeStyle = 'yellow';
-                canvasContext.lineWidth = 4;
-            } else {
-                canvasContext.strokeStyle = 'lightblue';
-                canvasContext.lineWidth = 2;
-            }
-            const x = this.props.width * detection.bbox[0];
-            const y = this.props.height * detection.bbox[1];
-            const w = this.props.width * Math.abs(detection.bbox[2] - detection.bbox[0]);
-            const h = this.props.height * Math.abs(detection.bbox[3] - detection.bbox[1]);
-            canvasContext.strokeRect(x, y, w, h);
-        } else if (detection.rectangle) {
+        if (detection.in || this.isAcrossThresholds(detection.bbox, this.props.aggregator.zones)) {
             canvasContext.strokeStyle = 'yellow';
+            canvasContext.lineWidth = 4;
+        } else {
+            canvasContext.strokeStyle = 'lightblue';
             canvasContext.lineWidth = 2;
-            const x = this.props.width * detection.rectangle.left;
-            const y = this.props.height * detection.rectangle.top;
-            const w = this.props.width * detection.rectangle.width;
-            const h = this.props.height * detection.rectangle.height;
-            canvasContext.strokeRect(x, y, w, h);
         }
+        const x = this.props.width * detection.bbox[0];
+        const y = this.props.height * detection.bbox[1];
+        const w = this.props.width * Math.abs(detection.bbox[2] - detection.bbox[0]);
+        const h = this.props.height * Math.abs(detection.bbox[3] - detection.bbox[1]);
+        canvasContext.strokeRect(x, y, w, h);
+    }
+
+    isAcrossThresholds(bbox, zones) {
+        const l = zones.length;
+        for (let i = 0; i < l; i++) {
+            const zone = zones[i];
+            if (zone.polygon.length > 0) {
+                if (this.isAcrossThreshold(bbox, zone)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    isAcrossThreshold(bbox, zone) {
+        let pointA = [];
+        let pointB = [];
+        let pointC = zone.polygon[0];
+        let pointD = zone.polygon[1];
+        pointA = [pointC[0], 0];
+        pointB = [pointD[0], 0]
+        return this.props.collision.isBBoxInZones(bbox, [{
+            name: zone.name,
+            polygon: [pointA, pointB, pointC, pointD],
+            threshold: zone.threshold
+        }]);
     }
 }
