@@ -32,7 +32,7 @@ export class Camera extends React.Component {
         this.state = {
             aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
             ampStreamingUrl: null,
-            syncOffset: -1000,
+            syncOffset: -4500,
             syncBuffer: 0.1,
             editingAllowed: false
         };
