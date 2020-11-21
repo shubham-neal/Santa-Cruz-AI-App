@@ -155,7 +155,7 @@ export class Camera extends React.Component {
                         value="replay"
                         style={{ marginLeft: 5 }}
                         onClick={(e) => {
-                            this.amp.currentTime = 0;
+                            this.amp.currentTime(0);
                             this.amp.play();
                         }} />
                 </div>
