@@ -1,7 +1,6 @@
 #!/bin/bash
 # Note: The script should be run as sudo
 
-
 # Exit the script on any error
 set -e
 
@@ -21,11 +20,11 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             shift # past value
             ;;
-		--help)
+                --help)
             PRINT_HELP="true"
             shift # past argument
             ;;
-        *)    
+        *)
             # unknown option
             echo "Unknown parameter passed: $1"
             printHelp
@@ -36,14 +35,14 @@ done
 
 
 if [ "$PRINT_HELP" == "true" ]; then
-	printHelp
-	exit 0
+        printHelp
+        exit 0
 elif [ -z "$RESOURCE_GROUP_AMS" ]; then
-	echo "$(error) required parameter RESOURCE_GROUP_AMS is missing from the command"
-	printHelp
-	exitWithError
+        echo "$(error) required parameter RESOURCE_GROUP_AMS is missing from the command"
+        printHelp
+        exitWithError
 elif [ -z "$RESOURCE_GROUP_DEVICE" ]; then
-	RESOURCE_GROUP_DEVICE="$RESOURCE_GROUP_AMS"
+        RESOURCE_GROUP_DEVICE="$RESOURCE_GROUP_AMS"
 fi
 RESOURCE_GROUP_IOT="$RESOURCE_GROUP_DEVICE"
 # Check if required packages are installed
@@ -70,20 +69,26 @@ GRAPH_INSTANCE_NAME="AzureEyeSOM"
 STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
 DEPLOYMENT_NAME="eye-deployment"
-DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_SUFFIX}
+DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 WEBAPP_PASSWORD=""
 
+#required credentials
+SP_APP_ID=""
+OBJECT_ID=""
+SP_APP_PWD=""
+TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
 
-# Check if already logged in using az ad signed-in-user 
+
+# Check if already logged in using az ad signed-in-user
 IS_LOGGED_IN=$(az account show)
 
 if [ -z "$IS_LOGGED_IN" ]; then
-	echo "$(info) Attempting login"
-	# Timeout Azure Login step if the user does not complete the login process in 3 minutes
-	timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
-	echo "$(info) Login successful"	
+        echo "$(info) Attempting login"
+        # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+        timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
+        echo "$(info) Login successful"
 else
-	echo "Using existing login"
+        echo "Using existing login"
 fi
 
 
@@ -92,9 +97,9 @@ if [ -z "$SUBSCRIPTION_ID" ]; then
     # Value is empty for SUBSCRIPTION_ID
     # Assign Default value to current subscription
     subscriptions=$(az account list)
-    
+
     SUBSCRIPTION_ID=$(az account list --query "[0].id" -o tsv)
-    
+
     if [ ${#subscriptions[*]} -gt 1 ]; then
         echo "[WARNING] User has access to more than one subscription, by default using first subscription: \"$SUBSCRIPTION_ID\""
     fi
@@ -107,11 +112,15 @@ echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 # Download ARM template and run from Az CLI
 
 ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/resources-deploy-bbox.json"
+echo "Downloading ARM template"
+wget -O resources-deploy-bbox.json "$ARM_TEMPLATE_URL"
 echo "Running ARM template"
 
-az deployment sub create --location "$LOCATION" --template-uri "" --no-prompt \
-	--parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS iotHubName=$IOTHUB_NAME mediaServiceName=$MEDIA_SERVICE_NAME
-    
+ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file "resources-deploy-bbox.json" --no-prompt \
+        --parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS iotHubName=$IOTHUB_NAME mediaServiceName=$MEDIA_SERVICE_NAME)
+
+STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo $ARM_DEPLOYMENT | jq '.properties.outputs.sasToken.value')
+
 #printf "\n%60s\n" " " | tr ' ' '-'
 #echo "Configuring IoT Hub"
 #printf "%60s\n" " " | tr ' ' '-'
@@ -181,10 +190,6 @@ echo "$(info) Updated Config.yaml"
 
 # Download ARM template and run from Az CLI
 
-SP_APP_ID="bdc49371-c353-4de5-8658-3d9f1300068f"
-OBJECT_ID="78181709-6735-42f7-abad-4c3f99f7c5b7"
-SP_APP_PWD="QYnR66uO0cMg8-WPigJ5~fJn_..3su4n_x"
-
 ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/custom-role-creation.json"
 
 echo "Downloading ARM template"
@@ -193,9 +198,9 @@ wget -O custom-role-creation.json "$ARM_TEMPLATE_URL"
 echo "Running ARM template"
 
 az deployment sub create --location "$LOCATION" --template-file "custom-role-creation.json" --no-prompt \
-	--parameters servicePrincipalObjectId=$OBJECT_ID resourceGroupAMS=$RESOURCE_GROUP_AMS 
+        --parameters servicePrincipalObjectId=$OBJECT_ID resourceGroupAMS=$RESOURCE_GROUP_AMS
 
-# Deploying Manifest   
+# Deploying Manifest
 #SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
 SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-lva.zip"
 echo "Downloading manifest bundle zip"
@@ -226,7 +231,7 @@ MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
 CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test/lots_015.mkv"
-sudo wget \"$CUSTOM_VIDEO_SOURCE\" -P /home/lvaadmin/samples/input/
+sudo wget -O "lots_015.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
 
 
 # Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,
@@ -248,13 +253,14 @@ fi
 MANIFEST_TEMPLATE_NAME="deployment.lvaedge.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
+
 # Update the value of RUNTIME variable in environment variable file
 sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"'"$SP_APP_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"'"$TENANT_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(AMS_ACCOUNT_NAME[ ]*=\).*#\1\"'"$AMS_ACCOUNT_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"'"$RESOURCE_GROUP_IOT"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(AMS_ACCOUNT_NAME[ ]*=\).*#\1\"'"$MEDIA_SERVICE_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"'"$RESOURCE_GROUP_AMS"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
 
 echo "$(info) Generating manifest file from template file"
@@ -300,12 +306,13 @@ az iot edge deployment create --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IO
 
 echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed to your device now. This may take some time."
 
-sleep 8m
+echo "$(info) Delaying script for module to get running. "
+sleep 13m
 
 echo "$(info) Setting LVA graph topology"
 
 GRAPH_TOPOLOGY=$(
-    cat cvr-topology.json | 
+    cat cvr-topology.json |
     jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
@@ -316,7 +323,6 @@ az iot hub invoke-module-method \
     --mn GraphTopologySet \
     --mp "$GRAPH_TOPOLOGY" \
     --output "none"
-
 
 echo "$(info) Getting LVA graph topology status..."
 TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphTopologyList \
@@ -333,8 +339,8 @@ fi
 echo "$(info) Creating a new LVA graph instance"
 
 GRAPH_INSTANCE=$(
-    cat cvr-topology-params.json | 
-    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
+    cat cvr-topology-params.json |
+    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' |
     jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
@@ -379,18 +385,13 @@ else
     exitWithError
 fi
 
-sleep 5m
-#creating streaming locator for video playback
-echo "$(info) Creating Streaming Locator..."
-az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
-
-# Restart the lvaEdge Module on device to update it's properties
+sleep 3m
 echo "$(info) Restarting the lvaEdge module on edge device..."
 RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m '$edgeAgent' --method-payload \
 '{"schemaVersion": "1.0","id": "lvaEdge"}')
 
 if [ "$(echo $RESTART_MODULE | jq '.status')" == 200 ]; then
-	echo "$(info) Restarted the lvaEdge module on edge device"
+        echo "$(info) Restarted the lvaEdge module on edge device"
 else
     echo "$(error) Failed to restart the lvaEdge module on edge device."
     echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
@@ -398,37 +399,27 @@ else
     exitWithError
 fi
 
+
 # Create an AMS asset
 echo "$(info) Creating an asset on AMS..."
-az ams asset create --account-name "$MEDIA_SERVICE_NAME" --name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
-
-# Checking the existence of Asset on Media Service
-# till Max 15 minutes
-for ((i=1; i<=60; i++)); do
-    ASSET=$(az ams asset list --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" --query "[?name=='$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME'].name" -o tsv)
-
-    if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
-        break
-    else
-        sleep 15s
-    fi
-done
-
+ASSET="$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME"
+az ams asset create --account-name "$MEDIA_SERVICE_NAME" --name "$ASSET" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
+sleep 3m
 if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
 
     if [ "$(az ams streaming-locator show --account-name "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --query "name" -o tsv)" == "$STREAMING_LOCATOR" ]; then
         echo "$(info) Streaming Locator already exist"
         echo "$(info) Deleting the existing Streaming Locator..."
         az ams streaming-locator delete --account-name "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --output "none"
-		echo "$(info) Deleted the existing Streaming Locator"
+                echo "$(info) Deleted the existing Streaming Locator"
     fi
-	
+
     sleep 10s
 
     #creating streaming locator for video playback
     echo "$(info) Creating Streaming Locator..."
     az ams streaming-locator create --account-name "$MEDIA_SERVICE_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly" --output "none"
-	echo "$(info) Created Streaming Locator"
+        echo "$(info) Created Streaming Locator"
 
 else
     echo "$(error) AMS Asset not found"
@@ -439,7 +430,7 @@ fi
 echo "$(info) Starting the Streaming endpoint..."
 az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 echo "$(info) Started the Streaming endpoint"
-sleep 5m
+sleep 2m
 
 # Passing Streaming url to script output for video playback
 STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
@@ -448,13 +439,9 @@ STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g 
 
 STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 
-echo "STREAMING_URL: \"$STREAMING_URL\" "
+MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --device-id "$DEVICE_NAME" --module-id lvaYolov3 --hub-name "$IOTHUB_NAME" --key-type primary --query "connectionString" -o tsv)
 
+echo "$(info) Running ARM template to deploy Web App"
+WEBAPP_TEMPLATE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/webappNew.json"
 
-
-
-
-WEBAPP_TEMPLATE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/webapp.json"
-
-az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt \
-    --parameters password=$WEBAPP_PASSWORD existingIotHubName=$IOTHUB_NAME AMP_STREAMING_URL=$STREAMING_URL
+az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt --parameters password=$WEBAPP_PASSWORD existingIotHubName=$IOTHUB_NAME AMP_STREAMING_URL=$STREAMING_URL AZUREEYE_MODULE_CONNECTION_STRING=$MODULE_CONNECTION_STRING STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE
