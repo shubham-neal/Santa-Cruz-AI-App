@@ -151,6 +151,7 @@ class App extends React.Component {
                                 frame={this.state.frame}
                                 updateAggregator={this.updateAggregator}
                                 collision={collision}
+                                iotHubName={this.state.iotHubName}
                                 ampStreamingUrl={this.state.ampStreamingUrl}
                                 blobServiceClient={blobServiceClient}
                             />

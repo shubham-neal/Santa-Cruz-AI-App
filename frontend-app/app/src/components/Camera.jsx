@@ -247,7 +247,7 @@ export class Camera extends React.Component {
             for (let d = 0; d < 3; d++) {
 
                 // TODO: account for daylight saving
-                let containerName = `iot-perf-metrics-vm/03/${dates[d].toLocaleDateString('fr-CA', {
+                let containerName = `${this.props.iotHubName}/03/${dates[d].toLocaleDateString('fr-CA', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit'
