@@ -25,6 +25,11 @@
       "metadata": {
         "description": "Enter the name for AMS account"
       }
+    },
+    "usingExistingIothub":{
+      "default":"",
+      "type": "String",
+      "metadata": "Yes/No. Yes if user wants to use exisitng iothub."
     }
   },
   "variables": {
@@ -124,7 +129,8 @@
           "outputs": {}
         }
       },
-      "resourceGroup": "[parameters('resourceGroupDevice')]"
+      "resourceGroup": "[parameters('resourceGroupDevice')]",
+      "condition":"[not(equals(parameters('usingExistingIothub'),'Yes'))]"
     },
     {
       "type": "Microsoft.Resources/deployments",
