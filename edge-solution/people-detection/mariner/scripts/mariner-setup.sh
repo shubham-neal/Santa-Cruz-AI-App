@@ -4,7 +4,75 @@
 # Exit the script on any error
 set -e
 
-source functions.sh
+printHelp() {
+    echo "
+    Mandatory Arguments
+        --rg-ams                : Resource group name for Azure Media Service, Storage Accounts and Web App
+        
+    Optional Arguments
+        --rg-device             : Resource group name for brainbox and IoT Hub. If it's not provided, it is same same rg-ams 
+        --website-password      : Password to access the web app
+		--existing-iothub		: Name of existing iothub
+		--existing-device		: Name of existing device present in iothub
+        --help                  : Show this message and exit
+	
+    Examples:
+
+    1. Deploy app with existing IoT Edge device
+    sudo ./mariner-setup.sh --rg-ams rg-mariner-ams 
+
+    2. Deploy app without existing IoT Edge device
+    sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device
+    "
+
+}
+
+# Define helper function for logging
+info() {
+    echo "$(date +"%Y-%m-%d %T") [INFO]"
+}
+
+# Define helper function for logging. This will change the Error text color to red
+error() {
+    echo "$(tput setaf 1)$(date +"%Y-%m-%d %T") [ERROR]"
+}
+
+exitWithError() {
+    # Reset console color
+    tput sgr0
+    exit 1
+}
+
+
+checkPackageInstallation() {
+
+	if [ -z "$(command -v iotedge)" ]; then
+		echo "$(error) IoT Runtime is not installed in current machine"
+		exitWithError
+	fi
+
+	if [ -z "$(command -v az)" ]; then
+        echo "$(info) Installing az cli"
+		curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    fi
+
+    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+        echo "$(info) Installing azure-iot extension"
+        az extension add --name azure-iot
+    fi
+	
+    if [ -z "$(command -v jq)" ]; then
+        echo "$(info) Installing jq"
+		sudo apt-get update
+		sudo apt-get install jq
+    fi
+	
+	if [ -z "$(command -v timeout)" ]; then
+        echo "$(info) Installing timeout"
+		sudo apt-get update
+		sudo apt-get install timeout
+    fi
+}
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -12,6 +80,16 @@ while [[ $# -gt 0 ]]; do
     case $key in
         --rg-ams)
             RESOURCE_GROUP_AMS="$2"
+            shift # past argument
+            shift # past value
+            ;;
+		--existing-iothub)
+            IOTHUB_NAME="$2"
+            shift # past argument
+            shift # past value
+            ;;
+	    --existing-device)
+            DEVICE_NAME="$2"
             shift # past argument
             shift # past value
             ;;
@@ -48,18 +126,25 @@ RESOURCE_GROUP_IOT="$RESOURCE_GROUP_DEVICE"
 # Check if required packages are installed
 checkPackageInstallation
 
-
 # Run uname to get current device architecture
-#DEVICE_ARCHITECTURE="x86"
+DEVICE_ARCHITECTURE="x86"
 #Run command to get current device runtime
-#DEVICE_RUNTIME="CPU"
+DEVICE_RUNTIME="CPU"
 
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_AMS" | md5sum | cut -c1-4)"
 RANDOM_NUMBER="${RANDOM:0:3}"
 
-IOTHUB_NAME="azureeye"
-IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
-DEVICE_NAME="azureeye"
+if [ -z "$IOTHUB_NAME" ]; then
+	IOTHUB_NAME="azureeye"
+	IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
+else
+	USING_EXISTING_IOTHUB="Yes"
+fi
+
+if [ -z "$DEVICE_NAME" ]; then
+	DEVICE_NAME="azureeye"
+fi
+
 MEDIA_SERVICE_NAME="livevideoanalysis"
 MEDIA_SERVICE_NAME=${MEDIA_SERVICE_NAME}${RANDOM_SUFFIX}
 #USE_EXISTING_RESOURCES="true"
@@ -109,15 +194,29 @@ echo "$(info) Setting current subscription to \"$SUBSCRIPTION_ID\""
 az account set --subscription "$SUBSCRIPTION_ID"
 echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
+
+# Downloading Mariner bundle
+SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/deployment-bundle-mariner.zip"
+echo "Downloading mariner bundle zip"
+
+# Download the latest mariner-bundle.zip from storage account
+wget -O mariner-bundle.zip "$SAS_URL"
+
+# Extracts all the files from zip in curent directory;
+# overwrite existing ones
+echo "Unzipping the files"
+unzip -o mariner-bundle.zip -d "mariner-bundle"
+cd mariner-bundle
+
+echo "Unzipped the files in directory mariner-bundle"
+
 # Download ARM template and run from Az CLI
 
-ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/resources-deploy-bbox.json"
-echo "Downloading ARM template"
-wget -O resources-deploy-bbox.json "$ARM_TEMPLATE_URL"
+ARM_TEMPLATE="resources.json"
 echo "Running ARM template"
 
-ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file "resources-deploy-bbox.json" --no-prompt \
-        --parameters resourceGroupDevice="$RESOURCE_GROUP_DEVICE" resourceGroupAMS="$RESOURCE_GROUP_AMS" iotHubName="$IOTHUB_NAME" mediaServiceName="$MEDIA_SERVICE_NAME")
+ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file "$ARM_TEMPLATE" --no-prompt \
+        --parameters resourceGroupDevice="$RESOURCE_GROUP_DEVICE" resourceGroupAMS="$RESOURCE_GROUP_AMS" iotHubName="$IOTHUB_NAME" mediaServiceName="$MEDIA_SERVICE_NAME" usingExistingIothub="$USING_EXISTING_IOTHUB")
 
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo "$ARM_DEPLOYMENT" | jq '.properties.outputs.sasToken.value')
 
@@ -151,70 +250,51 @@ fi
 # the device using sshpass. This step may fail if the edge device's network firewall
 # does not allow ssh access. Please make sure the edge device is on the local area
 # network and is accepting ssh requests.
-echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
-EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
-echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
-CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
-SCRIPT_PATH="/etc/iotedge/configedge.sh"
-# Replace placeholder connection string with actual value for Edge device using the 'configedge.sh' script
 
-source "$SCRIPT_PATH" "$EDGE_DEVICE_CONNECTION_STRING"
-
-echo "$(info) Updated Config.yaml"
+if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
+	echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
+	EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
+	echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
+	CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
+	SCRIPT_PATH="/etc/iotedge/configedge.sh"
+	# Replace placeholder connection string with actual value for Edge device using the 'configedge.sh' script
+	source "$SCRIPT_PATH" "$EDGE_DEVICE_CONNECTION_STRING"
+	echo "$(info) Updated Config.yaml"
+fi
 
 # creating the AMS account creates a service principal, so we'll just reset it to get the credentials
-# echo "setting up service principal..."
-# SPN="$MEDIA_SERVICE_NAME-access-sp" # this is the default naming convention used by `az ams account sp`
+echo "setting up service principal..."
+SPN="$MEDIA_SERVICE_NAME-access-sp" # this is the default naming convention used by `az ams account sp`
 
-# if test -z "$(az ad sp list --display-name $SPN --query="[].displayName" -o tsv)"; then
-    # AMS_CONNECTION=$(az ams account sp create -o yaml --resource-group $RESOURCE_GROUP_AMS --account-name $MEDIA_SERVICE_NAME)
-# else
-    # AMS_CONNECTION=$(az ams account sp reset-credentials -o yaml --resource-group $RESOURCE_GROUP_AMS --account-name $MEDIA_SERVICE_NAME)
-# fi
+if test -z "$(az ad sp list --display-name $SPN --query="[].displayName" -o tsv)"; then
+    AMS_CONNECTION=$(az ams account sp create -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
+else
+    AMS_CONNECTION=$(az ams account sp reset-credentials -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
+fi
 
 #capture config information
-# re="AadTenantId:\s([0-9a-z\-]*)"
-# AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+re="AadTenantId:\s([0-9a-z\-]*)"
+AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-# re="AadClientId:\s([0-9a-z\-]*)"
-# AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+re="AadClientId:\s([0-9a-z\-]*)"
+AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-# re="AadSecret:\s([0-9a-z\-]*)"
-# AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+re="AadSecret:\s([0-9a-z\-]*)"
+AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
-# re="SubscriptionId:\s([0-9a-z\-]*)"
-# SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+re="SubscriptionId:\s([0-9a-z\-]*)"
+SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
 
 # capture object_id
-#OBJECT_ID=$(az ad sp show --id ${AAD_SERVICE_PRINCIPAL_ID} --query 'objectId' | tr -d \")
+OBJECT_ID=$(az ad sp show --id ${AAD_SERVICE_PRINCIPAL_ID} --query 'objectId' | tr -d \")
 
 # Download ARM template and run from Az CLI
 
-ARM_TEMPLATE_URL="https://unifiededgescenariostest.blob.core.windows.net/test/custom-role-creation.json"
-
-echo "Downloading ARM template"
-wget -O custom-role-creation.json "$ARM_TEMPLATE_URL"
-
+ARM_TEMPLATE="custom-role.json"
 echo "Running ARM template"
-
-az deployment sub create --location "$LOCATION" --template-file "custom-role-creation.json" --no-prompt \
+az deployment sub create --location "$LOCATION" --template-file "$ARM_TEMPLATE" --no-prompt \
         --parameters servicePrincipalObjectId="$OBJECT_ID" resourceGroupAMS="$RESOURCE_GROUP_AMS"
 
-# Deploying Manifest
-#SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
-SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-lva.zip"
-echo "Downloading manifest bundle zip"
-
-# Download the latest manifest-bundle.zip from storage account
-wget -O manifest-bundle.zip "$SAS_URL"
-
-# Extracts all the files from zip in curent directory;
-# overwrite existing ones
-echo "Unzipping the files"
-unzip -o manifest-bundle.zip -d "manifest-bundle"
-cd manifest-bundle
-
-echo "Unzipped the files in directory manifest-bundle"
 
 echo "Installing packages"
 
@@ -223,7 +303,6 @@ pip install iotedgedev==2.1.4
 
 echo "installing azure iot extension"
 az extension add --name azure-iot
-
 
 echo "package installation is complete"
 
@@ -442,6 +521,6 @@ STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --device-id "$DEVICE_NAME" --module-id lvaYolov3 --hub-name "$IOTHUB_NAME" --key-type primary --query "connectionString" -o tsv)
 
 echo "$(info) Running ARM template to deploy Web App"
-WEBAPP_TEMPLATE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/webappNew.json"
+WEBAPP_TEMPLATE="webapp.json"
 
-az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE"
+az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE"
