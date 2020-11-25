@@ -50,9 +50,9 @@ checkPackageInstallation
 
 
 # Run uname to get current device architecture
-DEVICE_ARCHITECTURE="x86"
+#DEVICE_ARCHITECTURE="x86"
 #Run command to get current device runtime
-DEVICE_RUNTIME="CPU"
+#DEVICE_RUNTIME="CPU"
 
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_AMS" | md5sum | cut -c1-4)"
 RANDOM_NUMBER="${RANDOM:0:3}"
@@ -62,7 +62,7 @@ IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
 DEVICE_NAME="azureeye"
 MEDIA_SERVICE_NAME="livevideoanalysis"
 MEDIA_SERVICE_NAME=${MEDIA_SERVICE_NAME}${RANDOM_SUFFIX}
-USE_EXISTING_RESOURCES="true"
+#USE_EXISTING_RESOURCES="true"
 LOCATION="westus2"
 GRAPH_TOPOLOGY_NAME="CVRToAMSAsset"
 GRAPH_INSTANCE_NAME="AzureEyeSOM"
@@ -117,9 +117,9 @@ wget -O resources-deploy-bbox.json "$ARM_TEMPLATE_URL"
 echo "Running ARM template"
 
 ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file "resources-deploy-bbox.json" --no-prompt \
-        --parameters resourceGroupDevice=$RESOURCE_GROUP_DEVICE resourceGroupAMS=$RESOURCE_GROUP_AMS iotHubName=$IOTHUB_NAME mediaServiceName=$MEDIA_SERVICE_NAME)
+        --parameters resourceGroupDevice="$RESOURCE_GROUP_DEVICE" resourceGroupAMS="$RESOURCE_GROUP_AMS" iotHubName="$IOTHUB_NAME" mediaServiceName="$MEDIA_SERVICE_NAME")
 
-STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo $ARM_DEPLOYMENT | jq '.properties.outputs.sasToken.value')
+STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo "$ARM_DEPLOYMENT" | jq '.properties.outputs.sasToken.value')
 
 #printf "\n%60s\n" " " | tr ' ' '-'
 #echo "Configuring IoT Hub"
@@ -198,7 +198,7 @@ wget -O custom-role-creation.json "$ARM_TEMPLATE_URL"
 echo "Running ARM template"
 
 az deployment sub create --location "$LOCATION" --template-file "custom-role-creation.json" --no-prompt \
-        --parameters servicePrincipalObjectId=$OBJECT_ID resourceGroupAMS=$RESOURCE_GROUP_AMS
+        --parameters servicePrincipalObjectId="$OBJECT_ID" resourceGroupAMS="$RESOURCE_GROUP_AMS"
 
 # Deploying Manifest
 #SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/manifest-bundle-azureeye.zip"
@@ -317,18 +317,18 @@ GRAPH_TOPOLOGY=$(
 )
 
 az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphTopologySet \
     --mp "$GRAPH_TOPOLOGY" \
     --output "none"
 
 echo "$(info) Getting LVA graph topology status..."
-TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphTopologyList \
+TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphTopologyList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_TOPOLOGY_NAME"'"}')
 
-if [ "$(echo $TOPOLOGY_STATUS | jq '.status')" == 200 ]; then
+if [ "$(echo "$TOPOLOGY_STATUS" | jq '.status')" == 200 ]; then
     echo "$(info) Graph Topology has been set on device"
 else
     echo "$(error) Graph Topology has not been set on device"
@@ -347,8 +347,8 @@ GRAPH_INSTANCE=$(
 echo "$(info) Setting LVA graph instance"
 
 az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphInstanceSet \
     --mp "$GRAPH_INSTANCE" \
@@ -356,10 +356,10 @@ az iot hub invoke-module-method \
 
 
 echo "$(info) Getting LVA graph instance status..."
-INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+INSTANCE_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
-if [ "$(echo $INSTANCE_STATUS | jq '.status')" == 200 ]; then
+if [ "$(echo "$INSTANCE_STATUS" | jq '.status')" == 200 ]; then
     echo "$(info) Graph Instance has been created on device."
 else
     echo "$(error) Graph Instance has not been created on device"
@@ -369,19 +369,19 @@ fi
 
 echo "$(info) Activating LVA graph instance"
 INSTANCE_RESPONSE=$(az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphInstanceActivate \
     --mp '{"@apiVersion" : "1.0","name" : "'"$GRAPH_INSTANCE_NAME"'"}')
 
 
-if [ "$(echo $INSTANCE_RESPONSE | jq '.status')" == 200 ]; then
+if [ "$(echo "$INSTANCE_RESPONSE" | jq '.status')" == 200 ]; then
     echo "$(info) Graph Instance has been activated on device."
 else
     echo "$(error) Failed to activate Graph Instance on device."
-    echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
-    echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
+    echo "ERROR CODE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.message')"
     exitWithError
 fi
 
@@ -390,12 +390,12 @@ echo "$(info) Restarting the lvaEdge module on edge device..."
 RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m '$edgeAgent' --method-payload \
 '{"schemaVersion": "1.0","id": "lvaEdge"}')
 
-if [ "$(echo $RESTART_MODULE | jq '.status')" == 200 ]; then
+if [ "$(echo "$RESTART_MODULE" | jq '.status')" == 200 ]; then
         echo "$(info) Restarted the lvaEdge module on edge device"
 else
     echo "$(error) Failed to restart the lvaEdge module on edge device."
-    echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
-    echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
+    echo "ERROR CODE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.message')"
     exitWithError
 fi
 
@@ -444,4 +444,4 @@ MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --d
 echo "$(info) Running ARM template to deploy Web App"
 WEBAPP_TEMPLATE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/webappNew.json"
 
-az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt --parameters password=$WEBAPP_PASSWORD existingIotHubName=$IOTHUB_NAME AMP_STREAMING_URL=$STREAMING_URL AZUREEYE_MODULE_CONNECTION_STRING=$MODULE_CONNECTION_STRING STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE
+az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-uri "$WEBAPP_TEMPLATE_URI" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE"
