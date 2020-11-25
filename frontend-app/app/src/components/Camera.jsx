@@ -34,6 +34,7 @@ export class Camera extends React.Component {
             ampStreamingUrl: null,
             syncOffset: -4500,
             syncBuffer: 0.1,
+            restartTime: 0,
             editingAllowed: false,
             blobPartition: null
         };
@@ -117,6 +118,29 @@ export class Camera extends React.Component {
                         backgroundColor: '#d3d3d3',
                         position: 'relative'
                     }}>
+                    <label
+                        style={{ marginLeft: 5 }}>
+                        Offset
+                    </label>
+                    <input
+                        type="number"
+                        step="250"
+                        style={{ marginLeft: 5 }}
+                        defaultValue={this.state.syncOffset}
+                        onChange={(e) => this.setState({ syncOffset: +e.target.value })}
+                    />
+                    <label
+                        style={{ marginLeft: 5 }}>
+                        Buffer
+                    </label>
+                    <input
+                        type="number"
+                        step="0.1"
+                        style={{ marginLeft: 5 }}
+                        defaultValue={this.state.syncBuffer}
+                        onChange={(e) => this.setState({ syncBuffer: +e.target.value })}
+                    />
+                    <br />
 
                     <label
                         style={{ marginLeft: 5 }}>
@@ -130,33 +154,21 @@ export class Camera extends React.Component {
                     />
                     <label
                         style={{ marginLeft: 5 }}>
-                        Offset
+                        Jump to Time in Seconds
                     </label>
                     <input
                         type="number"
-                        step="250"
+                        step="1"
                         style={{ marginLeft: 5 }}
-                        defaultValue={this.state.syncOffset}
-                        onChange={(e) => this.setState({ syncOffset: +e.target.value })}
-                    />
-
-                    <label
-                        style={{ marginLeft: 5 }}>
-                        Buffer
-                    </label>
-                    <input
-                        type="number"
-                        step="0.1"
-                        style={{ marginLeft: 5 }}
-                        defaultValue={this.state.syncBuffer}
-                        onChange={(e) => this.setState({ syncBuffer: +e.target.value })}
+                        defaultValue={this.state.restartTime}
+                        onChange={(e) => this.setState({ restartTime: +e.target.value })}
                     />
                     <input
                         type="button"
-                        value="replay"
+                        value="Jump To"
                         style={{ marginLeft: 5 }}
                         onClick={(e) => {
-                            this.amp.currentTime(0);
+                            this.amp.currentTime(this.state.restartTime);
                             this.amp.play();
                         }} />
                 </div>
@@ -238,11 +250,11 @@ export class Camera extends React.Component {
 
     async sync() {
         if (this.amp && this.amp.currentMediaTime && !this.paused) {
-            if(this.state.blobPartition === null) {
-                for(let i = 0; i < 4; i++) {
+            if (this.state.blobPartition === null) {
+                for (let i = 0; i < 4; i++) {
                     let containerName = `${this.props.iotHubName}/0${i}`;
                     const exists = await this.blobExists("detectoroutput", containerName);
-                    if(exists) {
+                    if (exists) {
                         this.setState({
                             blobPartition: i
                         });
@@ -258,14 +270,13 @@ export class Camera extends React.Component {
                 dates[0].setMinutes(dates[0].getMinutes() - 1);
                 dates[2].setMinutes(dates[2].getMinutes() + 1);
                 for (let d = 0; d < 3; d++) {
-    
                     // TODO: account for daylight saving
                     let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
                     }).replace(/-/g, '/')}/${dates[d].getUTCHours()}/${dates[d].getMinutes()}`;
-    
+
                     const exists = await this.blobExists("detectoroutput", containerName);
                     if (exists) {
                         const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
