@@ -70,17 +70,17 @@ export class Camera extends React.Component {
             this.draw();
         }, 1000 / this.props.fps);
 
-        // setInterval(() => {
-        //     this.sync();
-        // }, 1000);
+        setInterval(() => {
+            this.sync();
+        }, 1000);
 
-        // setInterval(() => {
-        //     this.updateCurrentMediaTime();
-        // }, 1000 / this.props.fps);
+        setInterval(() => {
+            this.updateCurrentMediaTime();
+        }, 1000 / this.props.fps);
 
-        // setInterval(() => {
-        //     this.updateDetections();
-        // }, 1000 / this.props.fps);
+        setInterval(() => {
+            this.updateDetections();
+        }, 1000 / this.props.fps);
     }
 
     componentDidUpdate(prevProps) {
