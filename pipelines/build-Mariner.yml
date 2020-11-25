@@ -90,7 +90,7 @@ stages:
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the the result returned by shellcheck.
           SHELL_CHECK_RESULT_FUNCTIONS=$(shellcheck ./functions.sh -x)
-          SHELL_CHECK_RESULT_SETUP=$(shellcheck ./setup.sh -x)
+          SHELL_CHECK_RESULT_SETUP=$(shellcheck --exclude SC1090,SC2034 ./setup.sh -x)
 
           if [ -z "$SHELL_CHECK_RESULT_FUNCTIONS" ] && [ -z "$SHELL_CHECK_RESULT_SETUP" ]; then
               echo "Pass: There are no warnings from shellcheck"
