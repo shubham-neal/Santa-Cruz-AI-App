@@ -3,7 +3,7 @@ trigger:
   batch: true
   paths:
     include:
-    - deployment/arm
+    - edge-solution/people-detection/opencv/deployment/arm
     - edge-solution
     - pipelines/build-ARMtemplate.yml
     - pipelines/deploy-ARMtemplate.yml
@@ -92,8 +92,8 @@ stages:
       inputs:
         SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/'
         Contents: |
-          .env
-          deployment.camera.template.json
+          people-detection/opencv/.env
+          people-detection/opencv/deployment.camera.template.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/edge-solution/combined'
     
     - task: CopyFiles@2
@@ -101,7 +101,7 @@ stages:
       inputs:
         SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/'
         Contents: |
-          modules/CameraStream/module.json
+          people-detection/opencv/modules/CameraStream/module.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/edge-solution/combined/modules/CameraStream'
         flattenFolders: true
 
@@ -110,7 +110,7 @@ stages:
       inputs:
         SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/'
         Contents: |
-          modules/Detector/module.json
+          people-detection/opencv/modules/Detector/module.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/edge-solution/combined/modules/Detector'
         flattenFolders: true
     
@@ -130,11 +130,11 @@ stages:
         Contents: |
           manifest-bundle.zip
           ues_app/people-detection-app.zip
-          deployment/arm/scripts/create-setup-iot-edge-device.sh
-          deployment/arm/scripts/deploy-modules.sh
-          deployment/arm/scripts/disk-setup.sh
-          deployment/arm/azuredeploy.json
-          deployment/arm/smoketest.sh
+          edge-solution/people-detection/opencv/deployment/arm/scripts/create-setup-iot-edge-device.sh
+          edge-solution/people-detection/opencv/deployment/arm/scripts/deploy-modules.sh
+          edge-solution/people-detection/opencv/deployment/arm/scripts/disk-setup.sh
+          edge-solution/people-detection/opencv/deployment/arm/azuredeploy.json
+          edge-solution/people-detection/opencv/deployment/arm/smoketest.sh
         TargetFolder: '$(System.DefaultWorkingDirectory)/arm_template_bundle'
         flattenFolders: true
 

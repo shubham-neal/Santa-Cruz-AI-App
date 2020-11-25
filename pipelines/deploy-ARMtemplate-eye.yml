@@ -6,7 +6,7 @@ resources:
   pipelines:
   - pipeline: build
     project: UnifiedEdgeScenarios
-    source: Build ARM Template
+    source: Build ARM Template Eye
     trigger:
       enabled: true
 
@@ -16,9 +16,9 @@ pool:
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if startsWith(variables['Build.SourceBranchName'], 'release') }}:
-    Variable_Group: 'ARMTemplate_ReleaseEnvironment'
+    Variable_Group: 'ARMTemplateEyeDevice_ReleaseEnvironment'
   ${{ if not(startsWith(variables['Build.SourceBranchName'], 'release')) }}:
-     Variable_Group: 'ARMTemplate_TestEnvironment'
+     Variable_Group: 'ARMTemplateEyeDevice_TestEnvironment'
 
 
 stages:
@@ -33,45 +33,28 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Delete existing resource groups'
+      displayName: 'Delete existing resource group for AMS'
       env:
-        SP_APP_PWD: $(SP_APP_PWD)
+        LOGIN_PASSWORD: $(LOGIN_PASSWORD)
       inputs:
         targetType: 'inline'
         script: |
           echo "Logging to Azure"
                           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          
-          if [ "$RESOURCE_GROUP_DEVICE_ARM" == "$RESOURCE_GROUP_IOT_ARM" ]; then
-              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE_ARM")" == false ]; then
-                echo "Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-              else
-                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE_ARM\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
-              fi  
-          else    
-            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE_ARM")" == false ]; then
-                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-            else
-                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
-                az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --subscription "$SUBSCRIPTION_ID" --yes
-                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE_ARM\""
-            fi
-          
-            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT_ARM")" == false ]; then
-                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-            else
-                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT_ARM\""
-                az group delete --resource-group "$RESOURCE_GROUP_IOT_ARM" --subscription "$SUBSCRIPTION_ID" --yes
-                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT_ARM\""
-            fi
-          fi  
+          az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
+
+          if [ "$(az group exists --name "$RESOURCE_GROUP_AMS_ARM")" == false ]; then
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
+          else
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" exists in current subscription."
+              PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS_ARM" --query "principalId" -o tsv)
+              az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
+              az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
+          fi
+
 
     - task: DownloadPipelineArtifact@2
       enabled: true
@@ -112,10 +95,10 @@ stages:
           echo "Updating Primary scripts Url for deploymentScript in arm template"
           
           SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules-azureeye.sh"
-          jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[4].properties.primaryScriptUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
           
           SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/people-detection-app.zip"
-          jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
+          jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[2].properties.packageUri = $a' azuredeploy.json > "tmp" && mv "tmp" azuredeploy.json
           
           echo "Updated Primary scripts Url for deploymentScript in arm template"
         workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye'
@@ -125,7 +108,7 @@ stages:
       displayName: 'Upload the ARM template scripts to temporary container in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-        SP_APP_PWD: $(SP_APP_PWD)
+        LOGIN_PASSWORD: $(LOGIN_PASSWORD)
       inputs:
         targetType: 'inline'
         script: |
@@ -133,7 +116,7 @@ stages:
           set -e
           echo "Logging into Azure"
           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
           
           STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_ARM_CONTAINER_NAME"
           
@@ -186,15 +169,16 @@ stages:
     - task: AzureResourceManagerTemplateDeployment@3
       enabled: true
       env:
-        SP_APP_PWD: $(SP_APP_PWD)
+        SP_PWD: $(SP_PWD)
+        WEBAPP_PASSWORD: $(WEBAPP_PASSWORD)
       inputs:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
-        location: 'East US'
+        location: 'West US 2'
         templateLocation: 'Linked artifact'
         csmFile: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye/azuredeploy.json'
-        overrideParameters: '-resourceGroupAMS "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -existingIotHubName "$(EXISTING_IOTHUB_NAME)" -existingDeviceName "$(EXISTING_DEVICE_NAME)" -servicePrincipalId "$(SP_APP_ID)" -servicePrincipalSecret "$(SP_APP_PWD)"'
+        overrideParameters: '-resourceGroupAMS "$(RESOURCE_GROUP_AMS_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -existingIotHubName "$(EXISTING_IOTHUB_NAME)" -existingDeviceName "$(EXISTING_DEVICE_NAME)" -servicePrincipalId "$(SP_APPLICATION_ID)" -servicePrincipalObjectId "$(SP_OBJECT_ID)" -servicePrincipalSecret "$(SP_PWD)" -password "$(WEBAPP_PASSWORD)"'
         deploymentMode: 'Incremental'
 
     - task: Bash@3
@@ -202,13 +186,13 @@ stages:
       displayName: 'Delete temporary container for arm template scripts in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-        SP_APP_PWD: $(SP_APP_PWD)
+        LOGIN_PASSWORD: $(LOGIN_PASSWORD)
       inputs:
         targetType: 'inline'
         script: |
           echo "Logging into Azure"
           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
           
           STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME="$RELEASE_STORAGE_ACCOUNT_TEMP_ARM_CONTAINER_NAME"
           CONTAINER=$(az storage container exists --name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
@@ -241,9 +225,9 @@ stages:
 
           - task: Bash@3
             enabled: true
-            displayName: 'Delete the resource groups of test environment'
+            displayName: 'Delete the resource group of test environment'
             env:
-              SP_APP_PWD: $(SP_APP_PWD)
+              LOGIN_PASSWORD: $(LOGIN_PASSWORD)
             inputs:
               targetType: 'inline'
               script: |
@@ -252,27 +236,17 @@ stages:
                 
                 echo "Logging to Azure"
                 
-                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
                 
-                if [ "$RESOURCE_GROUP_DEVICE_ARM" == "$RESOURCE_GROUP_IOT_ARM" ]; then
-                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
+                PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS_ARM" --query "principalId" -o tsv)
+                az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
 
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
-                else
-                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE_ARM\""
-                  
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE_ARM" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE_ARM\""
-                  
-                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT_ARM\""
-                  
-                  az group delete --resource-group "$RESOURCE_GROUP_IOT_ARM" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT_ARM\""
-                fi  
+                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\""
+                
+                az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --yes --no-wait
+                
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS_ARM\""
+                
 
 
           - task: DownloadPipelineArtifact@2
@@ -281,7 +255,7 @@ stages:
             inputs:
               buildType: 'specific'
               project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
-              definition: '1'
+              definition: '8'
               buildVersionToDownload: 'latest'
               targetPath: '$(System.DefaultWorkingDirectory)'
 
@@ -321,10 +295,10 @@ stages:
                 echo "Updating Primary scripts Url for deploymentScript in arm template"
                 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules-azureeye.sh"
-                jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
+                jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[4].properties.primaryScriptUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
                 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/people-detection-app.zip"
-                jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
+                jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[2].properties.packageUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
                 
                 echo "Updated Primary scripts Url for deploymentScript in arm template"
               workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye'
@@ -358,10 +332,10 @@ stages:
                 echo "Updating Primary scripts Url for deploymentScript in arm template"
                 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/deploy-modules-azureeye.sh"
-                jq --arg a "$SCRIPT_URL" '.resources[7].properties.template.resources[5].properties.primaryScriptUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
+                jq --arg a "$SCRIPT_URL" '.resources[6].properties.template.resources[4].properties.primaryScriptUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
                 
                 SCRIPT_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME}/people-detection-app.zip"
-                jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[3].properties.packageUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
+                jq --arg a "$SCRIPT_URL" '.resources[8].properties.template.resources[1].resources[2].properties.packageUri = $a' "$ARM_TEMPLATE_FILENAME" > "tmp" && mv "tmp" "$ARM_TEMPLATE_FILENAME"
                 
                 echo "Updated Primary scripts Url for deploymentScript in arm template"
               workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye'
@@ -372,13 +346,13 @@ stages:
             displayName: 'Upload the ARM templates and scripts to release storage account'
             env:
               RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-              SP_APP_PWD: $(SP_APP_PWD)
+              LOGIN_PASSWORD: $(LOGIN_PASSWORD)
             inputs:
               targetType: 'inline'
               script: |
                 echo "Logging into Azure"
                 
-                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
                 
                 if [ "$CREATE_NEW_CONTAINER" == "true" ];then
                   echo "Creating container \"$RELEASE_STORAGE_ACCOUNT_ARM_CONTAINER_NAME\" in storage account"

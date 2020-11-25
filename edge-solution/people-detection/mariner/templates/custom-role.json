@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "servicePrincipalObjectId": {
+      "type": "String",
+      "metadata": {
+        "description": "Application ID of the service principal which will be used to configure LvaEdge module"
+      }
+    },
+    "resourceGroupAMS": {
+      "type": "String",
+      "metadata": {
+        "description": "Application ID of the service principal which will be used to configure LvaEdge module"
+      }
+    }
+  },
+  "variables": {
+    "location": "[deployment().location]",
+    "resourceGroupAMS": "[if(equals(parameters('resourceGroupAMS'),''),parameters('resourceGroupDevice'),parameters('resourceGroupAMS'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2018-07-01",
+      "name": "[guid(subscription().id, 'LVAEdgeUserRoleDefinition')]",
+      "properties": {
+        "roleName": "LVAEdgeUserRoleDefinition",
+        "description": "Can create assets, view list of containers and view Edge policies",
+        "type": "customRole",
+        "isCustom": true,
+        "permissions": [
+          {
+            "actions": [
+              "Microsoft.Media/mediaservices/assets/listContainerSas/action",
+              "Microsoft.Media/mediaservices/assets/write",
+              "Microsoft.Media/mediaservices/listEdgePolicies/action"
+            ],
+            "notActions": []
+          }
+        ],
+        "assignableScopes": [
+          "[subscription().id]"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-06-01",
+      "name": "CreatingRoleAssignments",
+      "dependsOn": [
+        "[guid(subscription().id, 'LVAEdgeUserRoleDefinition')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+
+          "servicePrincipalObjectId": {
+            "value": "[parameters('servicePrincipalObjectId')]"
+          }
+        },
+        "template": {
+          "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+
+            "servicePrincipalObjectId": {
+              "type": "String"
+            }
+          },
+          "variables": {},
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2018-09-01-preview",
+              "name": "[guid(concat(resourceGroup().id, 'LVAEdgeUserRoleDefinition'))]",
+              "properties": {
+                "roleDefinitionId": "[concat(resourceGroup().id, '/providers/Microsoft.Authorization/roleDefinitions/', guid(subscription().id, 'LVAEdgeUserRoleDefinition'))]",
+                "principalId": "[parameters('servicePrincipalObjectId')]",
+                "scope": "[resourceGroup().id]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "resourceGroup": "[variables('resourceGroupAMS')]"
+    }
+  ]
+}

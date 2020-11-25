@@ -3,8 +3,7 @@ trigger:
   batch: true
   paths:
     include:
-    - deployment/arm
-    - edge-solution
+    - edge-solution/people-detection/azure-eye
     - pipelines/build-ARMtemplate-eye.yml
     - pipelines/deploy-ARMtemplate-eye.yml
 
@@ -51,29 +50,17 @@ stages:
           fi
           
           # Change directory location to template scripts folder
-          cd deployment/arm/scripts
+          cd edge-solution/people-detection/azure-eye/deployment/arm/scripts
           
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the result returned by shellcheck.
-          SHELL_CHECK_RESULT_DISK_SETUP=$(shellcheck ./disk-setup.sh -x)
-          SHELL_CHECK_RESULT_IOT_SETUP=$(shellcheck ./create-setup-iot-edge-device.sh -x)
-          SHELL_CHECK_RESULT_DEPLOY_MODULES=$(shellcheck ./deploy-modules.sh -x)
-          if [ -z "$SHELL_CHECK_RESULT_DISK_SETUP" ] && [ -z "$SHELL_CHECK_RESULT_IOT_SETUP" ] && [ -z "$SHELL_CHECK_RESULT_DEPLOY_MODULES" ]; then
-              echo "Pass: There are no warnings from shellcheck"
+          SHELL_CHECK_RESULT_DEPLOY_MODULES=$(shellcheck ./deploy-modules-azureeye.sh -x)
+          if [ -z "$SHELL_CHECK_RESULT_DEPLOY_MODULES" ]; then
+            echo "Pass: There are no warnings from shellcheck"
           else
-              if [ ! -z "$SHELL_CHECK_RESULT_DISK_SETUP" ]; then
-              echo "The following are the warnings for disk setup script"
-              echo "$SHELL_CHECK_RESULT_DISK_SETUP"
-              fi
-              if [ ! -z "$SHELL_CHECK_RESULT_IOT_SETUP" ]; then
-              echo "The following are the warnings for iot setup script"
-              echo "$SHELL_CHECK_RESULT_IOT_SETUP"
-              fi
-              if [ ! -z "$SHELL_CHECK_RESULT_DEPLOY_MODULES" ]; then
-              echo "The following are the warnings for deploy modules script"
-              echo "$SHELL_CHECK_RESULT_DEPLOY_MODULES"
-              fi
-              exit 1
+            echo "The following are the warnings for deploy modules script"
+            echo "$SHELL_CHECK_RESULT_DEPLOY_MODULES"
+            exit 1
           fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
       
@@ -93,6 +80,8 @@ stages:
         SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/azure-eye'
         Contents: |
           .env
+          cvr-topology-params.json
+          cvr-topology.json
           deployment.lvaazureeye.template.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/azure-eye/combined'
     
@@ -114,8 +103,6 @@ stages:
           ues_app/people-detection-app.zip
           edge-solution/people-detection/azure-eye/deployment/arm/scripts/deploy-modules-azureeye.sh
           edge-solution/people-detection/azure-eye/deployment/arm/azuredeploy.json
-          edge-solution/people-detection/azure-eye/cvr-topology.json
-          edge-solution/people-detection/azure-eye/cvr-topology-params.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/arm_template_bundle-eye'
         flattenFolders: true
 

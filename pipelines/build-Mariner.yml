@@ -5,7 +5,7 @@ trigger:
   batch: true
   paths:
     include:
-    - edge-solution/people-detection/opencv/deployment/cloudshell
+    - deployment/cloudshell
     - edge-solution
     - pipelines/build-cloudshell.yml
     - pipelines/deploy-cloudshell.yml
@@ -55,14 +55,14 @@ stages:
         SourceFolder: '$(System.DefaultWorkingDirectory)'
         Contents: |
           README.md
-          edge-solution/people-detection/opencv/modules/CameraStream/camera-stream/video/staircase.mp4
-          edge-solution/people-detection/opencv/deployment.camera.template.json
-          edge-solution/people-detection/opencv/.env
-          edge-solution/people-detection/opencv/deployment/cloudshell/eye-vm-setup.sh
-          edge-solution/people-detection/opencv/deployment/cloudshell/deploy-iot.sh
-          edge-solution/people-detection/opencv/deployment/cloudshell/variables.template
-          edge-solution/people-detection/opencv/deployment/cloudshell/frontend-setup.sh
-          edge-solution/people-detection/opencv/deployment/cloudshell/smoketest.sh
+          edge-solution/modules/CameraStream/camera-stream/video/staircase.mp4
+          edge-solution/deployment.camera.template.json
+          edge-solution/.env
+          deployment/cloudshell/eye-vm-setup.sh
+          deployment/cloudshell/deploy-iot.sh
+          deployment/cloudshell/variables.template
+          deployment/cloudshell/frontend-setup.sh
+          deployment/cloudshell/smoketest.sh
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
         flattenFolders: true
 
@@ -71,7 +71,7 @@ stages:
       inputs:
         SourceFolder: '$(System.DefaultWorkingDirectory)'
         Contents: |
-          edge-solution/people-detection/opencv/modules/CameraStream/module.json
+          edge-solution/modules/CameraStream/module.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined/modules/CameraStream'
         flattenFolders: true
 
@@ -80,7 +80,7 @@ stages:
       inputs:
         SourceFolder: '$(System.DefaultWorkingDirectory)'
         Contents: |
-          edge-solution/people-detection/opencv/modules/Detector/module.json
+          edge-solution/modules/Detector/module.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined/modules/Detector'
         flattenFolders: true
 
@@ -165,6 +165,6 @@ stages:
     # Publishing the pipeline artifact
     - task: PublishPipelineArtifact@1
       inputs:
-        targetPath: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/opencv/deployment/cloudshell/cloudshell-deployment.sh'
+        targetPath: '$(System.DefaultWorkingDirectory)/deployment/cloudshell/cloudshell-deployment.sh'
         artifact: 'CloudshellDeployment-Script'
         publishLocation: 'pipeline'
