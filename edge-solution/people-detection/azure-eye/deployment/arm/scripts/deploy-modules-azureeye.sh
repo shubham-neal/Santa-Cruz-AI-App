@@ -5,6 +5,9 @@
 echo "Logging in with Managed Identity"
 az login --identity --output "none"
 
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
 # Define helper function for logging
 info() {
     echo "$(date +"%Y-%m-%d %T") [INFO]"
@@ -12,12 +15,12 @@ info() {
 
 # Define helper function for logging. This will change the Error text color to red
 error() {
-    echo "$(tput setaf 1)$(date +"%Y-%m-%d %T") [ERROR]"
+    echo "${RED}$(date +"%Y-%m-%d %T") [ERROR]"
 }
 
 exitWithError() {
     # Reset console color
-    tput sgr0
+    ${NC}
     exit 1
 }
 
@@ -148,14 +151,11 @@ sleep 8m
 
 echo "$(info) Setting LVA graph topology"
 
-GRAPH_TOPOLOGY=$(
-    cat cvr-topology.json | 
-    jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
-)
+GRAPH_TOPOLOGY=$(< cvr-topology.json jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"')
 
 az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphTopologySet \
     --mp "$GRAPH_TOPOLOGY" \
@@ -163,10 +163,10 @@ az iot hub invoke-module-method \
 
 
 echo "$(info) Getting LVA graph topology status..."
-TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphTopologyList \
+TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphTopologyList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_TOPOLOGY_NAME"'"}')
 
-if [ "$(echo $TOPOLOGY_STATUS | jq '.status')" == 200 ]; then
+if [ "$(echo "$TOPOLOGY_STATUS" | jq '.status')" == 200 ]; then
     echo "$(info) Graph Topology has been set on device"
 else
     echo "$(error) Graph Topology has not been set on device"
@@ -179,32 +179,31 @@ echo "$(info) Creating a new LVA graph instance"
 # Getting rtsp url from Manifest Environment variable file (.env) 
 RTSP_URL=$(grep -w "RTSP_URL" ".env" | cut -d'=' -f2)
 
-GRAPH_INSTANCE=$(
-    cat cvr-topology-params.json | 
-    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
+GRAPH_INSTANCE=$(< cvr-topology-params.json jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | 
     jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"' | 
     jq --arg replace_value "$RTSP_URL" '.properties.parameters[0].value = $replace_value'
 )
 
-INSTANCE_LIST=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+INSTANCE_LIST=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
-if [ "$(echo $INSTANCE_LIST | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
+if [ "$(echo "$INSTANCE_LIST" | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
     echo "$(info) Graph Instance already exist"
     echo "$(info) Deactivating LVA graph instance..."
     az iot hub invoke-module-method \
-        -n $IOTHUB_NAME \
-        -d $DEVICE_NAME \
+        -n "$IOTHUB_NAME" \
+        -d "$DEVICE_NAME" \
         -m lvaEdge \
         --mn GraphInstanceDeactivate \
-        --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}'
+        --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}' \
+		--output "none"
 fi
 
 echo "$(info) Setting LVA graph instance"
 
 az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphInstanceSet \
     --mp "$GRAPH_INSTANCE" \
@@ -212,10 +211,10 @@ az iot hub invoke-module-method \
 
 
 echo "$(info) Getting LVA graph instance status..."
-INSTANCE_STATUS=$(az iot hub invoke-module-method -n $IOTHUB_NAME -d $DEVICE_NAME -m lvaEdge --mn GraphInstanceList \
+INSTANCE_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
-if [ "$(echo $INSTANCE_STATUS | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
+if [ "$(echo "$INSTANCE_STATUS" | jq '.payload.value[].name' | cut -d'"' -f2 )" == "$GRAPH_INSTANCE_NAME" ]; then
     echo "$(info) Graph Instance has been created on device."
 else
     echo "$(error) Graph Instance has not been created on device"
@@ -225,21 +224,39 @@ fi
 
 echo "$(info) Activating LVA graph instance"
 INSTANCE_RESPONSE=$(az iot hub invoke-module-method \
-    -n $IOTHUB_NAME \
-    -d $DEVICE_NAME \
+    -n "$IOTHUB_NAME" \
+    -d "$DEVICE_NAME" \
     -m lvaEdge \
     --mn GraphInstanceActivate \
     --mp '{"@apiVersion" : "1.0","name" : "'"$GRAPH_INSTANCE_NAME"'"}')
 
 
-if [ "$(echo $INSTANCE_RESPONSE | jq '.status')" == 200 ]; then
+if [ "$(echo "$INSTANCE_RESPONSE" | jq '.status')" == 200 ]; then
     echo "$(info) Graph Instance has been activated on device."
 else
     echo "$(error) Failed to activate Graph Instance on device."
-    echo "ERROR CODE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.code')"
-    echo "ERROR MESSAGE: $(echo $INSTANCE_RESPONSE | jq '.payload.error.message')"
+    echo "ERROR CODE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.message')"
     exitWithError
 fi
+
+# Restart the lvaEdge Module on device to update it's properties
+echo "$(info) Restarting the lvaEdge module on edge device..."
+RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m "\$edgeAgent" --method-payload \
+'{"schemaVersion": "1.0","id": "lvaEdge"}')
+
+if [ "$(echo "$RESTART_MODULE" | jq '.status')" == 200 ]; then
+	echo "$(info) Restarted the lvaEdge module on edge device"
+else
+    echo "$(error) Failed to restart the lvaEdge module on edge device."
+    echo "ERROR CODE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.code')"
+    echo "ERROR MESSAGE: $(echo "$INSTANCE_RESPONSE" | jq '.payload.error.message')"
+    exitWithError
+fi
+
+# Create an AMS asset
+echo "$(info) Creating an asset on AMS..."
+az ams asset create --account-name "$AMS_ACCOUNT_NAME" --name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 
 # Checking the existence of Asset on Media Service
 # till Max 15 minutes
@@ -258,12 +275,16 @@ if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
     if [ "$(az ams streaming-locator show --account-name "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --query "name" -o tsv)" == "$STREAMING_LOCATOR" ]; then
         echo "$(info) Streaming Locator already exist"
         echo "$(info) Deleting the existing Streaming Locator..."
-        az ams streaming-locator delete --account-name "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR"
+        az ams streaming-locator delete --account-name "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --output "none"
+		echo "$(info) Deleted the existing Streaming Locator"
     fi
-    
+	
+    sleep 10s
+
     #creating streaming locator for video playback
     echo "$(info) Creating Streaming Locator..."
-    az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly"
+    az ams streaming-locator create --account-name "$AMS_ACCOUNT_NAME" --asset-name "$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME" --name "$STREAMING_LOCATOR" --resource-group "$RESOURCE_GROUP_AMS" --streaming-policy-name "Predefined_ClearStreamingOnly" --output "none"
+	echo "$(info) Created Streaming Locator"
 
 else
     echo "$(error) AMS Asset not found"
@@ -272,14 +293,18 @@ fi
 
 # Start the Streaming Endpoint of media service
 echo "$(info) Starting the Streaming endpoint..."
-az ams streaming-endpoint start --account-name "$AMS_ACCOUNT_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS"
+az ams streaming-endpoint start --account-name "$AMS_ACCOUNT_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
+echo "$(info) Started the Streaming endpoint"
 
+sleep 5m
 
 # Passing Streaming url to script output for video playback
 STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$AMS_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
 
-STREAMING_PATH=$(az ams streaming-locator get-paths -a "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='Dash'].paths[0]" -o tsv)
+STREAMING_PATH=$(az ams streaming-locator get-paths -a "$AMS_ACCOUNT_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='SmoothStreaming'].paths[]" -o tsv)
 
 STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 
-echo "{STREAMING_URL:\"$STREAMING_URL\"}" > $AZ_SCRIPTS_OUTPUT_PATH;
+MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --device-id "$DEVICE_NAME" --module-id AzureEyeModule --hub-name "$IOTHUB_NAME" --key-type primary --query "connectionString" -o tsv)
+
+echo "{STREAMING_URL:\"$STREAMING_URL\" ,MODULE_CONNECTION_STRING:\"$MODULE_CONNECTION_STRING\"}" > "$AZ_SCRIPTS_OUTPUT_PATH"
