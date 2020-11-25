@@ -5,10 +5,8 @@ trigger:
   batch: true
   paths:
     include:
-    - deployment/cloudshell
-    - edge-solution
-    - pipelines/build-cloudshell.yml
-    - pipelines/deploy-cloudshell.yml
+    - edge-solution/people-detection/mariner
+    - pipelines/build-Mariner.yml
 
 # Build after completion of Release WebApp
 resources:
@@ -55,34 +53,15 @@ stages:
         SourceFolder: '$(System.DefaultWorkingDirectory)'
         Contents: |
           README.md
-          edge-solution/modules/CameraStream/camera-stream/video/staircase.mp4
-          edge-solution/deployment.camera.template.json
-          edge-solution/.env
-          deployment/cloudshell/eye-vm-setup.sh
-          deployment/cloudshell/deploy-iot.sh
-          deployment/cloudshell/variables.template
-          deployment/cloudshell/frontend-setup.sh
-          deployment/cloudshell/smoketest.sh
+          edge-solution/people-detection/mariner/scripts/functions.sh
+          edge-solution/people-detection/mariner/scripts/setup.sh
+          edge-solution/people-detection/mariner/.env
+          edge-solution/people-detection/mariner/cvr-topology-params.json
+          edge-solution/people-detection/mariner/cvr-topology.json
+          edge-solution/people-detection/mariner/deployment.lvaedge.template.json
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
         flattenFolders: true
 
-    - task: CopyFiles@2
-      displayName: 'Copy CameraStream module to a combined folder'
-      inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)'
-        Contents: |
-          edge-solution/modules/CameraStream/module.json
-        TargetFolder: '$(System.DefaultWorkingDirectory)/combined/modules/CameraStream'
-        flattenFolders: true
-
-    - task: CopyFiles@2
-      displayName: 'Copy Detector module to a combined folder'
-      inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)'
-        Contents: |
-          edge-solution/modules/Detector/module.json
-        TargetFolder: '$(System.DefaultWorkingDirectory)/combined/modules/Detector'
-        flattenFolders: true
 
     - task: CopyFiles@2
       displayName: 'Copy docs to a combined folder'
@@ -110,38 +89,19 @@ stages:
           
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the the result returned by shellcheck.
-          SHELL_CHECK_RESULT_DEPLOY_IOT=$(shellcheck ./deploy-iot.sh -x)
-          SHELL_CHECK_RESULT_FRONTEND=$(shellcheck ./frontend-setup.sh -x)
-          SHELL_CHECK_RESULT_EYE_VM=$(shellcheck ./eye-vm-setup.sh -x)
-          SHELL_CHECK_RESULT_SMOKETEST=$(shellcheck ./smoketest.sh -x)
+          SHELL_CHECK_RESULT_FUNCTIONS=$(shellcheck ./functions.sh -x)
+          SHELL_CHECK_RESULT_SETUP=$(shellcheck ./setup.sh -x)
 
-          # Change directory location to cloudshell script
-          cd '$(System.DefaultWorkingDirectory)/deployment/cloudshell'
-
-          SHELL_CHECK_RESULT_CLOUDSHELL=$(shellcheck ./cloudshell-deployment.sh -x)
-          if [ -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ] && [ -z "$SHELL_CHECK_RESULT_FRONTEND" ] && [ -z "$SHELL_CHECK_RESULT_EYE_VM" ] && [ -z "$SHELL_CHECK_RESULT_SMOKETEST" ] && [ -z "$SHELL_CHECK_RESULT_CLOUDSHELL" ]; then
+          if [ -z "$SHELL_CHECK_RESULT_FUNCTIONS" ] && [ -z "$SHELL_CHECK_RESULT_SETUP" ]; then
               echo "Pass: There are no warnings from shellcheck"
           else
-              if [ ! -z "$SHELL_CHECK_RESULT_DEPLOY_IOT" ]; then
-              echo "The following are the warnings for deploy-iot script"
-              echo "$SHELL_CHECK_RESULT_DEPLOY_IOT"
+              if [ ! -z "$SHELL_CHECK_RESULT_FUNCTIONS" ]; then
+              echo "The following are the warnings for functions script"
+              echo "$SHELL_CHECK_RESULT_FUNCTIONS"
               fi
-              if [ ! -z "$SHELL_CHECK_RESULT_FRONTEND" ]; then
-              echo "The following are the warnings for frontend-setup script"
-              echo "$SHELL_CHECK_RESULT_FRONTEND"
-              fi
-              if [ ! -z "$SHELL_CHECK_RESULT_EYE_VM" ]; then
-              echo "The following are the warnings for eye-vm-setup script"
-              echo "$SHELL_CHECK_RESULT_EYE_VM"
-              fi
-              if [ ! -z "$SHELL_CHECK_RESULT_SMOKETEST" ]; then
-              echo "The following are the warnings for smoketest script"
-              echo "$SHELL_CHECK_RESULT_SMOKETEST"
-              fi
-              if [ ! -z "$SHELL_CHECK_RESULT_CLOUDSHELL" ]; then
-              echo "Task failed"
-              echo "The following are the warnings for cloudshell-deployment script"
-              echo "$SHELL_CHECK_RESULT_CLOUDSHELL"
+              if [ ! -z "$SHELL_CHECK_RESULT_SETUP" ]; then
+              echo "The following are the warnings for setup script"
+              echo "$SHELL_CHECK_RESULT_SETUP"
               fi
               exit 1
           fi
@@ -152,19 +112,19 @@ stages:
         rootFolderOrFile: '$(System.DefaultWorkingDirectory)/combined'
         includeRootFolder: false
         archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/deployment-bundle.zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/deployment-bundle-mariner.zip'
         replaceExistingArchive: true
 
     # Publishing the pipeline artifact
     - task: PublishPipelineArtifact@1
       inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)/deployment-bundle.zip'
-        artifact: 'deployment-bundle'
+        targetPath: '$(Build.ArtifactStagingDirectory)/deployment-bundle-mariner.zip'
+        artifact: 'deployment-bundle-mariner'
         publishLocation: 'pipeline'
 
     # Publishing the pipeline artifact
     - task: PublishPipelineArtifact@1
       inputs:
-        targetPath: '$(System.DefaultWorkingDirectory)/deployment/cloudshell/cloudshell-deployment.sh'
-        artifact: 'CloudshellDeployment-Script'
+        targetPath: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/mariner/scripts/setup.sh'
+        artifact: 'MarinerDeployment-Script'
         publishLocation: 'pipeline'
