@@ -55,6 +55,9 @@ stages:
           README.md
           edge-solution/people-detection/mariner/scripts/functions.sh
           edge-solution/people-detection/mariner/scripts/setup.sh
+          edge-solution/people-detection/mariner/templates/custom-role.json
+          edge-solution/people-detection/mariner/templates/resources.json
+          edge-solution/people-detection/mariner/templates/webapp.json
           edge-solution/people-detection/mariner/.env
           edge-solution/people-detection/mariner/cvr-topology-params.json
           edge-solution/people-detection/mariner/cvr-topology.json
@@ -62,14 +65,6 @@ stages:
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
         flattenFolders: true
 
-
-    - task: CopyFiles@2
-      displayName: 'Copy docs to a combined folder'
-      inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)'
-        Contents: |
-          docs/*
-        TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
 
     - task: Bash@3
       displayName: 'ShellCheck validation'
@@ -122,9 +117,3 @@ stages:
         artifact: 'deployment-bundle-mariner'
         publishLocation: 'pipeline'
 
-    # Publishing the pipeline artifact
-    - task: PublishPipelineArtifact@1
-      inputs:
-        targetPath: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/mariner/scripts/setup.sh'
-        artifact: 'MarinerDeployment-Script'
-        publishLocation: 'pipeline'
