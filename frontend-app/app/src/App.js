@@ -23,7 +23,6 @@ const blobImage = new BlobImage();
 const { BlobServiceClient } = require("@azure/storage-blob");
 const isAdmin = false;
 
-let iotHubName = null;
 let storageBlobAccount = null;
 let storageBlobSharedAccessSignature = null;
 let blobServiceClient = null;
@@ -206,7 +205,7 @@ class App extends React.Component {
                             <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={collision.isBBoxInZones}
-                                iotHubName={iotHubName}
+                                iotHubName={this.state.iotHubName}
                                 blobServiceClient={blobServiceClient}
                                 updateAggregateChartMetrics={this.updateAggregateChartMetrics}
                             />
@@ -229,14 +228,14 @@ class App extends React.Component {
     }
 
     setup(data) {
-        iotHubName = data.iotHubName;
         storageBlobAccount = data.storageBlobAccount;
         storageBlobSharedAccessSignature = data.storageBlobSharedAccessSignature;
         blobServiceClient = new BlobServiceClient(`https://${storageBlobAccount}.blob.core.windows.net?${storageBlobSharedAccessSignature}`);
         socketUrl = data.socketUrl;
 
         this.setState({
-            ampStreamingUrl: data.ampStreamingUrl
+            ampStreamingUrl: data.ampStreamingUrl,
+            iotHubName: data.iotHubName
         });
 
         // messages

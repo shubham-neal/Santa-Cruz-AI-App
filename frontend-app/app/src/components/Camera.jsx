@@ -34,7 +34,8 @@ export class Camera extends React.Component {
             ampStreamingUrl: null,
             syncOffset: -4500,
             syncBuffer: 0.1,
-            editingAllowed: false
+            editingAllowed: false,
+            blobPartition: null
         };
 
         this.canvasRef = React.createRef();
@@ -237,40 +238,53 @@ export class Camera extends React.Component {
 
     async sync() {
         if (this.amp && this.amp.currentMediaTime && !this.paused) {
-            const dates = [
-                new Date(this.currentMediaTime * 1000),
-                new Date(this.currentMediaTime * 1000),
-                new Date(this.currentMediaTime * 1000)
-            ];
-            dates[0].setMinutes(dates[0].getMinutes() - 1);
-            dates[2].setMinutes(dates[2].getMinutes() + 1);
-            for (let d = 0; d < 3; d++) {
-
-                // TODO: account for daylight saving
-                let containerName = `${this.props.iotHubName}/03/${dates[d].toLocaleDateString('fr-CA', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                }).replace(/-/g, '/')}/${dates[d].getUTCHours()}/${dates[d].getMinutes()}`;
-
-                const exists = await this.blobExists("detectoroutput", containerName);
-                if (exists) {
-                    const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
-                    let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerName });
-                    const blobs = [];
-                    for await (const item of iter) {
-                        const blob = await this.downloadBlob("detectoroutput", item.name);
-                        for (let i = 0; i < blob.length; i++) {
-                            const view = blob[i];
-                            const inferences = view.inferences;
-                            for (let j = 0; j < inferences.length; j++) {
-                                const inference = inferences[j];
-                                if (inference.label === "person" && (view.out === 1)) {
-                                    inference.in = true;
-                                }
-                                const time = inference.timestamp;
-                                if (!this.inferences.hasOwnProperty(time)) {
-                                    this.inferences[time] = inference;
+            if(this.state.blobPartition === null) {
+                for(let i = 0; i < 4; i++) {
+                    let containerName = `${this.props.iotHubName}/0${i}`;
+                    const exists = await this.blobExists("detectoroutput", containerName);
+                    if(exists) {
+                        this.setState({
+                            blobPartition: i
+                        });
+                        break;
+                    }
+                }
+            } else {
+                const dates = [
+                    new Date(this.currentMediaTime * 1000),
+                    new Date(this.currentMediaTime * 1000),
+                    new Date(this.currentMediaTime * 1000)
+                ];
+                dates[0].setMinutes(dates[0].getMinutes() - 1);
+                dates[2].setMinutes(dates[2].getMinutes() + 1);
+                for (let d = 0; d < 3; d++) {
+    
+                    // TODO: account for daylight saving
+                    let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }).replace(/-/g, '/')}/${dates[d].getUTCHours()}/${dates[d].getMinutes()}`;
+    
+                    const exists = await this.blobExists("detectoroutput", containerName);
+                    if (exists) {
+                        const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
+                        let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerName });
+                        const blobs = [];
+                        for await (const item of iter) {
+                            const blob = await this.downloadBlob("detectoroutput", item.name);
+                            for (let i = 0; i < blob.length; i++) {
+                                const view = blob[i];
+                                const inferences = view.inferences;
+                                for (let j = 0; j < inferences.length; j++) {
+                                    const inference = inferences[j];
+                                    if (inference.label === "person" && (view.out === 1)) {
+                                        inference.in = true;
+                                    }
+                                    const time = inference.timestamp;
+                                    if (!this.inferences.hasOwnProperty(time)) {
+                                        this.inferences[time] = inference;
+                                    }
                                 }
                             }
                         }
