@@ -391,8 +391,7 @@ sleep 13m
 echo "$(info) Setting LVA graph topology"
 
 GRAPH_TOPOLOGY=$(
-    < cvr-topology.json 
-    jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
+    < cvr-topology.json jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
 az iot hub invoke-module-method \
@@ -418,9 +417,7 @@ fi
 echo "$(info) Creating a new LVA graph instance"
 
 GRAPH_INSTANCE=$(
-    < cvr-topology-params.json 
-    jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' |
-    jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
+    < cvr-topology-params.json jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' | jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
 echo "$(info) Setting LVA graph instance"
