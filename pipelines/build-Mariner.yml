@@ -53,8 +53,7 @@ stages:
         SourceFolder: '$(System.DefaultWorkingDirectory)'
         Contents: |
           README.md
-          edge-solution/people-detection/mariner/scripts/functions.sh
-          edge-solution/people-detection/mariner/scripts/setup.sh
+          edge-solution/people-detection/mariner/scripts/mariner-setup.sh
           edge-solution/people-detection/mariner/templates/custom-role.json
           edge-solution/people-detection/mariner/templates/resources.json
           edge-solution/people-detection/mariner/templates/webapp.json
@@ -84,18 +83,13 @@ stages:
           
           # Run shellcheck, Shellcheck will return a list of warnings if the script is not complient with all the rules
           # We are checking the the result returned by shellcheck.
-          SHELL_CHECK_RESULT_FUNCTIONS=$(shellcheck ./functions.sh -x)
-          SHELL_CHECK_RESULT_SETUP=$(shellcheck --exclude SC1090,SC2034,SC2002,SC2016 ./setup.sh -x)
+          SHELL_CHECK_RESULT_SETUP=$(shellcheck --exclude SC1090,SC2034,SC2002,SC2016 ./mariner-setup.sh -x)
 
-          if [ -z "$SHELL_CHECK_RESULT_FUNCTIONS" ] && [ -z "$SHELL_CHECK_RESULT_SETUP" ]; then
+          if [ -z "$SHELL_CHECK_RESULT_SETUP" ]; then
               echo "Pass: There are no warnings from shellcheck"
           else
-              if [ ! -z "$SHELL_CHECK_RESULT_FUNCTIONS" ]; then
-              echo "The following are the warnings for functions script"
-              echo "$SHELL_CHECK_RESULT_FUNCTIONS"
-              fi
               if [ ! -z "$SHELL_CHECK_RESULT_SETUP" ]; then
-              echo "The following are the warnings for setup script"
+              echo "The following are the warnings for mariner-setup script"
               echo "$SHELL_CHECK_RESULT_SETUP"
               fi
               exit 1
