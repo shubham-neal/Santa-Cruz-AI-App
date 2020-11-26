@@ -266,7 +266,7 @@ fi
 echo "setting up service principal..."
 SPN="$MEDIA_SERVICE_NAME-access-sp" # this is the default naming convention used by `az ams account sp`
 
-if test -z "$(az ad sp list --display-name $SPN --query="[].displayName" -o tsv)"; then
+if test -z "$(az ad sp list --display-name "$SPN" --query="[].displayName" -o tsv)"; then
     AMS_CONNECTION=$(az ams account sp create -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
 else
     AMS_CONNECTION=$(az ams account sp reset-credentials -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
@@ -274,19 +274,19 @@ fi
 
 #capture config information
 re="AadTenantId:\s([0-9a-z\-]*)"
-AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
 
 re="AadClientId:\s([0-9a-z\-]*)"
-AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
 
 re="AadSecret:\s([0-9a-z\-]*)"
-AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
 
 re="SubscriptionId:\s([0-9a-z\-]*)"
-SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo ${BASH_REMATCH[1]})
+SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
 
 # capture object_id
-OBJECT_ID=$(az ad sp show --id ${AAD_SERVICE_PRINCIPAL_ID} --query 'objectId' | tr -d \")
+OBJECT_ID=$(az ad sp show --id "${AAD_SERVICE_PRINCIPAL_ID}" --query 'objectId' | tr -d \")
 
 # Download ARM template and run from Az CLI
 
