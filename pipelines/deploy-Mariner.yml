@@ -270,32 +270,7 @@ stages:
           fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
 
-    - task: Bash@3
-      enabled: true
-      displayName: 'Run smoke test'
-      env:
-        SP_APP_PWD: $(SP_APP_PWD)
-        EDGE_DEVICE_PASSWORD: $(EDGE_DEVICE_PASSWORD)
-      inputs:
-        targetType: 'inline'
-        script: |
-          # Exit the script on any error
-          set -e
-          
-          cd deployment-bundle-latest
-          
-          echo "Delaying execution of smoketest script by 10 minutes to allow IoTEdge modules to start"
-          sleep 10m
-          echo "Logging into Azure"
-          
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          echo "Running smoketest script"
-          
-          source "./smoketest.sh"
-          
-          echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
-
+    
 - stage: Release
   jobs:
   - deployment: 'Release'
