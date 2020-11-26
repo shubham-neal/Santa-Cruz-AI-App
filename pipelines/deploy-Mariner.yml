@@ -1,4 +1,4 @@
-# This pipeline takes the cloudshell-deployment zip from build pipeline and releases it to a test environment.
+# This pipeline takes the Mariner-deployment zip from build pipeline and releases it to a test environment.
 # It then releases it to blob storage account after manual approval
 
 
@@ -8,7 +8,7 @@ resources:
   pipelines:
   - pipeline: build
     project: UnifiedEdgeScenarios
-    source: Build Cloud Shell Script
+    source: Build Mariner
     trigger:
       enabled: true
 
@@ -19,9 +19,9 @@ pool:
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if startsWith(variables['Build.SourceBranchName'], 'release') }}:
-    Variable_Group: 'CloudShell_ReleaseEnvironment'
+    Variable_Group: 'Mariner_ReleaseEnvironment'
   ${{ if not(startsWith(variables['Build.SourceBranchName'], 'release')) }}:
-     Variable_Group: 'CloudShell_TestEnvrionment'
+     Variable_Group: 'Mariner_TestEnvrionment'
 
 stages:
 - stage: 'Deploy'
@@ -102,7 +102,7 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Upload the cloudshell deployment scripts to temporary container in storage account'
+      displayName: 'Upload the mariner deployment scripts to temporary container in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
         SP_APP_PWD: $(SP_APP_PWD)
@@ -118,7 +118,7 @@ stages:
           CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
           if [ "$CONTAINER" == "False" ]; then
-            echo "Creating temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
+            echo "Creating temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts in storage account"
           
             az storage container create \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -131,19 +131,19 @@ stages:
             --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
             --public-access blob
           
-            echo "Created temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts in storage account"
+            echo "Created temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts in storage account"
           fi
           
           az storage blob upload \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
             --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
-            --file deployment-bundle.zip \
-            --name deployment-bundle.zip
+            --file deployment-bundle-mariner.zip \
+            --name deployment-bundle-mariner.zip
           
-          unzip -o deployment-bundle.zip -d .
+          unzip -o deployment-bundle-mariner.zip -d .
           
-        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
     
     - task: Bash@3
       enabled: true
@@ -214,7 +214,7 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Run cloudshell-deployment.sh script'
+      displayName: 'Run mariner-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
       inputs:
@@ -222,10 +222,10 @@ stages:
         script: |
           echo "Starting task"
 
-          echo "Updating sas url for deployment bundle zip"
-          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle.zip"
-          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
-          echo "Updated sas url for deployment bundle zip"
+          echo "Updating sas url for deployment bundle mariner zip"
+          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle-mariner.zip"
+          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+          echo "Updated sas url for deployment bundle mariner zip"
 
           # Exit the inline script on any erros
           set -e
@@ -234,15 +234,15 @@ stages:
           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
 
-          echo "Setting the distribution envrionment to cloudshell for skipping login step"
-          export POWERSHELL_DISTRIBUTION_CHANNEL="CloudShell"
+          echo "Setting the distribution envrionment to mariner for skipping login step"
+          export POWERSHELL_DISTRIBUTION_CHANNEL="Mariner"
 
-          echo "Running cloudshell-deployment.sh script"
+          echo "Running mariner-setup.sh script"
           
           sudo bash ./cloudshell-deployment.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/MarinerDeployment-Script'
 
     - task: Bash@3
       enabled: true
@@ -260,13 +260,13 @@ stages:
           CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
           if [ "$CONTAINER" == "True" ]; then
-            echo "Deleting temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+            echo "Deleting temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts"
             az storage container delete \
             --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
             --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
             --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
 
-            echo "Deleted temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for cloudshell deployment scripts"
+            echo "Deleted temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts"
           fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
 
@@ -300,7 +300,7 @@ stages:
   jobs:
   - deployment: 'Release'
     displayName: 'Release bundle zip to storage account'
-    environment: 'ApproveCloudShellRelease'
+    environment: 'ApproveMarinerRelease'
     variables:
       - group: ${{variables.Variable_Group}}
     strategy:
@@ -322,7 +322,7 @@ stages:
 
           - task: Bash@3
             enabled: true
-            displayName: 'Upload the deployment bundle zip to release storage account'
+            displayName: 'Upload the deployment bundle mariner zip to release storage account'
             env:
               RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
               SP_APP_PWD: $(SP_APP_PWD)
@@ -356,42 +356,42 @@ stages:
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file deployment-bundle.zip \
-                  --name "$(buildSuffix)/deployment-bundle.zip"
+                  --file deployment-bundle-mariner.zip \
+                  --name "$(buildSuffix)/deployment-bundle-mariner.zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file deployment-bundle.zip \
-                  --name deployment-bundle.zip
+                  --file deployment-bundle-mariner.zip \
+                  --name deployment-bundle-mariner.zip
                 
                 cd '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
 
                 echo "Updating sas url for deployment bundle zip"
-                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle.zip"
-                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
-                echo "Updated sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle-mariner.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+                echo "Updated sas url for deployment bundle mariner zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file cloudshell-deployment.sh \
-                  --name "cloudshell-deployment.sh"
+                  --file mariner-setup.sh \
+                  --name "mariner-setup.sh"
                 
                 echo "Updating sas url for deployment bundle zip"
-                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle.zip"
-                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "cloudshell-deployment.sh"
-                echo "Updated sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle-mariner.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+                echo "Updated sas url for deployment bundle mariner zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
-                  --file cloudshell-deployment.sh \
-                  --name "$(buildSuffix)/cloudshell-deployment.sh"
-              workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle'
+                  --file mariner-setup.sh \
+                  --name "$(buildSuffix)/mariner-setup.sh"
+              workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
 
           - task: Bash@3
             enabled: true
