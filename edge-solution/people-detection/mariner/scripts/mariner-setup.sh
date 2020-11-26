@@ -466,7 +466,7 @@ fi
 
 sleep 3m
 echo "$(info) Restarting the lvaEdge module on edge device..."
-RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m '$edgeAgent' --method-payload \
+RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m "$edgeAgent" --method-payload \
 '{"schemaVersion": "1.0","id": "lvaEdge"}')
 
 if [ "$(echo "$RESTART_MODULE" | jq '.status')" == 200 ]; then
