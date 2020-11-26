@@ -391,7 +391,7 @@ sleep 13m
 echo "$(info) Setting LVA graph topology"
 
 GRAPH_TOPOLOGY=$(
-    cat cvr-topology.json |
+    < cvr-topology.json 
     jq '.name = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
 
@@ -418,7 +418,7 @@ fi
 echo "$(info) Creating a new LVA graph instance"
 
 GRAPH_INSTANCE=$(
-    cat cvr-topology-params.json |
+    < cvr-topology-params.json 
     jq '.name = "'"$GRAPH_INSTANCE_NAME"'"' |
     jq '.properties.topologyName = "'"$GRAPH_TOPOLOGY_NAME"'"'
 )
@@ -466,7 +466,7 @@ fi
 
 sleep 3m
 echo "$(info) Restarting the lvaEdge module on edge device..."
-RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m "$edgeAgent" --method-payload \
+RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m '$edgeAgent' --method-payload \
 '{"schemaVersion": "1.0","id": "lvaEdge"}')
 
 if [ "$(echo "$RESTART_MODULE" | jq '.status')" == 200 ]; then
