@@ -96,7 +96,7 @@ stages:
       inputs:
         buildType: 'specific'
         project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
-        definition: '3'
+        definition: '10'
         buildVersionToDownload: 'latest'
         targetPath: '$(System.DefaultWorkingDirectory)'
 
@@ -239,14 +239,14 @@ stages:
 
           echo "Running mariner-setup.sh script"
           
-          sudo bash ./cloudshell-deployment.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
+          sudo bash ./mariner-setup.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/MarinerDeployment-Script'
 
     - task: Bash@3
       enabled: true
-      displayName: 'Delete temporary container for cloudshell deployment scripts in storage account'
+      displayName: 'Delete temporary container for mariner deployment scripts in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
         SP_APP_PWD: $(SP_APP_PWD)
