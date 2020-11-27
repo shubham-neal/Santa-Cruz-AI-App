@@ -110,3 +110,10 @@ stages:
         artifact: 'deployment-bundle-mariner'
         publishLocation: 'pipeline'
 
+    # Publishing the pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/mariner/scripts/mariner-setup.sh'
+        artifact: 'Mariner-Setup-Script'
+        publishLocation: 'pipeline'    
+
