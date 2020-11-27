@@ -242,7 +242,7 @@ stages:
           sudo bash ./mariner-setup.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
-        workingDirectory: '$(System.DefaultWorkingDirectory)/MarinerDeployment-Script'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
     - task: Bash@3
       enabled: true
