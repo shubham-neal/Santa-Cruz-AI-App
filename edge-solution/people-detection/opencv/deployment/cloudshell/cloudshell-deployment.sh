@@ -188,9 +188,9 @@ sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g
 source "variables.template"
 
 # Provide all the script paths to run
-VM_SCRIPT_PATH="./eye-vm-setup.sh"
-DEPLOY_IOT_SCRIPT_PATH="./deploy-iot.sh"
-FRONTEND_SCRIPT_PATH="./frontend-setup.sh"
+VM_SCRIPT_PATH="sudo ./eye-vm-setup.sh"
+DEPLOY_IOT_SCRIPT_PATH="sudo ./deploy-iot.sh"
+FRONTEND_SCRIPT_PATH="sudo ./frontend-setup.sh"
 
 if [ "$CREATE_IOTHUB" == "true" ]; then 
 
