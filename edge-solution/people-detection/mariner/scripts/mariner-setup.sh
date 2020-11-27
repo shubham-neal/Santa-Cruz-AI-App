@@ -218,7 +218,7 @@ echo "Running ARM template"
 ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file "$ARM_TEMPLATE" --no-prompt \
         --parameters resourceGroupDevice="$RESOURCE_GROUP_DEVICE" resourceGroupAMS="$RESOURCE_GROUP_AMS" iotHubName="$IOTHUB_NAME" mediaServiceName="$MEDIA_SERVICE_NAME" usingExistingIothub="$USING_EXISTING_IOTHUB")
 
-STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo "$ARM_DEPLOYMENT" | jq '.properties.outputs.sasToken.value')
+STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo "$ARM_DEPLOYMENT" | jq -r '.properties.outputs.sasToken.value')
 
 #printf "\n%60s\n" " " | tr ' ' '-'
 #echo "Configuring IoT Hub"
