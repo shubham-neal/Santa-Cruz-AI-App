@@ -27,7 +27,6 @@
       }
     },
     "usingExistingIothub":{
-      "default":"",
       "type": "String",
       "metadata": "Yes/No. Yes if user wants to use exisitng iothub."
     }
