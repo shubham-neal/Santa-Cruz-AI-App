@@ -341,7 +341,7 @@ stages:
                   --file deployment-bundle-mariner.zip \
                   --name deployment-bundle-mariner.zip
                 
-                cd '$(System.DefaultWorkingDirectory)/CloudshellDeployment-Script'
+                cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
                 echo "Updating sas url for deployment bundle zip"
                 SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle-mariner.zip"
