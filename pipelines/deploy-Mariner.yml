@@ -239,7 +239,7 @@ stages:
 
           echo "Running mariner-setup.sh script"
           
-          sudo bash ./mariner-setup.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
+          sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" 
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
