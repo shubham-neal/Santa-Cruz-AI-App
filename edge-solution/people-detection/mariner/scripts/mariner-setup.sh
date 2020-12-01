@@ -19,7 +19,7 @@ printHelp() {
     Examples:
 
     1. Deploy app with existing IoT Edge device
-    sudo ./mariner-setup.sh --rg-ams rg-mariner-ams 
+    sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device --existing-iothub <iothub name> --existing-device <device name>
 
     2. Deploy app without existing IoT Edge device
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device
@@ -309,8 +309,8 @@ echo "package installation is complete"
 MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
-CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test/lots_015.mkv"
-sudo wget -O "lots_015.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
+CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test2/staircase.mkv"
+sudo wget "staircase.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
 
 
 # Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,

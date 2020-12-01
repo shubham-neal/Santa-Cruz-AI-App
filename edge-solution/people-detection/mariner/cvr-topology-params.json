@@ -7,7 +7,7 @@
     "parameters": [
       {
         "name": "rtspUrl",
-        "value": "rtsp://rtspsim:554/media/lots_015.mkv"
+        "value": "rtsp://rtspsim:554/media/video.mkv"
       },
       {
         "name": "rtspUserName",
