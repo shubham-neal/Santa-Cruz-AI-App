@@ -188,9 +188,9 @@ sed -i 's#^\(USE_EXISTING_RESOURCES[ ]*=\).*#\1\"'"$USE_EXISTING_RESOURCES"'\"#g
 source "variables.template"
 
 # Provide all the script paths to run
-VM_SCRIPT_PATH="sudo ./eye-vm-setup.sh"
-DEPLOY_IOT_SCRIPT_PATH="sudo ./deploy-iot.sh"
-FRONTEND_SCRIPT_PATH="sudo ./frontend-setup.sh"
+VM_SCRIPT_PATH="./eye-vm-setup.sh"
+DEPLOY_IOT_SCRIPT_PATH="./deploy-iot.sh"
+FRONTEND_SCRIPT_PATH="./frontend-setup.sh"
 
 if [ "$CREATE_IOTHUB" == "true" ]; then 
 
@@ -199,7 +199,7 @@ if [ "$CREATE_IOTHUB" == "true" ]; then
     echo "Running Eye VM Setup script"
     printf "%60s\n" " " | tr ' ' '-'
 
-    "$VM_SCRIPT_PATH"
+    sudo bash "$VM_SCRIPT_PATH"
 
     printf "\n%60s\n" " " | tr ' ' '-'
     echo "Completed Eye VM Setup script"
@@ -211,7 +211,7 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Running Deploy IoT Setup script"
 printf "%60s\n" " " | tr ' ' '-'
 
-"$DEPLOY_IOT_SCRIPT_PATH"
+sudo bash "$DEPLOY_IOT_SCRIPT_PATH"
 
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Completed Deploy IoT Setup script"
@@ -221,7 +221,7 @@ printf "\n%60s\n" " " | tr ' ' '-'
 echo "Running Frontend Setup script"
 printf "%60s\n" " " | tr ' ' '-'
 
-"$FRONTEND_SCRIPT_PATH"
+sudo bash "$FRONTEND_SCRIPT_PATH"
 
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Completed Frontend Setup script"
