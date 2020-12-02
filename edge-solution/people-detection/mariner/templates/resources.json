@@ -350,7 +350,7 @@
                                         {
                                             "name": "adls-route",
                                             "source": "DeviceMessages",
-                                            "condition": "$twin.moduleId = 'lvaYolov3'",
+                                            "condition": "$twin.moduleId = 'lvaEdge'",
                                             "endpointNames": [
                                                 "adls-endpoint"
                                             ],
