@@ -207,7 +207,7 @@ stages:
         deploymentScope: 'Subscription'
         azureResourceManagerConnection: 'AED E2E Subscription'
         subscriptionId: '7c9469c0-29ac-424a-85ab-d01f2cea1c38'
-        location: 'East US'
+        location: 'West US 2'
         templateLocation: 'Linked artifact'
         csmFile: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle/azuredeploy.json'
         overrideParameters: '-resourceGroupIot "$(RESOURCE_GROUP_IOT_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -deviceArchitecture "$(DEVICE_ARCHITECTURE)" -moduleRuntime "$(MODULE_RUNTIME)" -password "$(PASSWORD)" -useExistingEdgeDevice "$(USE_EXISTING_EDGE_DEVICE)"'
