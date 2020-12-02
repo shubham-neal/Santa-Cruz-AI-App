@@ -1,7 +1,0 @@
-REACT_APP_ampStreamingUrl = 'https://lvarocketams-usw22.streaming.media.azure.net/7041fa4b-4c97-4a46-97f9-12b9c023b8bc/content.ism/manifest'
-REACT_APP_iotHubName = iot-perf-metrics-vm
-REACT_APP_password = 8675309
-REACT_APP_storageBlobAccount = storageperfmetricsvm
-REACT_APP_storageBlobSharedAccessSignature = sv=2019-12-12&ss=bfqt&srt=sco&sp=rwdlacupx&se=2022-10-16T01:18:46Z&st=2020-10-15T17:18:46Z&spr=https&sig=82sxvuYS6O0sqetyjCyw1XaBcKt1gs7ieuTu3dVZOAA%3D
-REACT_APP_azureEyeModuleConnectionString = HostName=iot-perf-metrics-vm.azure-devices.net;DeviceId=realeye;SharedAccessKey=8MtVSHk0GDOyf4jpOMdjcY2IsxF1VlCzYbhIoZkYics=
-REACT_APP_socketUrl = uesappopencv.azurewebsites.net/

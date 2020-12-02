@@ -245,6 +245,8 @@ export class Camera extends React.Component {
     updateCurrentMediaTime = () => {
         if (this.amp && this.amp.currentMediaTime) {
             this.currentMediaTime = this.amp.currentMediaTime();
+            // const d = new Date(this.currentMediaTime * 1000);
+            // console.log(`${d.toString()} ${d.toUTCString()}`);
         }
     }
 
@@ -271,11 +273,19 @@ export class Camera extends React.Component {
                 dates[2].setMinutes(dates[2].getMinutes() + 1);
                 for (let d = 0; d < 3; d++) {
                     // TODO: account for daylight saving
+                    let hours = dates[d].getUTCHours();
+                    if(hours.length === 1) {
+                        hours = `0${hours}`;
+                    }
+                    let minutes = dates[d].getUTCMinutes();
+                    if(minutes.length === 1) {
+                        minutes = `0${minutes}`;
+                    }
                     let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
-                    }).replace(/-/g, '/')}/${dates[d].getUTCHours()}/${dates[d].getMinutes()}`;
+                    }).replace(/-/g, '/')}/${hours}/${minutes}`;
 
                     const exists = await this.blobExists("detectoroutput", containerName);
                     if (exists) {
