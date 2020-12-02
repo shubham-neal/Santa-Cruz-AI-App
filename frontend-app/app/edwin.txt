@@ -1,7 +1,0 @@
-REACT_APP_ampStreamingUrl = "https://livevideoanalysisz5wm-usw22.streaming.media.azure.net/61255007-9807-47b5-9d79-680d9153e2e9/content.ism/manifest"
-REACT_APP_iotHubName = iot-azureeye-naew
-REACT_APP_password = 8675309
-REACT_APP_storageBlobAccount = uesstoragez5wm
-REACT_APP_storageBlobSharedAccessSignature = ?sv=2019-12-12&ss=bfqt&srt=co&sp=rwdlacupx&se=2021-01-01T00:12:58Z&st=2020-11-25T16:12:58Z&spr=https&sig=dt2Vi8mIB4Bko17QTXN%2FCNdUv1FfG2r1FO2IQysPHjM%3D
-REACT_APP_azureEyeModuleConnectionString = HostName=iot-azureeye-naew.azure-devices.net;DeviceId=azureeye;ModuleId=AzureEyeModule;SharedAccessKey=m7CGqSyrJNMNR1dfzCRZeQ3KBZhmpohbfuNFaZ+vtGw=
-REACT_APP_socketUrl = uesappopencv.azurewebsites.net/
