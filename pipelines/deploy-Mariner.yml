@@ -36,58 +36,26 @@ stages:
 
     - task: Bash@3
       enabled: true
-      displayName: 'Delete existing resource groups'
+      displayName: 'Delete existing resource group'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
       inputs:
         targetType: 'inline'
         script: |
-          # Write your commands here
-          set -e
-          
-          if [ -z $(command -v az) ]; then
-            echo "Installing Azure-cli"
-            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-            echo "Installed Azure-cli"
-          fi
-          
-          if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-iot extension"
-            az extension add --name azure-iot
-          fi
-          
           echo "Logging to Azure"
                           
           az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-          
-          if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
-              if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
-                echo "Resource Group \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-              else
-                echo "Resource Group for \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
-              fi  
-          else    
-            if [ "$(az group exists --name "$RESOURCE_GROUP_DEVICE")" == false ]; then
-                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-            else
-                echo "Resource Group for Mariner VM \"$RESOURCE_GROUP_DEVICE\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_DEVICE\""
-                az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --subscription "$SUBSCRIPTION_ID" --yes
-                echo "Deleted Resource Group \"$RESOURCE_GROUP_DEVICE\""
-            fi
-          
-            if [ "$(az group exists --name "$RESOURCE_GROUP_IOT")" == false ]; then
-                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" does not exist in current subscription."
-                echo "Skipping deletion of resource group"
-            else
-                echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_IOT\" exists in current subscription."
-                echo "Deleting Resource Group \"$RESOURCE_GROUP_IOT\""
-                az group delete --resource-group "$RESOURCE_GROUP_IOT" --subscription "$SUBSCRIPTION_ID" --yes
-                echo "Deleted Resource Group \"$RESOURCE_GROUP_IOT\""
-            fi
+
+          if [ "$(az group exists --name "$RESOURCE_GROUP_AMS")" == false ]; then
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" does not exist in current subscription."
+              echo "Skipping deletion of resource group"
+          else
+              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" exists in current subscription."
+              PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS" --query "principalId" -o tsv)
+              az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE" --assignee "$PRINCIPAL_ID"
+              echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS\""
+              az group delete --resource-group "$RESOURCE_GROUP_AMS" --subscription "$SUBSCRIPTION_ID" --yes
+              echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS\""
           fi  
 
     - task: DownloadPipelineArtifact@2
@@ -239,7 +207,7 @@ stages:
 
           echo "Running mariner-setup.sh script"
           
-          sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" 
+          sudo bash ./mariner-setup.sh --create-iothub --device-runtime "$DETECTOR_MODULE_RUNTIME" --website-password "$PASSWORD_FOR_WEBSITE_LOGIN" --rg-iot "$RESOURCE_GROUP_IOT" --device-architecture "$EDGE_DEVICE_ARCHITECTURE" --rg-vm "$RESOURCE_GROUP_DEVICE"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
@@ -370,7 +338,7 @@ stages:
 
           - task: Bash@3
             enabled: true
-            displayName: 'Delete the resource group'
+            displayName: 'Delete the resource group of test environment'
             env:
               SP_APP_PWD: $(SP_APP_PWD)
             inputs:
@@ -383,23 +351,12 @@ stages:
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
-                if [ "$RESOURCE_GROUP_DEVICE" == "$RESOURCE_GROUP_IOT" ]; then
-                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE\""
+                PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS" --query "principalId" -o tsv)
+                az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE" --assignee "$PRINCIPAL_ID"
+
+                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS\""
                 
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
-                else
-                  echo "Deleting resource group for Mariner VM \"$RESOURCE_GROUP_DEVICE\""
-                  
-                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE\""
-                  
-                  echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_IOT\""
-                  
-                  az group delete --resource-group "$RESOURCE_GROUP_IOT" --yes --no-wait
-                  
-                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_IOT\""
-                fi
+                az group delete --resource-group "$RESOURCE_GROUP_AMS" --yes --no-wait
+                
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS\""
               workingDirectory: '$(System.DefaultWorkingDirectory)'
