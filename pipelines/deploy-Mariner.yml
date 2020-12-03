@@ -351,12 +351,15 @@ stages:
                 
                 az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
                 
-                PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS" --query "principalId" -o tsv)
-                az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE" --assignee "$PRINCIPAL_ID"
-
-                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS\""
-                
-                az group delete --resource-group "$RESOURCE_GROUP_AMS" --yes --no-wait
-                
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS\""
+                if [ "$(az group exists --name "$RESOURCE_GROUP_AMS")" == false ]; then 
+                    echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" does not exist in current subscription."
+                    echo "Skipping deletion of resource group"
+                else
+                    echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" exists in current subscription."
+                    PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS" --query "principalId" -o tsv)
+                    az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE" --assignee "$PRINCIPAL_ID"
+                    echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS\""
+                    az group delete --resource-group "$RESOURCE_GROUP_AMS" --subscription "$SUBSCRIPTION_ID" --yes
+                    echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS\""
+                fi
               workingDirectory: '$(System.DefaultWorkingDirectory)'
