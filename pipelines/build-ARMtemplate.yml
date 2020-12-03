@@ -90,7 +90,7 @@ stages:
     - task: CopyFiles@2
       displayName: 'Copy deployment manifest files to a combined folder'
       inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/opencv/'
+        SourceFolder: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/opencv'
         Contents: |
           .env
           deployment.camera.template.json
