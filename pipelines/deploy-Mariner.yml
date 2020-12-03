@@ -259,7 +259,7 @@ stages:
             inputs:
               buildType: 'specific'
               project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
-              definition: '3'
+              definition: '10'
               buildVersionToDownload: 'latest'
               targetPath: '$(System.DefaultWorkingDirectory)'
 
