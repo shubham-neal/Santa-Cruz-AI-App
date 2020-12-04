@@ -57,6 +57,8 @@ class App extends React.Component {
             },
             frames: [],
             collisions: 0,
+            inside: 0,
+            outside: 0,
             detections: 0,
             ampStreamingUrl: null,
             accessGranted: isAdmin,
@@ -153,6 +155,7 @@ class App extends React.Component {
                                 iotHubName={this.state.iotHubName}
                                 ampStreamingUrl={this.state.ampStreamingUrl}
                                 blobServiceClient={blobServiceClient}
+                                updateRealTimeMetrics={this.updateRealTimeMetrics}
                             />
                             <Pivot
                                 onLinkClick={(item) => {
@@ -201,6 +204,8 @@ class App extends React.Component {
                                 frame={this.state.frame}
                                 collisions={this.state.collisions}
                                 detections={this.state.detections}
+                                inside={this.state.inside}
+                                outside={this.state.outside}
                             />
                             <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
@@ -275,6 +280,12 @@ class App extends React.Component {
         //         aggregator: aggregator
         //     });
         // }
+    }
+
+    updateRealTimeMetrics = (metrics) => {
+        this.setState({
+            
+        })
     }
 
     updateAggregateChartMetrics = (metrics) => {
