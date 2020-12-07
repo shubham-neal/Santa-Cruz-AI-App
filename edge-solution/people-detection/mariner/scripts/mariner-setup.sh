@@ -14,8 +14,12 @@ printHelp() {
         --website-password      : Password to access the web app
 		--existing-iothub		: Name of existing iothub
 		--existing-device		: Name of existing device present in iothub
+        --use-existing-sp       : Use existing service principal. Yes/No.
         --help                  : Show this message and exit
-	
+        --sp-id                 : Service principal id      
+        --sp-password           : Service principal secret
+        --sp-object-id          : Service principal object id 
+    
     Examples:
 
     1. Deploy app with existing IoT Edge device
@@ -98,7 +102,27 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             shift # past value
             ;;
-                --help)
+        --use-existing-sp)
+            USING_EXISTING_SP="$2"
+            shift # past argument
+            shift # past value
+            ;;    
+        --sp-id)
+            SP_APP_ID="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --sp-password)
+            SP_APP_PWD="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --sp-object-id)
+            OBJECT_ID="$2"
+            shift # past argument
+            shift # past value
+            ;;    
+        --help)
             PRINT_HELP="true"
             shift # past argument
             ;;
@@ -158,9 +182,6 @@ DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 WEBAPP_PASSWORD=""
 
 #required credentials
-SP_APP_ID=""
-OBJECT_ID=""
-SP_APP_PWD=""
 TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
 
 
@@ -262,31 +283,15 @@ if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
 	echo "$(info) Updated Config.yaml"
 fi
 
-# creating the AMS account creates a service principal, so we'll just reset it to get the credentials
-echo "setting up service principal..."
-SPN="$MEDIA_SERVICE_NAME-access-sp" # this is the default naming convention used by `az ams account sp`
+# creating new service principal for custom role assignment
 
-if test -z "$(az ad sp list --display-name "$SPN" --query="[].displayName" -o tsv)"; then
-    AMS_CONNECTION=$(az ams account sp create -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
-else
-    AMS_CONNECTION=$(az ams account sp reset-credentials -o yaml --resource-group "$RESOURCE_GROUP_AMS" --account-name "$MEDIA_SERVICE_NAME")
+if [ "$USING_EXISTING_SP" == "No" ];then 
+    APP_NAME="$MEDIA_SERVICE_NAME-sp"
+    APP_DETAILS=$(az ad sp create-for-rbac --name $APP_NAME --skip-assignment --query "{appName:displayName, appId:appId, appSecret:password}")
+    OBJECT_ID=$(az ad sp list --display-name $APP_NAME --query [0].objectId --output tsv)
+    SP_APP_ID=$(echo $APP_DETAILS | jq -r '.appId')
+    SP_APP_PWD=$(echo $APP_DETAILS | jq -r '.appSecret')
 fi
-
-#capture config information
-re="AadTenantId:\s([0-9a-z\-]*)"
-AAD_TENANT_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
-
-re="AadClientId:\s([0-9a-z\-]*)"
-AAD_SERVICE_PRINCIPAL_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
-
-re="AadSecret:\s([0-9a-z\-]*)"
-AAD_SERVICE_PRINCIPAL_SECRET=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
-
-re="SubscriptionId:\s([0-9a-z\-]*)"
-SUBSCRIPTION_ID=$([[ "$AMS_CONNECTION" =~ $re ]] && echo "${BASH_REMATCH[1]}")
-
-# capture object_id
-OBJECT_ID=$(az ad sp show --id "${AAD_SERVICE_PRINCIPAL_ID}" --query 'objectId' | tr -d \")
 
 # Download ARM template and run from Az CLI
 
@@ -310,19 +315,19 @@ MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
 CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test2/staircase.mkv"
-sudo wget "staircase.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
+sudo wget -O "staircase.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
 
 
 # Check for existence of IoT Hub and Edge device in Resource Group for IoT Hub,
 # and based on that either throw error or use the existing resources
-if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_IOT" -o tsv)" ]; then
+if [ -z "$(az iot hub list --query "[?name=='$IOTHUB_NAME'].name" --resource-group "$RESOURCE_GROUP_DEVICE" -o tsv)" ]; then
     echo "$(error) IoT Hub \"$IOTHUB_NAME\" does not exist."
     exit 1
 else
     echo "$(info) Using existing IoT Hub \"$IOTHUB_NAME\""
 fi
 
-if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_IOT" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
+if [ -z "$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --resource-group "$RESOURCE_GROUP_DEVICE" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)" ]; then
     echo "$(error) Device \"$DEVICE_NAME\" does not exist in IoT Hub \"$IOTHUB_NAME\""
     exit 1
 else
