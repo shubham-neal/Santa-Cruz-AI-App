@@ -18,38 +18,29 @@ export class RealTimeMetrics extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            totalCollisions: 0,
-            totalDetections: 0,
-            maxCollisionsPerSecond: 0,
-            maxDetectionsPerSecond: 0
-        }
+            inside: 0, 
+            outside: 0 ,
+            totalInside: 0, 
+            totalOutside: 0 
+        };
+        this.metrics = [];
     }
 
     componentDidMount() {
         setInterval(() => {
-            const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-            const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
+            // get metrics from last second
+            
+            // get metrics from last minute
 
-            this.setState({
-                totalCollisions: this.state.totalCollisions + maxCollisionsPerSecond,
-                totalDetections: this.state.totalDetections + maxDetectionsPerSecond
-            }, () => {
-                this.setState({
-                    maxCollisionsPerSecond: 0,
-                    maxDetectionsPerSecond: 0
-                })
-            });
         }, 1000);
     }
 
     componentDidUpdate(prevProps) {
-        // update the metrics
-        if (this.props.frame !== prevProps.frame) {
-            const maxCollisionsPerSecond = this.state.maxCollisionsPerSecond;
-            const maxDetectionsPerSecond = this.state.maxDetectionsPerSecond;
-            this.setState({
-                maxCollisionsPerSecond: this.props.collisions > maxCollisionsPerSecond ? this.props.collisions : maxCollisionsPerSecond,
-                maxDetectionsPerSecond: this.props.detections > maxDetectionsPerSecond ? this.props.detections : maxDetectionsPerSecond
+        if (this.props.metrics !== prevProps.metrics) {
+            this.metrics.push({
+                inside: this.props.metrics.inside,
+                outside: this.props.metrics.outside,
+                date: new Date()   
             });
         }
     }
@@ -71,28 +62,41 @@ export class RealTimeMetrics extends React.Component {
                         <Label style={{fontWeight: 'bold'}}>Real time metrics</Label>
                     </div>
                     <Text variant={'medium'} block>
-                        People detections in frame
+                        People detected
                     </Text>
                     <Text variant={'medium'} block>
-                        <b>{this.props.detections}</b>
+                        <b>{this.state.inside + this.state.outside}</b>
                     </Text>
                     <Text variant={'medium'} block>
-                        People detections in zones ({names})
+                        People detected inside
                     </Text>
                     <Text variant={'medium'} block>
-                        <b>{this.props.collisions}</b>
+                        <b>{this.state.inside}</b>
                     </Text>
                     <Text variant={'medium'} block>
-                        Max people detections in frame per second
+                        People detected outside
                     </Text>
                     <Text variant={'medium'} block>
-                        <b>{this.state.maxDetectionsPerSecond}</b>
+                        <b>{this.state.outside}</b>
+                    </Text>
+                    
+                    <Text variant={'medium'} block>
+                        People detected in last 60 seconds
                     </Text>
                     <Text variant={'medium'} block>
-                        Max people detections in zones ({names}) per second
+                        <b>{this.state.totalInside + this.state.totalOutside}</b>
                     </Text>
                     <Text variant={'medium'} block>
-                        <b>{this.state.maxCollisionsPerSecond}</b>
+                        People detected inside in last 60 seconds
+                    </Text>
+                    <Text variant={'medium'} block>
+                        <b>{this.state.totalInside}</b>
+                    </Text>
+                    <Text variant={'medium'} block>
+                        People detected outside in last 60 seconds
+                    </Text>
+                    <Text variant={'medium'} block>
+                        <b>{this.state.totalOutside}</b>
                     </Text>
                 </div>
             </React.Fragment>

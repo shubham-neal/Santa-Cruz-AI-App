@@ -57,9 +57,8 @@ class App extends React.Component {
             },
             frames: [],
             collisions: 0,
-            inside: 0,
-            outside: 0,
             detections: 0,
+            metrics: {inside: 0, outside: 0 },
             ampStreamingUrl: null,
             accessGranted: isAdmin,
             blobServiceClient: blobServiceClient,
@@ -157,7 +156,7 @@ class App extends React.Component {
                                 blobServiceClient={blobServiceClient}
                                 updateRealTimeMetrics={this.updateRealTimeMetrics}
                             />
-                            <Pivot
+                            {/* <Pivot
                                 onLinkClick={(item) => {
                                     this.setState({
                                         realTimeChart: item.props.itemKey === "realtime"
@@ -188,7 +187,7 @@ class App extends React.Component {
                                         detections={this.state.detections}
                                         aggregateChartMetrics={this.state.aggregateChartMetrics}
                                     />
-                            }
+                            } */}
                         </div>
                         <div
                             style={{
@@ -204,16 +203,15 @@ class App extends React.Component {
                                 frame={this.state.frame}
                                 collisions={this.state.collisions}
                                 detections={this.state.detections}
-                                inside={this.state.inside}
-                                outside={this.state.outside}
+                                metrics={this.state.metrics}
                             />
-                            <AggregateStatsInTimeWindow
+                            {/* <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={collision.isBBoxInZones}
                                 iotHubName={this.state.iotHubName}
                                 blobServiceClient={blobServiceClient}
                                 updateAggregateChartMetrics={this.updateAggregateChartMetrics}
-                            />
+                            /> */}
                             {/* <EditZones
                                 aggregator={this.state.aggregator}
                                 selectedZoneIndex={this.state.selectedZoneIndex}
@@ -284,8 +282,8 @@ class App extends React.Component {
 
     updateRealTimeMetrics = (metrics) => {
         this.setState({
-            
-        })
+            metrics: metrics
+        });
     }
 
     updateAggregateChartMetrics = (metrics) => {

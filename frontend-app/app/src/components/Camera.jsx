@@ -83,6 +83,10 @@ export class Camera extends React.Component {
         setInterval(() => {
             this.updateDetections();
         }, 1000 / this.props.fps);
+
+        setInterval(() => {
+            this.updateRealTimeMetrics();
+        }, 1000 / this.props.fps);
     }
 
     componentDidUpdate(prevProps) {
@@ -242,6 +246,21 @@ export class Camera extends React.Component {
         }
     }
 
+    updateRealTimeMetrics = () => {
+        let inside = 0;
+        let outside = 0;
+        const l = this.detections.length;
+        for(let i = 0; i < l; i++) {
+            const detection = this.detections[i];
+            if(detection.in) {
+                inside = inside + 1;
+            } else if(detection.out) {
+                outside = outside + 1;
+            }
+        }
+        this.props.updateRealTimeMetrics({inside, outside});
+    }
+
     updateCurrentMediaTime = () => {
         if (this.amp && this.amp.currentMediaTime) {
             this.currentMediaTime = this.amp.currentMediaTime();
@@ -299,8 +318,9 @@ export class Camera extends React.Component {
                                 const inferences = view.inferences;
                                 for (let j = 0; j < inferences.length; j++) {
                                     const inference = inferences[j];
-                                    if (inference.label === "person" && (view.out === 1)) {
-                                        inference.in = true;
+                                    if (inference.label === "person") {
+                                        inference.in = view.in === 0 ? true : false;
+                                        inference.out = view.out === 0 ? true: false;
                                     }
                                     const time = inference.timestamp;
                                     if (!this.inferences.hasOwnProperty(time)) {
