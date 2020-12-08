@@ -29,14 +29,24 @@ export class Camera extends React.Component {
     }
     constructor(props) {
         super(props);
+        // TODO: temp for dev, remove when finished with it
+        const devOptions = JSON.parse(localStorage.getItem("UES-APP-DEVOPTIONS")) || {
+            syncOffset: 0,
+            syncBuffer: 0.1,
+            restartTime: 0
+        };
+        
+
         this.state = {
             aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
             ampStreamingUrl: null,
-            syncOffset: -4500,
-            syncBuffer: 0.1,
-            restartTime: 0,
-            editingAllowed: false,
-            blobPartition: null
+            blobPartition: null,
+            
+            // TODO: temp for dev, remove when finished with it
+            syncOffset: devOptions.syncOffset,
+            syncBuffer: devOptions.syncBuffer,
+            restartTime: devOptions.restartTime,
+            editingAllowed: false
         };
 
         this.canvasRef = React.createRef();
@@ -131,7 +141,7 @@ export class Camera extends React.Component {
                         step="250"
                         style={{ marginLeft: 5 }}
                         defaultValue={this.state.syncOffset}
-                        onChange={(e) => this.setState({ syncOffset: +e.target.value })}
+                        onChange={(e) => this.setState({ syncOffset: +e.target.value }, () => { this.saveDevOptions() })}
                     />
                     <label
                         style={{ marginLeft: 5 }}>
@@ -142,11 +152,11 @@ export class Camera extends React.Component {
                         step="0.1"
                         style={{ marginLeft: 5 }}
                         defaultValue={this.state.syncBuffer}
-                        onChange={(e) => this.setState({ syncBuffer: +e.target.value })}
+                        onChange={(e) => this.setState({ syncBuffer: +e.target.value }, () => { this.saveDevOptions() })}
                     />
                     <br />
 
-                    <label
+                    {/* <label
                         style={{ marginLeft: 5 }}>
                         Editing
                     </label>
@@ -155,7 +165,7 @@ export class Camera extends React.Component {
                         style={{ marginLeft: 5 }}
                         defaultChecked={this.state.editingAllowed}
                         onChange={(e) => this.setState({ editingAllowed: e.target.checked })}
-                    />
+                    /> */}
                     <label
                         style={{ marginLeft: 5 }}>
                         Jump to Time in Seconds
@@ -165,7 +175,7 @@ export class Camera extends React.Component {
                         step="1"
                         style={{ marginLeft: 5 }}
                         defaultValue={this.state.restartTime}
-                        onChange={(e) => this.setState({ restartTime: +e.target.value })}
+                        onChange={(e) => this.setState({ restartTime: +e.target.value }, () => { this.saveDevOptions() })}
                     />
                     <input
                         type="button"
@@ -226,6 +236,14 @@ export class Camera extends React.Component {
         );
     }
 
+    // TODO: temp for dev, remove when finished with it
+    saveDevOptions = () => {
+        localStorage.setItem("UES-APP-DEVOPTIONS", JSON.stringify({
+            syncOffset: this.state.syncOffset,
+            syncBuffer: this.state.syncBuffer,
+            restartTime: this.state.restartTime,
+        }));
+    }
 
     updateDetections = () => {
         if (this.currentMediaTime && !this.paused) {
@@ -250,15 +268,15 @@ export class Camera extends React.Component {
         let inside = 0;
         let outside = 0;
         const l = this.detections.length;
-        for(let i = 0; i < l; i++) {
+        for (let i = 0; i < l; i++) {
             const detection = this.detections[i];
-            if(detection.in) {
+            if (detection.in) {
                 inside = inside + 1;
-            } else if(detection.out) {
+            } else if (detection.out) {
                 outside = outside + 1;
             }
         }
-        this.props.updateRealTimeMetrics({inside, outside});
+        this.props.updateRealTimeMetrics({ inside, outside });
     }
 
     updateCurrentMediaTime = () => {
@@ -293,11 +311,11 @@ export class Camera extends React.Component {
                 for (let d = 0; d < 3; d++) {
                     // TODO: account for daylight saving
                     let hours = dates[d].getUTCHours();
-                    if(hours.length === 1) {
+                    if (hours.length === 1) {
                         hours = `0${hours}`;
                     }
                     let minutes = dates[d].getUTCMinutes();
-                    if(minutes.length === 1) {
+                    if (minutes.length === 1) {
                         minutes = `0${minutes}`;
                     }
                     let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
@@ -320,7 +338,7 @@ export class Camera extends React.Component {
                                     const inference = inferences[j];
                                     if (inference.label === "person") {
                                         inference.in = view.in === 0 ? true : false;
-                                        inference.out = view.out === 0 ? true: false;
+                                        inference.out = view.out === 0 ? true : false;
                                     }
                                     const time = inference.timestamp;
                                     if (!this.inferences.hasOwnProperty(time)) {

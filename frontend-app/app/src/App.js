@@ -198,13 +198,13 @@ class App extends React.Component {
                                 padding: 10
                             }}
                         >
-                            <RealTimeMetrics
+                            {/* <RealTimeMetrics
                                 aggregator={this.state.aggregator}
                                 frame={this.state.frame}
                                 collisions={this.state.collisions}
                                 detections={this.state.detections}
                                 metrics={this.state.metrics}
-                            />
+                            /> */}
                             {/* <AggregateStatsInTimeWindow
                                 aggregator={this.state.aggregator}
                                 isBBoxInZones={collision.isBBoxInZones}
