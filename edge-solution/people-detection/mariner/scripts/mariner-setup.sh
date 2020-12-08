@@ -47,6 +47,11 @@ exitWithError() {
     exit 1
 }
 
+checkIfMachineIsMariner() {
+	if [[ ! "$(uname -a)" == *"Mariner"* ]]; 
+		then echo "[WARNING] Current machine is not a mariner build. The installation commands may not work." ;
+	fi
+}
 
 checkPackageInstallation() {
 
@@ -56,25 +61,31 @@ checkPackageInstallation() {
 	fi
 
 	if [ -z "$(command -v az)" ]; then
+		checkIfMachineIsMariner
         echo "$(info) Installing az cli"
-		curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-    fi
+		wget "https://packages.microsoft.com/yumrepos/azure-cli/azure-cli-2.0.16-1.el7.x86_64.rpm"
+		rpm -ivh --nodeps azure-cli-*.rpm
+		rm azure-cli-*.rpm
 
-    if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-        echo "$(info) Installing azure-iot extension"
+		echo "$(info) Installing azure-iot extension"
         az extension add --name azure-iot
-    fi
+    else
+		if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
+			echo "$(info) Installing azure-iot extension"
+			az extension add --name azure-iot
+		fi
+	fi
 	
     if [ -z "$(command -v jq)" ]; then
+        checkIfMachineIsMariner
         echo "$(info) Installing jq"
-		sudo apt-get update
-		sudo apt-get install jq
+		sudo yum -y install jq
     fi
 	
 	if [ -z "$(command -v timeout)" ]; then
+        checkIfMachineIsMariner
         echo "$(info) Installing timeout"
-		sudo apt-get update
-		sudo apt-get install timeout
+		sudo yum -y install timeout
     fi
 }
 
