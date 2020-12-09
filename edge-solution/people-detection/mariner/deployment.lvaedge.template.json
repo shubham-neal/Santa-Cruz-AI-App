@@ -79,7 +79,7 @@
     "lvaEdge": {
       "properties.desired": {
         "applicationDataDirectory": "/var/lib/azuremediaservices",
-        "azureMediaServicesArmId": "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP_IOT}/providers/microsoft.media/mediaservices/${AMS_ACCOUNT_NAME}",
+        "azureMediaServicesArmId": "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP_AMS}/providers/microsoft.media/mediaservices/${AMS_ACCOUNT_NAME}",
         "aadTenantId": "$TENANT_ID",
         "aadServicePrincipalAppId": "$SP_APP_ID",
         "aadServicePrincipalSecret": "$SP_APP_PWD",

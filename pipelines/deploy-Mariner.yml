@@ -146,38 +146,6 @@ stages:
             echo "$(info) Installing azure-iot extension"
             az extension add --name azure-iot
           fi
-
-          INSTALL_AZCOPY="true"
-          if [ -n "$(command -v azcopy)" ]; then
-            currentVersion=$(sudo azcopy --version | cut -d ' ' -f3)
-            requiredVersion="10.5.1"
-            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
-            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
-              # Current installed azcopy version is higher than required, no need to re-install
-              INSTALL_AZCOPY="false"
-            fi
-          fi
-  
-          if [ "$INSTALL_AZCOPY" == "true" ]; then
-  
-            echo "$(info) Installing AzCopy"
-
-            CURRENT_DIRECTORY="$PWD"
-            wget https://aka.ms/downloadazcopy-v10-linux -O downloadazcopy-v10-linux
-            # unzipping the downloaded archive
-            tar -xvf downloadazcopy-v10-linux
-            # changing directory to fetch the azcopy executable
-            cd azcopy_linux*/
-            # Add azcopy to /usr/bin directory
-            sudo cp azcopy /usr/bin/
-            # Return to original directory
-            cd "$CURRENT_DIRECTORY"
-            # Remove the downloaded files
-            rm azcopy_linux* -r
-            rm downloadazcopy-v10-linux
-
-            echo "$(info) Installed AzCopy "
-          fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
@@ -185,6 +153,7 @@ stages:
       displayName: 'Run mariner-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
+        VM_PASSWORD: $(MARINER_VM_PASSWORD)
       inputs:
         targetType: 'inline'
         script: |
@@ -195,19 +164,29 @@ stages:
           sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
           echo "Updated sas url for deployment bundle mariner zip"
 
+          chmod +x mariner-setup.sh
+
+          CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
+          az network nsg rule create --name "Port_22" --nsg-name "mariner-nsg" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          az network nsg rule create --name "Port_22" --nsg-name "rg-mariner-device-vnet-NRMS" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+
+          sshpass -p $VM_PASSWORD scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh $VM_UNAME@$VM_SERVER:/root/setup/mariner-setup.sh
+
+          sleep 5s
+
+          sshpass -p $VM_PASSWORD ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $VM_UNAME@$VM_SERVER "az login --service-principal --username \"$SP_APP_ID\" --password \"$SP_APP_PWD\" --tenant \"$TENANT_ID\" --output \"none\" "
+
+          sshpass -p $VM_PASSWORD ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $VM_UNAME@$VM_SERVER "/root/setup/mariner-setup.sh --rg-ams \"$RESOURCE_GROUP_AMS\" --rg-device \"$RESOURCE_GROUP_DEVICE\" --existing-iothub \"$EXISTING_IOTHUB_NAME\" --existing-device \"$EXISTING_DEVICE_NAME\" --use-existing-sp \"$USE_EXISTING_SP\" --sp-id \"$SP_APP_ID\" --sp-password \"$SP_APP_PWD\" --sp-object-id \"$OBJECT_ID\" "
           # Exit the inline script on any erros
-          set -e
+          #set -e
 
-          echo "Logging into Azure"
+          #echo "Logging into Azure"
           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          #az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
 
-          echo "Setting the distribution envrionment to mariner for skipping login step"
-          export POWERSHELL_DISTRIBUTION_CHANNEL="Mariner"
-
-          echo "Running mariner-setup.sh script"
+          #echo "Running mariner-setup.sh script"
           
-          sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID"
+          #sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'

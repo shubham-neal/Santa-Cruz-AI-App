@@ -32,6 +32,12 @@
       "metadata": {
         "description": "STORAGE_BLOB_SHARED_ACCESS_SIGNATURE"
       }
+    },
+    "WEBAPP_PACKAGE": {
+      "type": "string",
+      "metadata": {
+        "description": "Package for the webapp"
+      }
     }
   },
   "variables": {
@@ -176,7 +182,7 @@
             "[variables('webappName')]"
           ],
           "properties": {
-            "packageUri": "https://unifiededgescenariostest.blob.core.windows.net/test/people-detection-app.zip"
+            "packageUri": "[parameters('WEBAPP_PACKAGE')]"
           }
         }
       ]

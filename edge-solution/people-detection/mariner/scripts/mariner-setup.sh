@@ -14,9 +14,9 @@ printHelp() {
         --website-password      : Password to access the web app
 		--existing-iothub		: Name of existing iothub
 		--existing-device		: Name of existing device present in iothub
-        --use-existing-sp       : Use existing service principal. Yes/No.
+        --use-existing-sp       : Use existing service principal. True/False.
         --help                  : Show this message and exit
-        --sp-id                 : Service principal id      
+        --sp-id                 : Service principal id (if use-existing-sp is set to 'True')     
         --sp-password           : Service principal secret
         --sp-object-id          : Service principal object id 
     
@@ -46,6 +46,7 @@ exitWithError() {
     tput sgr0
     exit 1
 }
+
 
 checkIfMachineIsMariner() {
 	if [[ ! "$(uname -a)" == *"Mariner"* ]]; 
@@ -114,7 +115,7 @@ while [[ $# -gt 0 ]]; do
             shift # past value
             ;;
         --use-existing-sp)
-            USING_EXISTING_SP="$2"
+            USE_EXISTING_SP="$2"
             shift # past argument
             shift # past value
             ;;    
@@ -146,6 +147,20 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Check if required values are present after setting use existing service principal as Yes.
+if [ "$USE_EXISTING_SP" == "True"  ];then
+    if [ -z "$SP_APP_ID" ] || [ -z "$SP_APP_PWD" ] || [ -z "$OBJECT_ID" ];then
+        echo "$(error) Service principal id, secret or object id cannot be empty"
+        exitWithError
+    else 
+        echo "$(info) using provided existing service principal credentials"
+    fi
+else
+    USE_EXISTING_SP="False"
+    SP_APP_ID=""
+    SP_APP_PWD=""
+    OBJECT_ID=""
+fi
 
 if [ "$PRINT_HELP" == "true" ]; then
         printHelp
@@ -157,7 +172,7 @@ elif [ -z "$RESOURCE_GROUP_AMS" ]; then
 elif [ -z "$RESOURCE_GROUP_DEVICE" ]; then
         RESOURCE_GROUP_DEVICE="$RESOURCE_GROUP_AMS"
 fi
-RESOURCE_GROUP_IOT="$RESOURCE_GROUP_DEVICE"
+
 # Check if required packages are installed
 checkPackageInstallation
 
@@ -166,18 +181,33 @@ DEVICE_ARCHITECTURE="x86"
 #Run command to get current device runtime
 DEVICE_RUNTIME="CPU"
 
+# Random number and string generation for unique names
 RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_AMS" | md5sum | cut -c1-4)"
 RANDOM_NUMBER="${RANDOM:0:3}"
 
-if [ -z "$IOTHUB_NAME" ]; then
-	IOTHUB_NAME="azureeye"
+if [ -z "$IOTHUB_NAME" ];then
+	IOTHUB_NAME="brainboxhub"
 	IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
 else
 	USING_EXISTING_IOTHUB="Yes"
 fi
 
+# Check if device is present inside the existing iothub
+if [ "$USING_EXISTING_IOTHUB" == "Yes" ];then
+    if [ -z "$DEVICE_NAME" ];then
+        echo "$(error) Device name cannot be empty while using existing iothub."
+        exitWithError
+    else 
+        EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
+        if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
+            echo "$(error) $DEVICE_NAME does not exists in the iothub $IOTHUB_NAME"
+            exitWithError
+        fi    
+    fi
+fi
+
 if [ -z "$DEVICE_NAME" ]; then
-	DEVICE_NAME="azureeye"
+	DEVICE_NAME="brainbox"
 fi
 
 MEDIA_SERVICE_NAME="livevideoanalysis"
@@ -185,10 +215,10 @@ MEDIA_SERVICE_NAME=${MEDIA_SERVICE_NAME}${RANDOM_SUFFIX}
 #USE_EXISTING_RESOURCES="true"
 LOCATION="westus2"
 GRAPH_TOPOLOGY_NAME="CVRToAMSAsset"
-GRAPH_INSTANCE_NAME="AzureEyeSOM"
+GRAPH_INSTANCE_NAME="BrainBoxSOM"
 STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
-DEPLOYMENT_NAME="eye-deployment"
+DEPLOYMENT_NAME="bbox-deployment"
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 WEBAPP_PASSWORD=""
 
@@ -296,7 +326,7 @@ fi
 
 # creating new service principal for custom role assignment
 
-if [ "$USING_EXISTING_SP" == "No" ];then 
+if [ "$USE_EXISTING_SP" == "False" ];then 
     APP_NAME="$MEDIA_SERVICE_NAME-sp"
     APP_DETAILS=$(az ad sp create-for-rbac --name $APP_NAME --skip-assignment --query "{appName:displayName, appId:appId, appSecret:password}")
     OBJECT_ID=$(az ad sp list --display-name $APP_NAME --query [0].objectId --output tsv)
@@ -355,7 +385,7 @@ sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT
 sed -i 's#^\(TENANT_ID[ ]*=\).*#\1\"'"$TENANT_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SUBSCRIPTION_ID[ ]*=\).*#\1\"'"$SUBSCRIPTION_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(AMS_ACCOUNT_NAME[ ]*=\).*#\1\"'"$MEDIA_SERVICE_NAME"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
-sed -i 's#^\(RESOURCE_GROUP_IOT[ ]*=\).*#\1\"'"$RESOURCE_GROUP_AMS"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
+sed -i 's#^\(RESOURCE_GROUP_AMS[ ]*=\).*#\1\"'"$RESOURCE_GROUP_AMS"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 
 
 echo "$(info) Generating manifest file from template file"
@@ -534,6 +564,9 @@ STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --device-id "$DEVICE_NAME" --module-id lvaYolov3 --hub-name "$IOTHUB_NAME" --key-type primary --query "connectionString" -o tsv)
 
 echo "$(info) Running ARM template to deploy Web App"
+
+PACKAGE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/people-detection-app.zip"
+
 WEBAPP_TEMPLATE="webapp.json"
 
-az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE"
+az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" WEBAPP_PACKAGE="$PACKAGE_URI"
