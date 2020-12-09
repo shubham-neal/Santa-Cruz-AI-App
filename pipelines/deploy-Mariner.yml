@@ -207,7 +207,7 @@ stages:
 
           echo "Running mariner-setup.sh script"
           
-          sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME"
+          sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID"
           
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
