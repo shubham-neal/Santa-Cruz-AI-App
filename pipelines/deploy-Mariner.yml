@@ -154,6 +154,7 @@ stages:
       env:
         SP_APP_PWD: $(SP_APP_PWD)
         VM_PASSWORD: $(MARINER_VM_PASSWORD)
+        SP_APP_ID_LOGIN: $(SP_APP_ID_LOGIN)
       inputs:
         targetType: 'inline'
         script: |
@@ -167,8 +168,10 @@ stages:
           chmod +x mariner-setup.sh
 
           CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
-          az network nsg rule create --name "Port_22" --nsg-name "mariner-nsg" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
-          az network nsg rule create --name "Port_22" --nsg-name "rg-mariner-device-vnet-NRMS" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+
+          az network nsg rule create --name "AllowSSH" --nsg-name "mariner-nsg" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          az network nsg rule create --name "AllowSSH" --nsg-name "rg-mariner-device-vnet-NRMS" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
 
           sshpass -p $VM_PASSWORD scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh $VM_UNAME@$VM_SERVER:/root/setup/mariner-setup.sh
 
