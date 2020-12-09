@@ -310,12 +310,12 @@ export class Camera extends React.Component {
                 dates[2].setMinutes(dates[2].getMinutes() + 1);
                 for (let d = 0; d < 3; d++) {
                     // TODO: account for daylight saving
-                    let hours = dates[d].getUTCHours();
-                    if (hours.length === 1) {
+                    let hours = `${dates[d].getUTCHours()}`;
+                    if (hours.length < 2) {
                         hours = `0${hours}`;
                     }
-                    let minutes = dates[d].getUTCMinutes();
-                    if (minutes.length === 1) {
+                    let minutes = `${dates[d].getUTCMinutes()}`;
+                    if (minutes.length < 2) {
                         minutes = `0${minutes}`;
                     }
                     let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
@@ -323,6 +323,12 @@ export class Camera extends React.Component {
                         month: '2-digit',
                         day: '2-digit'
                     }).replace(/-/g, '/')}/${hours}/${minutes}`;
+
+                    const path = containerName.split('/');
+                    const last = path[path.length - 1];
+                    if(last.length < 2) {
+                        console.log(path);
+                    }
 
                     const exists = await this.blobExists("detectoroutput", containerName);
                     if (exists) {
