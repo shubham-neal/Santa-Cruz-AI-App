@@ -9,11 +9,4 @@ bin/
 .vs/
 ASALocalRun/
 sandbox/
-/edge-solution/.env
-/edge-solution/lva.env
-/edge-solution/opencv.env
-
-
-
-
-
+**/edge-solution/*.env
