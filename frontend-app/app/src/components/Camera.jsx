@@ -199,7 +199,6 @@ export class Camera extends React.Component {
                             <video
                                 ref={this.videoRef}
                                 className="azuremediaplayer amp-default-skin amp-big-play-centered"
-                                tabIndex={0}
                                 style={{
                                     position: 'absolute',
                                     zIndex: 1
@@ -310,45 +309,58 @@ export class Camera extends React.Component {
                 dates[2].setMinutes(dates[2].getMinutes() + 1);
                 for (let d = 0; d < 3; d++) {
                     // TODO: account for daylight saving
-                    let hours = `${dates[d].getUTCHours()}`;
-                    if (hours.length < 2) {
-                        hours = `0${hours}`;
+                    
+                    // hours and minutes need to be 2 digits
+                    const hours = dates[d].getUTCHours();
+                    let hoursString = `${hours}`;
+                    const hoursStringLength = hoursString.length;
+                    if (hoursStringLength < 2) {
+                        hoursString = `0${hours}`;
                     }
-                    let minutes = `${dates[d].getUTCMinutes()}`;
-                    if (minutes.length < 2) {
-                        minutes = `0${minutes}`;
+                    const minutes = dates[d].getUTCMinutes();
+                    let minutesString = `${minutes}`;
+                    const minutesStringLength = minutesString.length;
+                    if (minutesStringLength < 2) {
+                        minutesString = `0${minutes}`;
                     }
-                    let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dates[d].toLocaleDateString('fr-CA', {
+
+                    const date = dates[d];
+                    const dateLocaleString = date.toLocaleDateString('fr-CA', {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
-                    }).replace(/-/g, '/')}/${hours}/${minutes}`;
+                    });
+                    const dateString = dateLocaleString.replace(/-/g, '/')
+
+                    let containerName = `${this.props.iotHubName}/0${this.state.blobPartition}/${dateString}/${hoursString}/${minutesString}`;
 
                     const path = containerName.split('/');
-                    const last = path[path.length - 1];
-                    if(last.length < 2) {
+                    const hoursPath = path[path.length - 2];
+                    const hoursPathLength = hoursPath.length;
+                    const minutesPath = path[path.length - 1];
+                    const minutesPathLength = minutesPath.length;
+                    if(hoursPathLength < 2 || minutesPathLength < 2) {
                         console.log(path);
-                    }
-
-                    const exists = await this.blobExists("detectoroutput", containerName);
-                    if (exists) {
-                        const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
-                        let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerName });
-                        const blobs = [];
-                        for await (const item of iter) {
-                            const blob = await this.downloadBlob("detectoroutput", item.name);
-                            for (let i = 0; i < blob.length; i++) {
-                                const view = blob[i];
-                                const inferences = view.inferences;
-                                for (let j = 0; j < inferences.length; j++) {
-                                    const inference = inferences[j];
-                                    if (inference.label === "person") {
-                                        inference.in = view.in === 0 ? true : false;
-                                        inference.out = view.out === 0 ? true : false;
-                                    }
-                                    const time = inference.timestamp;
-                                    if (!this.inferences.hasOwnProperty(time)) {
-                                        this.inferences[time] = inference;
+                    } else {
+                        const exists = await this.blobExists("detectoroutput", containerName);
+                        if (exists) {
+                            const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
+                            let iter = containerClient.listBlobsByHierarchy("/", { prefix: containerName });
+                            for await (const item of iter) {
+                                const blob = await this.downloadBlob("detectoroutput", item.name);
+                                for (let i = 0; i < blob.length; i++) {
+                                    const view = blob[i];
+                                    const inferences = view.inferences;
+                                    for (let j = 0; j < inferences.length; j++) {
+                                        const inference = inferences[j];
+                                        if (inference.label === "person") {
+                                            inference.in = view.in === 0 ? true : false;
+                                            inference.out = view.out === 0 ? true : false;
+                                        }
+                                        const time = inference.timestamp;
+                                        if (!this.inferences.hasOwnProperty(time)) {
+                                            this.inferences[time] = inference;
+                                        }
                                     }
                                 }
                             }
