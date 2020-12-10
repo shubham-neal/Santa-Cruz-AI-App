@@ -38,13 +38,13 @@ stages:
       enabled: true
       displayName: 'Delete existing resource group'
       env:
-        SP_APP_PWD: $(SP_APP_PWD)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
       inputs:
         targetType: 'inline'
         script: |
           echo "Logging to Azure"
                           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
 
           if [ "$(az group exists --name "$RESOURCE_GROUP_AMS")" == false ]; then
               echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" does not exist in current subscription."
@@ -73,7 +73,7 @@ stages:
       displayName: 'Upload the mariner deployment scripts to temporary container in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-        SP_APP_PWD: $(SP_APP_PWD)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
       inputs:
         targetType: 'inline'
         script: |
@@ -81,7 +81,7 @@ stages:
           set -e
           echo "Logging into Azure"
           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
           
           CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
@@ -154,7 +154,7 @@ stages:
       env:
         SP_APP_PWD: $(SP_APP_PWD)
         MARINER_VM_PASSWORD: $(MARINER_VM_PASSWORD)
-        SP_APP_ID_LOGIN: $(SP_APP_ID_LOGIN)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
       inputs:
         targetType: 'inline'
         script: |
@@ -189,13 +189,13 @@ stages:
       displayName: 'Delete temporary container for mariner deployment scripts in storage account'
       env:
         RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-        SP_APP_PWD: $(SP_APP_PWD)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
       inputs:
         targetType: 'inline'
         script: |
           echo "Logging into Azure"
           
-          az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
           
           CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
           
@@ -240,13 +240,13 @@ stages:
             displayName: 'Upload the deployment bundle mariner zip to release storage account'
             env:
               RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
-              SP_APP_PWD: $(SP_APP_PWD)
+              SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
             inputs:
               targetType: 'inline'
               script: |
                 echo "Logging into Azure"
                 
-                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
 
                 CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
                 
@@ -312,7 +312,7 @@ stages:
             enabled: true
             displayName: 'Delete the resource group of test environment'
             env:
-              SP_APP_PWD: $(SP_APP_PWD)
+              SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
             inputs:
               targetType: 'inline'
               script: |
@@ -321,7 +321,7 @@ stages:
                 
                 echo "Logging to Azure"
                 
-                az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
+                az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
                 
                 PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS" --query "principalId" -o tsv)
                 az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE" --assignee "$PRINCIPAL_ID"
