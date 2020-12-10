@@ -223,6 +223,7 @@ stages:
         deploy:
           steps: 
           - checkout: none
+          - download: none
 
           - task: DownloadPipelineArtifact@2
             enabled: true
