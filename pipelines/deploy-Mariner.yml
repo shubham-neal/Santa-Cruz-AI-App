@@ -317,7 +317,6 @@ stages:
               targetType: 'inline'
               script: |
                 # Exit the script on any error
-                set -e
                 
                 echo "Logging to Azure"
                 
