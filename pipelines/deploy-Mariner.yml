@@ -222,8 +222,7 @@ stages:
       runOnce:
         deploy:
           steps: 
-          - checkout: none
-          - download: none
+          - checkout: self
 
           - task: DownloadPipelineArtifact@2
             enabled: true
