@@ -215,7 +215,7 @@ stages:
   jobs:
   - deployment: 'Release'
     displayName: 'Release bundle zip to storage account'
-    environment: 'ApproveMarinerRelease'
+    environment: 'ApproveARMRelease'
     variables:
       - group: ${{variables.Variable_Group}}
     strategy:
