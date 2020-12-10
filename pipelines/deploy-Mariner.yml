@@ -153,7 +153,7 @@ stages:
       displayName: 'Run mariner-setup.sh script'
       env:
         SP_APP_PWD: $(SP_APP_PWD)
-        VM_PASSWORD: $(MARINER_VM_PASSWORD)
+        MARINER_VM_PASSWORD: $(MARINER_VM_PASSWORD)
         SP_APP_ID_LOGIN: $(SP_APP_ID_LOGIN)
       inputs:
         targetType: 'inline'
@@ -169,28 +169,18 @@ stages:
 
           CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
           az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
-
-          az network nsg rule create --name "AllowSSH" --nsg-name "mariner-nsg" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
-          az network nsg rule create --name "AllowSSH" --nsg-name "rg-mariner-device-vnet-NRMS" --priority 100 --resource-group "rg-mariner-device" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
-
-          sshpass -p $VM_PASSWORD scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh $VM_UNAME@$VM_SERVER:/root/setup/mariner-setup.sh
-
+          
+          az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG1_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG2_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          sudo apt install -y sshpass
+          sshpass -p "$MARINER_VM_PASSWORD" scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP":/root/setup/mariner-setup.sh
           sleep 5s
-
-          sshpass -p $VM_PASSWORD ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $VM_UNAME@$VM_SERVER "az login --service-principal --username \"$SP_APP_ID\" --password \"$SP_APP_PWD\" --tenant \"$TENANT_ID\" --output \"none\" "
-
-          sshpass -p $VM_PASSWORD ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $VM_UNAME@$VM_SERVER "/root/setup/mariner-setup.sh --rg-ams \"$RESOURCE_GROUP_AMS\" --rg-device \"$RESOURCE_GROUP_DEVICE\" --existing-iothub \"$EXISTING_IOTHUB_NAME\" --existing-device \"$EXISTING_DEVICE_NAME\" --use-existing-sp \"$USE_EXISTING_SP\" --sp-id \"$SP_APP_ID\" --sp-password \"$SP_APP_PWD\" --sp-object-id \"$OBJECT_ID\" "
-          # Exit the inline script on any erros
-          #set -e
-
-          #echo "Logging into Azure"
-          
-          #az login --service-principal --username "$SP_APP_ID" --password "$SP_APP_PWD" --tenant "$TENANT_ID" --output "none"
-
-          #echo "Running mariner-setup.sh script"
-          
-          #sudo bash ./mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID"
-          
+         
+          Command="az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none" "
+          sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
+          echo "Running script"
+          Command="echo $(ls); sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
+          sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
