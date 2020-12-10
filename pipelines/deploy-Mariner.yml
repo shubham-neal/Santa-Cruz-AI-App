@@ -179,7 +179,7 @@ stages:
           Command="az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none" "
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Running script"
-          Command="echo $(ls); sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --existing-iothub "$EXISTING_IOTHUB_NAME" --existing-device "$EXISTING_DEVICE_NAME" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
+          Command="echo $(ls); sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --use-existing-sp "$USE_EXISTING_SP" --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
