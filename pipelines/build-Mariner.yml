@@ -106,7 +106,7 @@ stages:
     # Publishing the pipeline artifact
     - task: PublishPipelineArtifact@1
       inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)/people-detection-app.zip'
+        targetPath: '$(Pipeline.Workspace)/people-detection-app.zip'
         artifact: 'people-detection-app'
         publishLocation: 'pipeline'
 
