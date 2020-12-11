@@ -107,6 +107,13 @@ stages:
             --file deployment-bundle-mariner.zip \
             --name deployment-bundle-mariner.zip
           
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file people-detection-app.zip \
+            --name people-detection-app.zip
+
           unzip -o deployment-bundle-mariner.zip -d .
           
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
@@ -162,6 +169,9 @@ stages:
           SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle-mariner.zip"
           sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
           echo "Updated sas url for deployment bundle mariner zip"
+
+          PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/people-detection-app.zip"
+          sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
 
           chmod +x mariner-setup.sh
 
@@ -279,6 +289,20 @@ stages:
                   --file deployment-bundle-mariner.zip \
                   --name deployment-bundle-mariner.zip
                 
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file people-detection-app.zip \
+                  --name "$(buildSuffix)/people-detection-app.zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file people-detection-app.zip \
+                  --name people-detection-app.zip
+                  
                 cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
                 echo "Updating sas url for deployment bundle zip"
@@ -286,6 +310,11 @@ stages:
                 sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
                 echo "Updated sas url for deployment bundle mariner zip"
                 
+                echo "Updating package uri for deployment bundle zip"
+                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/people-detection-app.zip"
+                sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+                echo "Updated package uri for deployment bundle mariner zip"
+
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -297,6 +326,11 @@ stages:
                 SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle-mariner.zip"
                 sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
                 echo "Updated sas url for deployment bundle mariner zip"
+                
+                echo "Updating package uri for deployment bundle zip"
+                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/people-detection-app.zip"
+                sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+                echo "Updated package uri for deployment bundle mariner zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
