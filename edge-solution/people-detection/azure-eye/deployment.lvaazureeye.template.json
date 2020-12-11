@@ -9,7 +9,11 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
+<<<<<<< HEAD:edge-solution/people-detection/azure-eye/deployment.lvaazureeye.template.json
+              "image": "unifiededgescenarios.azurecr.io/live-video-analytics:1.0.5rc",
+=======
               "image": "mcr.microsoft.com/media/live-video-analytics:1",
+>>>>>>> master:people_detection/simple/RtcvDeployment/deployment.lva.template.json
               "createOptions": {
                 "HostConfig": {
                   "LogConfig": {
@@ -39,6 +43,13 @@
                 },
                 "Name": "/rtspserver",
                 "HostConfig": {
+                  "LogConfig": {
+                    "Type": "",
+                    "Config": {
+                      "max-size": "10m",
+                      "max-file": "10"
+                    }
+                  },
                   "Binds": [
                     "/dev/bus/usb:/dev/bus/usb"
                   ],
@@ -149,6 +160,6 @@
         "Running": true,
         "TelemetryInterval": 5
       }
-    }    
+    }
   }
 }
