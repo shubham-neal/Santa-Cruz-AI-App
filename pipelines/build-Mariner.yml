@@ -38,13 +38,6 @@ stages:
         artifactName: 'ues_app'
         targetPath: '$(Pipeline.Workspace)'
     
-    - task: CopyFiles@2
-      displayName: 'Copy App Files to a combined folder'
-      inputs:
-        SourceFolder: '$(Pipeline.Workspace)'
-        Contents: people-detection-app.zip
-        TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
-
 
     # Copy all the required files for deployment to a folder
     - task: CopyFiles@2
@@ -108,6 +101,13 @@ stages:
       inputs:
         targetPath: '$(Build.ArtifactStagingDirectory)/deployment-bundle-mariner.zip'
         artifact: 'deployment-bundle-mariner'
+        publishLocation: 'pipeline'
+
+    # Publishing the pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/people-detection-app.zip'
+        artifact: 'people-detection-app'
         publishLocation: 'pipeline'
 
     # Publishing the pipeline artifact
