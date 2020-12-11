@@ -9,12 +9,16 @@ Press this button to deploy the people counting application to your Santa Cruz A
 ## Legacy Deployment
 
 
+
+
+
 Press this button to deploy the people counting application to virtualized environment in Azure Public Cloud.
+
+[Read this](docs/virtualized-environment-setup.md) for instructions on how to use Legacy Deployment method.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Funifiededgescenarios.blob.core.windows.net%2Farm-template%2F20201005.6%2Fazuredeploy-20201005.6.json)
 
 
-[Read this](docs/virtualized-environment-setup.md) for instructions on how to use Legacy Deployment method.
 
 ### Overview
 

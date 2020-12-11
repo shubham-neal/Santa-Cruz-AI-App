@@ -115,7 +115,7 @@
                         "value": {
                             "signedServices": "b",
                             "signedPermission": "lr",
-                            "signedExpiry": "2021-01-01T00:00:01Z",
+                            "signedExpiry": "2021-08-01T00:00:01Z",
                             "signedResourceTypes": "sco"
                         }
                     },
