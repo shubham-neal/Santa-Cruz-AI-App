@@ -689,7 +689,7 @@
                             "properties": {
                                 "forceUpdateTag": "1",
                                 "azCliVersion": "2.9.1",
-                                "primaryScriptUri": "https://unifiededgescenariostest.blob.core.windows.net/test2/deploy-modules-azureeye.sh",
+                                "primaryScriptUri": "https://unifiededgescenarios.blob.core.windows.net/arm-template/azure-eye/latest/deploy-modules-azureeye.sh",
                                 "supportingScriptUris": [],
                                 "environmentVariables": [
                                     {
@@ -914,7 +914,7 @@
                                         "[variables('webappName')]"
                                     ],
                                     "properties": {
-                                        "packageUri": "https://unifiededgescenariostest.blob.core.windows.net/test2/people-detection-app.zip"
+                                        "packageUri": "https://unifiededgescenarios.blob.core.windows.net/arm-template/azure-eye/latest/people-detection-app.zip"
                                     }
                                 }
                             ]

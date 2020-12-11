@@ -48,8 +48,13 @@ stages:
               echo "Skipping deletion of resource group"
           else
               echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" exists in current subscription."
-              PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS_ARM" --query "principalId" -o tsv)
-              az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
+              PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
+              if [ ! -z "$PRINCIPAL_ID" ]; then
+                IS_ROLE_ASSIGNMENT_NOT_PRESENT=$(az role assignment list --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --query "[?principalId=='$PRINCIPAL_ID'].principalId" -o tsv)
+                if [ ! -z "$IS_ROLE_ASSIGNMENT_NOT_PRESENT" ]; then
+                  az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
+                fi
+              fi
               echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
               az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --subscription "$SUBSCRIPTION_ID" --yes
               echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
@@ -238,14 +243,21 @@ stages:
                 
                 az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
                 
-                PRINCIPAL_ID=$(az identity show -n "$MANAGED_IDENTITY" -g "$RESOURCE_GROUP_AMS_ARM" --query "principalId" -o tsv)
-                az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
-
+                PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
+                if [ ! -z "$PRINCIPAL_ID" ]; then
+                  IS_ROLE_ASSIGNMENT_NOT_PRESENT=$(az role assignment list --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --query "[?principalId=='$PRINCIPAL_ID'].principalId" -o tsv)
+                  if [ ! -z "$IS_ROLE_ASSIGNMENT_NOT_PRESENT" ]; then
+                    az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
+                  fi
+                fi
                 echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\""
+                GROUP_EXISTS=$(az group exists -n "$RESOURCE_GROUP_AMS_ARM")
+                if [ "$GROUP_EXISTS" == "true" ]; then
+                  az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --yes --no-wait
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS_ARM\""
+                fi
                 
-                az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --yes --no-wait
                 
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS_ARM\""
                 
 
 
