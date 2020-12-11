@@ -35,13 +35,13 @@ export class Camera extends React.Component {
             syncBuffer: 0.1,
             restartTime: 0
         };
-        
+
 
         this.state = {
             aggregator: JSON.parse(JSON.stringify(this.props.aggregator)),
             ampStreamingUrl: null,
             blobPartition: null,
-            
+
             // TODO: temp for dev, remove when finished with it
             syncOffset: devOptions.syncOffset,
             syncBuffer: devOptions.syncBuffer,
@@ -255,12 +255,33 @@ export class Camera extends React.Component {
                 const iTime = inferenceTime.getTime();
                 const difference = cmTime - iTime;
                 const seconds = Math.abs(difference / 1000);
-                if (seconds <= this.state.syncBuffer && this.inferences[inference].label === "person") {
+                if (seconds <= this.state.syncBuffer && this.isPerson(this.inferences[inference])) {
                     detections.push(this.inferences[inference]);
                 }
             }
             this.detections = detections;
         }
+    }
+
+    isPerson = (inference) => {
+        if (inference.hasOwnProperty("bbox")) {
+            if (inference.hasOwnProperty("label")) {
+                return inference.label === "person";
+            }
+        } else if (inference.hasOwnProperty("box")) {
+            if (inference.hasOwnProperty("type")) {
+                if (inference.type === "entity") {
+                    if (inference.hasOwnProperty("entity")) {
+                        if (inference.entity.hasOwnProperty("tag")) {
+                            if (inference.entity.tag.hasOwnProperty("value")) {
+                                return inference.entity.tag.value === "person";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     updateRealTimeMetrics = () => {
@@ -309,7 +330,7 @@ export class Camera extends React.Component {
                 dates[2].setMinutes(dates[2].getMinutes() + 1);
                 for (let d = 0; d < 3; d++) {
                     // TODO: account for daylight saving
-                    
+
                     // hours and minutes need to be 2 digits
                     const hours = dates[d].getUTCHours();
                     let hoursString = `${hours}`;
@@ -339,7 +360,7 @@ export class Camera extends React.Component {
                     const hoursPathLength = hoursPath.length;
                     const minutesPath = path[path.length - 1];
                     const minutesPathLength = minutesPath.length;
-                    if(hoursPathLength < 2 || minutesPathLength < 2) {
+                    if (hoursPathLength < 2 || minutesPathLength < 2) {
                         console.log(path);
                     } else {
                         const exists = await this.blobExists("detectoroutput", containerName);
@@ -353,10 +374,10 @@ export class Camera extends React.Component {
                                     const inferences = view.inferences;
                                     for (let j = 0; j < inferences.length; j++) {
                                         const inference = inferences[j];
-                                        if (inference.label === "person") {
-                                            inference.in = view.in === 0 ? true : false;
-                                            inference.out = view.out === 0 ? true : false;
-                                        }
+                                        // if (this.isPerson(inference)) {
+                                        //     inference.in = view.in === 0 ? true : false;
+                                        //     inference.out = view.out === 0 ? true : false;
+                                        // }
                                         const time = inference.timestamp;
                                         if (!this.inferences.hasOwnProperty(time)) {
                                             this.inferences[time] = inference;
@@ -451,7 +472,17 @@ export class Camera extends React.Component {
     }
 
     drawDetection(canvasContext, detection) {
-        if (detection.in || this.isAcrossThresholds(detection.bbox, this.props.aggregator.zones)) {
+        // if (detection.in || this.isAcrossThresholds(detection.bbox, this.props.aggregator.zones)) {
+        if(detection.hasOwnProperty("box")) {
+            detection.bbox = [
+                detection.box.l,
+                detection.box.t,
+                detection.box.w,
+                detection.box.h
+            ];
+        }
+
+        if (this.isAcrossThresholds(detection.bbox, this.props.aggregator.zones)) {
             canvasContext.strokeStyle = 'yellow';
             canvasContext.lineWidth = 4;
         } else {
