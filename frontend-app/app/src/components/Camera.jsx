@@ -346,6 +346,7 @@ export class Camera extends React.Component {
                     }
 
                     const date = dates[d];
+                    date.setDate(date.getDate() + 1);
                     const dateLocaleString = date.toLocaleDateString('fr-CA', {
                         year: 'numeric',
                         month: '2-digit',
@@ -363,6 +364,7 @@ export class Camera extends React.Component {
                     if (hoursPathLength < 2 || minutesPathLength < 2) {
                         console.log(path);
                     } else {
+                        try {
                         const exists = await this.blobExists("detectoroutput", containerName);
                         if (exists) {
                             const containerClient = this.props.blobServiceClient.getContainerClient("detectoroutput");
@@ -386,6 +388,9 @@ export class Camera extends React.Component {
                                 }
                             }
                         }
+                        } catch (e) {
+                            // console.log(e);
+                        }
                     }
                 }
             }
@@ -393,10 +398,15 @@ export class Camera extends React.Component {
     }
 
     async blobExists(containerName, blobName) {
-        const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
-        const blobClient = containerClient.getBlobClient(blobName);
-        const exists = blobClient.exists();
-        return exists;
+        try {
+            const containerClient = this.props.blobServiceClient.getContainerClient(containerName);
+            const blobClient = containerClient.getBlobClient(blobName);
+            const exists = blobClient.exists();
+            return exists;
+        } catch(e) {
+            // console.log(e);
+            return false;
+        }
     }
 
     async downloadBlob(containerName, blobName) {
