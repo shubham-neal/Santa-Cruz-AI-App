@@ -346,7 +346,7 @@ export class Camera extends React.Component {
                     }
 
                     const date = dates[d];
-                    date.setDate(date.getDate() + 1);
+                    date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
                     const dateLocaleString = date.toLocaleDateString('fr-CA', {
                         year: 'numeric',
                         month: '2-digit',
