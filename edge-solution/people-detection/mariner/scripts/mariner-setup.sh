@@ -14,7 +14,7 @@ printHelp() {
         --website-password      : Password to access the web app
 		--existing-iothub		: Name of existing iothub
 		--existing-device		: Name of existing device present in iothub
-        --use-existing-sp       : Use existing service principal. True/False.
+        --use-existing-sp       : Use existing service principal.
         --help                  : Show this message and exit
         --sp-id                 : Service principal id (if use-existing-sp is set to 'True')     
         --sp-password           : Service principal secret
@@ -24,6 +24,9 @@ printHelp() {
 
     1. Deploy app with existing IoT Edge device
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device --existing-iothub <iothub name> --existing-device <device name>
+
+    2. Deploy app with existing Iot Edge device and existing Service Principal
+    sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device --existing-iothub <iothub name> --existing-device <device name> --use-existing-sp --sp-id <id> --sp-password <secret> --sp-object-id <object-id>
 
     2. Deploy app without existing IoT Edge device
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device
@@ -90,6 +93,8 @@ checkPackageInstallation() {
     fi
 }
 
+WEBAPP_PASSWORD=""
+
 while [[ $# -gt 0 ]]; do
     key="$1"
 
@@ -115,9 +120,8 @@ while [[ $# -gt 0 ]]; do
             shift # past value
             ;;
         --use-existing-sp)
-            USE_EXISTING_SP="$2"
+            USE_EXISTING_SP="True"
             shift # past argument
-            shift # past value
             ;;    
         --sp-id)
             SP_APP_ID="$2"
@@ -131,6 +135,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --sp-object-id)
             OBJECT_ID="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --website-password)
+            WEBAPP_PASSWORD="$2"
             shift # past argument
             shift # past value
             ;;    
@@ -150,7 +159,7 @@ done
 # Check if required values are present after setting use existing service principal as Yes.
 if [ "$USE_EXISTING_SP" == "True"  ];then
     if [ -z "$SP_APP_ID" ] || [ -z "$SP_APP_PWD" ] || [ -z "$OBJECT_ID" ];then
-        echo "$(error) Service principal id, secret or object id cannot be empty"
+        echo "$(error) Service principal id, secret or object id must be provided with use-existing-sp"
         exitWithError
     else 
         echo "$(info) using provided existing service principal credentials"
@@ -186,6 +195,9 @@ RANDOM_SUFFIX="$(echo "$RESOURCE_GROUP_AMS" | md5sum | cut -c1-4)"
 RANDOM_NUMBER="${RANDOM:0:3}"
 
 if [ -z "$IOTHUB_NAME" ];then
+    if [ ! -z "$DEVICE_NAME" ]; then
+        echo "$(error) IOTHUB_NAME must be provided to use existing device /"$DEVICE_NAME/" "
+    fi
 	IOTHUB_NAME="brainboxhub"
 	IOTHUB_NAME=${IOTHUB_NAME}${RANDOM_SUFFIX}
 else
@@ -210,6 +222,7 @@ if [ -z "$DEVICE_NAME" ]; then
 	DEVICE_NAME="brainbox"
 fi
 
+
 MEDIA_SERVICE_NAME="livevideoanalysis"
 MEDIA_SERVICE_NAME=${MEDIA_SERVICE_NAME}${RANDOM_SUFFIX}
 #USE_EXISTING_RESOURCES="true"
@@ -220,7 +233,7 @@ STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
 DEPLOYMENT_NAME="bbox-deployment"
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
-WEBAPP_PASSWORD=""
+
 
 #required credentials
 TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
@@ -258,7 +271,7 @@ echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
 
 # Downloading Mariner bundle
-SAS_URL="https://unifiededgescenariostest.blob.core.windows.net/test/deployment-bundle-mariner.zip"
+SAS_URL="https://unifiededgescenariost.blob.core.windows.net/mariner-deployment/deployment-bundle-mariner.zip"
 echo "Downloading mariner bundle zip"
 
 # Download the latest mariner-bundle.zip from storage account
@@ -282,31 +295,9 @@ ARM_DEPLOYMENT=$(az deployment sub create --location "$LOCATION" --template-file
 
 STORAGE_BLOB_SHARED_ACCESS_SIGNATURE=$(echo "$ARM_DEPLOYMENT" | jq -r '.properties.outputs.sasToken.value')
 
-#printf "\n%60s\n" " " | tr ' ' '-'
-#echo "Configuring IoT Hub"
-#printf "%60s\n" " " | tr ' ' '-'
-
-# We are checking if the IoTHub already exists by querying the list of IoT Hubs in current subscription.
-# It will return a blank array if it does not exist. Create a new IoT Hub if it does not exist,
-# if it already exists then check value for USE_EXISTING_RESOURCES. If it is set to yes, use existing IoT Hub.
-#EXISTING_IOTHUB=$(az iot hub list --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-#EXISTING_IOTHUB=$(az iot hub list --resource-group "$RESOURCE_GROUP_DEVICE" --query "[?name=='$IOTHUB_NAME'].{Name:name}" --output tsv)
-# This step creates a new edge device in the IoT Hub account or will use an existing edge device
-# if the USE_EXISTING_RESOURCES configuration variable is set to true.
 printf "\n%60s\n" " " | tr ' ' '-'
 echo "Configuring Edge Device in IoT Hub"
 printf "%60s\n" " " | tr ' ' '-'
-
-# Check if a Edge Device with given name already exists in IoT Hub. Create a new one if it doesn't exist already.
-EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
-
-if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
-    echo "$(info) Creating an Edge device \"$DEVICE_NAME\" in IoT Hub \"$IOTHUB_NAME\""
-    az iot hub device-identity create --hub-name "$IOTHUB_NAME" --device-id "$DEVICE_NAME" --edge-enabled --output "none"
-    echo "$(info) Created \"$DEVICE_NAME\" device in IoT Hub \"$IOTHUB_NAME\""
-else
-    echo "$(info) Using existing IoT Hub Edge Device \"$DEVICE_NAME\""
-fi
 
 # The following steps retrieves the connection string for the edge device an uses it to onboard
 # the device using sshpass. This step may fail if the edge device's network firewall
@@ -338,24 +329,14 @@ fi
 
 ARM_TEMPLATE="custom-role.json"
 echo "Running ARM template"
-az deployment sub create --location "$LOCATION" --template-file "$ARM_TEMPLATE" --no-prompt \
-        --parameters servicePrincipalObjectId="$OBJECT_ID" resourceGroupAMS="$RESOURCE_GROUP_AMS"
+ROLE_ASSIGNMENT=$(az deployment sub create --location "$LOCATION" --template-file "$ARM_TEMPLATE" --no-prompt \
+        --parameters servicePrincipalObjectId="$OBJECT_ID" resourceGroupAMS="$RESOURCE_GROUP_AMS")
 
-
-echo "Installing packages"
-
-echo "Installing iotedgedev"
-pip install iotedgedev==2.1.4
-
-echo "installing azure iot extension"
-az extension add --name azure-iot
-
-echo "package installation is complete"
 
 MANIFEST_TEMPLATE_NAME="deployment.lvaazureeye.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
 
-CUSTOM_VIDEO_SOURCE="https://unifiededgescenariostest.blob.core.windows.net/test2/staircase.mkv"
+CUSTOM_VIDEO_SOURCE="https://unifiededgescenarios.blob.core.windows.net/mariner-deployment/staircase.mkv"
 sudo wget -O "staircase.mkv" "$CUSTOM_VIDEO_SOURCE" -P /home/lvaadmin/samples/input/
 
 
@@ -431,7 +412,7 @@ az iot edge deployment create --deployment-id "$DEPLOYMENT_NAME" --hub-name "$IO
 
 echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed to your device now. This may take some time."
 
-echo "$(info) Delaying script for module to get running. "
+echo "$(info) Pausing script for 13m to allow Edge modules to start."
 sleep 13m
 
 echo "$(info) Setting LVA graph topology"
@@ -448,7 +429,7 @@ az iot hub invoke-module-method \
     --mp "$GRAPH_TOPOLOGY" \
     --output "none"
 
-echo "$(info) Getting LVA graph topology status..."
+echo "$(info) Getting LVA graph topology status"
 TOPOLOGY_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphTopologyList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_TOPOLOGY_NAME"'"}')
 
@@ -477,7 +458,7 @@ az iot hub invoke-module-method \
     --output "none"
 
 
-echo "$(info) Getting LVA graph instance status..."
+echo "$(info) Getting LVA graph instance status"
 INSTANCE_STATUS=$(az iot hub invoke-module-method -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m lvaEdge --mn GraphInstanceList \
     --mp '{"@apiVersion": "1.0","name": "'"$GRAPH_INSTANCE_NAME"'"}')
 
@@ -507,8 +488,9 @@ else
     exitWithError
 fi
 
+echo "$(info) Pausing script execution for 3m"
 sleep 3m
-echo "$(info) Restarting the lvaEdge module on edge device..."
+echo "$(info) Restarting the lvaEdge module on edge device"
 RESTART_MODULE=$(az iot hub invoke-module-method --method-name "RestartModule" -n "$IOTHUB_NAME" -d "$DEVICE_NAME" -m \$edgeAgent --method-payload \
 '{"schemaVersion": "1.0","id": "lvaEdge"}')
 
@@ -523,10 +505,13 @@ fi
 
 
 # Create an AMS asset
-echo "$(info) Creating an asset on AMS..."
+echo "$(info) Creating an asset on AMS"
 ASSET="$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME"
 az ams asset create --account-name "$MEDIA_SERVICE_NAME" --name "$ASSET" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
+
+echo "$(info) Pausing script execution for 3m"
 sleep 3m
+
 if [ "$ASSET" == "$GRAPH_TOPOLOGY_NAME"-"$GRAPH_INSTANCE_NAME" ]; then
 
     if [ "$(az ams streaming-locator show --account-name "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" --name "$STREAMING_LOCATOR" --query "name" -o tsv)" == "$STREAMING_LOCATOR" ]; then
@@ -552,6 +537,7 @@ fi
 echo "$(info) Starting the Streaming endpoint..."
 az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 echo "$(info) Started the Streaming endpoint"
+echo "$(info) Pausing script execution for 2m"
 sleep 2m
 
 # Passing Streaming url to script output for video playback
@@ -565,8 +551,13 @@ MODULE_CONNECTION_STRING=$(az iot hub module-identity connection-string show --d
 
 echo "$(info) Running ARM template to deploy Web App"
 
-PACKAGE_URI="https://unifiededgescenariostest.blob.core.windows.net/test/people-detection-app.zip"
+PACKAGE_URI="https://unifiededgescenarios.blob.core.windows.net/mariner-deployment/people-detection-app.zip"
 
 WEBAPP_TEMPLATE="webapp.json"
 
-az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" WEBAPP_PACKAGE="$PACKAGE_URI"
+APP_DEPLOYMENT=$(az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" WEBAPP_PACKAGE="$PACKAGE_URI")
+
+WEBAPP_NAME=$(az resources list --resource-group "$RESOURCE_GROUP_AMS" --query "[?type=='Microsoft.Web/sites'].name" --tag "people-tracking-brainbox-device" -o tsv)
+WEBAPP_URL="https://www.$WEBAPP_NAME.azurewebsites.net"
+echo "$(info) Script execution is completed successfully. You can visit the web app at the following link."
+echo "$(info) Web App: $WEBAPP_URL"
