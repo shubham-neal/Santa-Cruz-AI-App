@@ -53,6 +53,7 @@ stages:
           edge-solution/people-detection/mariner/cvr-topology-params.json
           edge-solution/people-detection/mariner/cvr-topology.json
           edge-solution/people-detection/mariner/deployment.lvaedge.template.json
+          edge-solution/people-detection/mariner/video/staircase.mkv
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
         flattenFolders: true
 
