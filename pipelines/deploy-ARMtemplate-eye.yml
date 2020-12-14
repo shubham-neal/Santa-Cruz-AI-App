@@ -42,12 +42,14 @@ stages:
           echo "Logging to Azure"
                           
           az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
+          az account set --subscription "$SUBSCRIPTION_ID"
 
           if [ "$(az group exists --name "$RESOURCE_GROUP_AMS_ARM")" == false ]; then
               echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" does not exist in current subscription."
               echo "Skipping deletion of resource group"
           else
               echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" exists in current subscription."
+              MANAGED_IDENTITY=$(az resource list --resource-group "$RESOURCE_GROUP_AMS_ARM" --query "[?type=='Microsoft.ManagedIdentity/userAssignedIdentities'].name" -o tsv)
               PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
               if [ ! -z "$PRINCIPAL_ID" ]; then
                 IS_ROLE_ASSIGNMENT_NOT_PRESENT=$(az role assignment list --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --query "[?principalId=='$PRINCIPAL_ID'].principalId" -o tsv)
@@ -242,7 +244,8 @@ stages:
                 echo "Logging to Azure"
                 
                 az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
-                
+                az account set --subscription "$SUBSCRIPTION_ID"
+                MANAGED_IDENTITY=$(az resource list --resource-group "$RESOURCE_GROUP_AMS_ARM" --query "[?type=='Microsoft.ManagedIdentity/userAssignedIdentities'].name" -o tsv)
                 PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
                 if [ ! -z "$PRINCIPAL_ID" ]; then
                   IS_ROLE_ASSIGNMENT_NOT_PRESENT=$(az role assignment list --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --query "[?principalId=='$PRINCIPAL_ID'].principalId" -o tsv)
