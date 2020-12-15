@@ -1,4 +1,4 @@
-# This pipeline builds a zip for cloudshell-deployment and publishes this zip as an artifact.
+# This pipeline builds a zip for mariner-deployment and publishes this zip as an artifact.
 
 # Trigger build only for changes in specific folders
 trigger:
