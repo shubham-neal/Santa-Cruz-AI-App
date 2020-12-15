@@ -1,5 +1,13 @@
 # This pipeline builds a zip for mariner-deployment and publishes this zip as an artifact.
 
+# CI Enabled
+trigger:
+  batch: true
+  branches:
+    include:
+    - releases/*
+    - master/*
+
 # Trigger build only for changes in specific folders
 trigger:
   batch: true
