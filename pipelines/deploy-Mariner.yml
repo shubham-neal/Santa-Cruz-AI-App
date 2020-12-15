@@ -114,6 +114,13 @@ stages:
             --file people-detection-app.zip \
             --name people-detection-app.zip
 
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file staircase.mkv \
+            --name staircase.mkv  
+
           unzip -o deployment-bundle-mariner.zip -d .
           
         workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
@@ -151,6 +158,9 @@ stages:
 
           PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/people-detection-app.zip"
           sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+
+          CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/staircase.mkv"
+          sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
 
           chmod +x mariner-setup.sh
 
@@ -281,6 +291,20 @@ stages:
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file people-detection-app.zip \
                   --name "latest/people-detection-app.zip"
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file staircase.mkv \
+                  --name "$(buildSuffix)/staircase.mkv"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file staircase.mkv \
+                  --name "latest/staircase.mkv"  
                   
                 cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
@@ -294,6 +318,9 @@ stages:
                 sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
                 echo "Updated package uri for deployment bundle mariner zip"
 
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/staircase.mkv"
+                sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
+                
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
@@ -310,6 +337,9 @@ stages:
                 PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/people-detection-app.zip"
                 sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
                 echo "Updated package uri for deployment bundle mariner zip"
+
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/staircase.mkv"
+                sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
