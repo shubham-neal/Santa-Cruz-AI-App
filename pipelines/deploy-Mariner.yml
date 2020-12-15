@@ -19,9 +19,9 @@ pool:
 variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if or(startsWith(variables['Build.SourceBranchName'], 'release'), eq(variables['Build.SourceBranchName'], 'master')) }}:
-    Variable_Group: 'Mariner_ReleaseEnvironment'
+    Variable_Group: 'Mariner_ReleaseEnvrionment'
   ${{ if and(not(startsWith(variables['Build.SourceBranchName'], 'release')), ne(variables['Build.SourceBranchName'], 'master')) }}:
-    Variable_Group: 'Mariner_TestEnvironment'
+    Variable_Group: 'Mariner_TestEnvrionment'
 
 stages:
 - stage: 'Deploy'
