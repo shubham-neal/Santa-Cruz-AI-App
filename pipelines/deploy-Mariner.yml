@@ -141,6 +141,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
+          set -e
           echo "Starting task"
 
           echo "Updating sas url for deployment bundle mariner zip"
@@ -265,7 +266,7 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file deployment-bundle-mariner.zip \
-                  --name deployment-bundle-mariner.zip
+                  --name "latest/deployment-bundle-mariner.zip"
                 
                 az storage blob upload \
                   --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
@@ -279,7 +280,7 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file people-detection-app.zip \
-                  --name people-detection-app.zip
+                  --name "latest/people-detection-app.zip"
                   
                 cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
@@ -298,7 +299,7 @@ stages:
                   --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
                   --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
                   --file mariner-setup.sh \
-                  --name "mariner-setup.sh"
+                  --name "latest/mariner-setup.sh"
                 
                 echo "Updating sas url for deployment bundle zip"
                 SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle-mariner.zip"
