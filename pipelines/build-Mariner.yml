@@ -7,15 +7,8 @@ trigger:
     include:
     - edge-solution/people-detection/mariner
     - pipelines/build-Mariner.yml
+    - pipelines/deploy-Mariner.yml
 
-# Build after completion of Release WebApp
-resources:
-  pipelines:
-  - pipeline: build
-    project: UnifiedEdgeScenarios
-    source: Release ues-app
-    trigger:
-      enabled: true
 
 pool:
   default
