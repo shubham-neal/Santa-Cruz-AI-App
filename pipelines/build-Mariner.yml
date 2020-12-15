@@ -50,7 +50,6 @@ stages:
           edge-solution/people-detection/mariner/cvr-topology-params.json
           edge-solution/people-detection/mariner/cvr-topology.json
           edge-solution/people-detection/mariner/deployment.lvaedge.template.json
-          edge-solution/people-detection/mariner/video/staircase.mkv
         TargetFolder: '$(System.DefaultWorkingDirectory)/combined'
         flattenFolders: true
 
@@ -106,6 +105,13 @@ stages:
       inputs:
         targetPath: '$(Pipeline.Workspace)/people-detection-app.zip'
         artifact: 'people-detection-app'
+        publishLocation: 'pipeline'
+
+    # Publishing the pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/edge-solution/people-detection/mariner/video/staircase.mkv'
+        artifact: 'staircase-video'
         publishLocation: 'pipeline'
 
     # Publishing the pipeline artifact
