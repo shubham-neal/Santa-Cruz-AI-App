@@ -557,7 +557,7 @@ WEBAPP_TEMPLATE="webapp.json"
 
 APP_DEPLOYMENT=$(az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" WEBAPP_PACKAGE="$PACKAGE_URI")
 
-WEBAPP_NAME=$(az resources list --resource-group "$RESOURCE_GROUP_AMS" --query "[?type=='Microsoft.Web/sites'].name" --tag "people-tracking-brainbox-device" -o tsv)
+WEBAPP_NAME=$(az resource list --resource-group "$RESOURCE_GROUP_AMS" --query "[?type=='Microsoft.Web/sites'].name" -o tsv)
 WEBAPP_URL="https://www.$WEBAPP_NAME.azurewebsites.net"
 echo "$(info) Script execution is completed successfully. You can visit the web app at the following link."
 echo "$(info) Web App: $WEBAPP_URL"
