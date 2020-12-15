@@ -309,16 +309,16 @@ stages:
                 cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
 
                 echo "Updating sas url for deployment bundle zip"
-                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/deployment-bundle-mariner.zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/deployment-bundle-mariner.zip"
                 sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
                 echo "Updated sas url for deployment bundle mariner zip"
                 
                 echo "Updating package uri for deployment bundle zip"
-                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/people-detection-app.zip"
+                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/people-detection-app.zip"
                 sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
                 echo "Updated package uri for deployment bundle mariner zip"
 
-                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/staircase.mkv"
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/staircase.mkv"
                 sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
                 
                 az storage blob upload \
@@ -338,7 +338,7 @@ stages:
                 sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
                 echo "Updated package uri for deployment bundle mariner zip"
 
-                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/staircase.mkv"
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/staircase.mkv"
                 sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
                 
                 az storage blob upload \
