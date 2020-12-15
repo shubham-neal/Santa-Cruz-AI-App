@@ -20,7 +20,11 @@ variables:
   buildSuffix: '$(Build.BuildNumber)' 
   ${{ if startsWith(variables['Build.SourceBranchName'], 'release') }}:
     Variable_Group: 'Mariner_ReleaseEnvironment'
+  ${{ if startsWith(variables['Build.SourceBranchName'], 'master') }}:
+    Variable_Group: 'Mariner_ReleaseEnvironment'
   ${{ if not(startsWith(variables['Build.SourceBranchName'], 'release')) }}:
+     Variable_Group: 'Mariner_TestEnvrionment'
+  ${{ if not(startsWith(variables['Build.SourceBranchName'], 'master')) }}:
      Variable_Group: 'Mariner_TestEnvrionment'
 
 stages:
