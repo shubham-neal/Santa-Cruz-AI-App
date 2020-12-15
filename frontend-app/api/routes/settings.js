@@ -4,11 +4,12 @@ var router = express.Router();
 /* GET settings. */
 router.get('/', function (req, res, next) {
     const settings = {
-        account: process.env.APPSETTING_STORAGE_BLOB_ACCOUNT,
-        eventHub: process.env.CUSTOMCONNSTR_EventHub,
-        containerName: process.env.APPSETTING_STORAGE_BLOB_CONTAINER_NAME,
-        blobPath: process.env.APPSETTING_STORAGE_BLOB_PATH,
-        sharedAccessSignature: process.env.APPSETTING_STORAGE_BLOB_SHARED_ACCESS_SIGNATURE
+        ampStreamingUrl: process.env.APPSETTING_AMP_STREAMING_URL,
+        iotHubName: process.env.APPSETTING_IOT_HUB_NAME,
+        password: process.env.APPSETTING_PASSWORD,
+        storageBlobAccount: process.env.APPSETTING_STORAGE_BLOB_ACCOUNT,
+        storageBlobSharedAccessSignature: process.env.APPSETTING_STORAGE_BLOB_SHARED_ACCESS_SIGNATURE,
+        azureEyeModuleConnectionString: process.env.CUSTOMCONNSTR_AZUREEYE_MODULE_CONNECTION_STRING
     };
     res.send(JSON.stringify(settings));
 });
