@@ -7,10 +7,6 @@ trigger:
     include:
     - releases/*
     - master/*
-
-# Trigger build only for changes in specific folders
-trigger:
-  batch: true
   paths:
     include:
     - edge-solution/people-detection/mariner
