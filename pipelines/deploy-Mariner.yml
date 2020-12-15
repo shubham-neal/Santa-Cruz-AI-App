@@ -126,31 +126,9 @@ stages:
         script: |
           sudo apt install -y curl
           sudo apt install -y jq
-          sudo apt install -y timeout
           sudo apt install -y wget
           sudo apt install -y sshpass
-          sudo apt install -y python-pip
 
-          INSTALL_IOTEDGEDEV="true"
-          if [ ! -z "$(command -v iotedgedev)" ]; then
-            currentVersion=$(iotedgedev --version | cut -d ' ' -f3)
-            requiredVersion="2.1.4"
-            # Sort the current version and required version to get the lowest of the two and then then compare it with required version
-            if [ "$(printf '%s\n' "$currentVersion" "$requiredVersion" | sort -V | head -n1)" == "$requiredVersion" ]; then
-              # Current installed iotedgedev version is higher than required, no need to re-install
-              INSTALL_IOTEDGEDEV="false"
-            fi
-          fi
-
-          if [ "$INSTALL_IOTEDGEDEV" == "true" ]; then
-            echo "$(info) Installing iotedgedev"
-            sudo pip install iotedgedev==2.1.4
-          fi
-
-          if [[ $(az extension list --query "[?name=='azure-iot'].name" --output tsv | wc -c) -eq 0 ]]; then
-            echo "$(info) Installing azure-iot extension"
-            az extension add --name azure-iot
-          fi
         workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: Bash@3
@@ -180,14 +158,14 @@ stages:
           
           az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG1_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
           az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG2_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
-          sudo apt install -y sshpass
+          
           sshpass -p "$MARINER_VM_PASSWORD" scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP":/root/setup/mariner-setup.sh
           sleep 5s
          
           Command="az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none" "
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Running script"
-          Command="echo $(ls); sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --use-existing-sp --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
+          Command="sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --use-existing-sp --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
