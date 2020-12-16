@@ -231,8 +231,6 @@ GRAPH_TOPOLOGY_NAME="CVRToAMSAsset"
 GRAPH_INSTANCE_NAME="BrainBoxSOM"
 STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
-STREAMING_ENDPOINT="StreamingEndpoint"
-STREAMING_ENDPOINT=${STREAMING_ENDPOINT}${RANDOM_SUFFIX}
 DEPLOYMENT_NAME="bbox-deployment"
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 
@@ -537,20 +535,15 @@ else
     exitWithError
 fi
 
-#Create Streaming Endpoint of media service
-echo "$(info) Creating streaming endpoint"
-az ams streaming-endpoint create --account-name "$AMS_ACCOUNT_NAME" --name "$STREAMING_ENDPOINT" --resource-group "$RESOURCE_GROUP_AMS" --scale-units 0
-echo "$(info) Created streaming endpoint"
-
 # Start the Streaming Endpoint of media service
 echo "$(info) Starting the Streaming endpoint..."
-az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "$STREAMING_ENDPOINT" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
+az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 echo "$(info) Started the Streaming endpoint"
-echo "$(info) Pausing script execution for 4m"
-sleep 4m
+echo "$(info) Pausing script execution for 2m"
+sleep 2m
 
 # Passing Streaming url to script output for video playback
-STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "$STREAMING_ENDPOINT" --query "hostName" -o tsv)
+STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
 
 STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='SmoothStreaming'].paths[]" -o tsv)
 
