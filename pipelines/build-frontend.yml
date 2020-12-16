@@ -7,6 +7,10 @@ variables:
 
 trigger:
   batch: true
+  branches:
+    include:
+      - releases/*
+      - master
   paths:
     include:
     - frontend-app

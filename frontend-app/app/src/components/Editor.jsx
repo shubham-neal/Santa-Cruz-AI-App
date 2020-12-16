@@ -7,6 +7,7 @@ export class Editor extends React.Component {
         width: 300,
         height: 300,
         fps: 30,
+        editingAllowed: true,
         aggregator: {
             lines: [],
             zones: []
@@ -102,91 +103,93 @@ export class Editor extends React.Component {
     }
 
     handleMouseOver = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        this.canvasRef.current.focus();
-        this.dragging = false;
-        this.mouseInside = true;
-        this.setState({
-            selectedPointIndex: -1,
-            selectedEdgeIndices: [-1, -1]
-        });
+        if(this.props.editingAllowed) {
+            this.canvasRef.current.focus();
+            this.dragging = false;
+            this.mouseInside = true;
+            this.setState({
+                selectedPointIndex: -1,
+                selectedEdgeIndices: [-1, -1]
+            });
+        }
     }
 
     handleMouseOut = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        this.dragging = false;
-        this.mouseInside = false;
-        this.setState({
-            selectedPointIndex: -1,
-            selectedEdgeIndices: [-1, -1]
-        });
-        this.props.updateAggregator(this.state.aggregator);
+        if(this.props.editingAllowed) {
+            this.dragging = false;
+            this.mouseInside = false;
+            this.setState({
+                selectedPointIndex: -1,
+                selectedEdgeIndices: [-1, -1]
+            });
+            this.props.updateAggregator(this.state.aggregator);
+        }
     }
 
     handleKeyUp = (e) => {
-        if (e.keyCode === 45) {
-            this.insertPoint();
-        } else if (e.keyCode === 46) {
-            this.removePoint();
-        } if (e.keyCode === 49 || e.keyCode === 97) {
-            this.setState({
-                editBy: "point"
-            }, () => {
-                this.editByRef.current.selectedKey = this.state.editBy;
-            });
-        } else if (e.keyCode === 50 || e.keyCode === 98) {
-            this.setState({
-                editBy: "edge"
-            }, () => {
-                this.editByRef.current.selectedKey = this.state.editBy;
-            });
-        } else if (e.keyCode === 51 || e.keyCode === 99) {
-            this.setState({
-                editBy: "shape"
-            }, () => {
-                this.editByRef.current.selectedKey = this.state.editBy;
-            });
+        if(this.props.editingAllowed) {
+            if (e.keyCode === 45) {
+                this.insertPoint();
+            } else if (e.keyCode === 46) {
+                this.removePoint();
+            } if (e.keyCode === 49 || e.keyCode === 97) {
+                this.setState({
+                    editBy: "point"
+                }, () => {
+                    this.editByRef.current.selectedKey = this.state.editBy;
+                });
+            } else if (e.keyCode === 50 || e.keyCode === 98) {
+                this.setState({
+                    editBy: "edge"
+                }, () => {
+                    this.editByRef.current.selectedKey = this.state.editBy;
+                });
+            } else if (e.keyCode === 51 || e.keyCode === 99) {
+                this.setState({
+                    editBy: "shape"
+                }, () => {
+                    this.editByRef.current.selectedKey = this.state.editBy;
+                });
+            }
         }
     }
 
     handleMouseDown = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        if (!this.dragging && this.canvasRef.current && this.state.selectedZoneIndex !== -1) {
-            const rect = this.canvasRef.current?.getBoundingClientRect();
-            const x = this.clamp((e.clientX - rect.left) / this.props.width, 0, 1);
-            const y = this.clamp((e.clientY - rect.top) / this.props.height, 0, 1);
-
-            this.dragAnchorPoint = { x: x, y: y };
+        if(this.props.editingAllowed) {
+            if (!this.dragging && this.canvasRef.current && this.state.selectedZoneIndex !== -1) {
+                const rect = this.canvasRef.current?.getBoundingClientRect();
+                const x = this.clamp((e.clientX - rect.left) / this.props.width, 0, 1);
+                const y = this.clamp((e.clientY - rect.top) / this.props.height, 0, 1);
+    
+                this.dragAnchorPoint = { x: x, y: y };
+            }
+            this.dragging = true;
+            this.updateMousePos(e);
+            this.forceUpdate();
         }
-        this.dragging = true;
-        this.updateMousePos(e);
-        this.forceUpdate();
     }
 
     handleMouseUp = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        this.dragging = false;
+        if(this.props.editingAllowed) {
+            this.dragging = false;
+        }
     }
 
     handleMouseMove = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        this.updateMousePos(e);
-        if (this.state.editBy === "point") {
-            this.movePoint(e);
-        } else if (this.state.editBy === "edge") {
-            this.moveEdge(e);
-        } else if (this.state.editBy === "shape") {
-            this.moveShape(e);
+        if(this.props.editingAllowed) {
+            this.updateMousePos(e);
+            if (this.state.editBy === "point") {
+                this.movePoint(e);
+            } else if (this.state.editBy === "edge") {
+                this.moveEdge(e);
+            } else if (this.state.editBy === "shape") {
+                this.moveShape(e);
+            }
         }
     }
 
     handleMouseClick = (e) => {
-        if (this.state.editBy === "point") {
+        if (this.props.editingAllowed && this.state.editBy === "point") {
             this.addPoint(e);
         }
     }

@@ -9,7 +9,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "mcr.microsoft.com/media/live-video-analytics:1",
+              "image": "unifiededgescenarios.azurecr.io/live-video-analytics:1.0.5rc",
               "createOptions": {
                 "HostConfig": {
                   "LogConfig": {
@@ -39,6 +39,13 @@
                 },
                 "Name": "/rtspserver",
                 "HostConfig": {
+                  "LogConfig": {
+                    "Type": "",
+                    "Config": {
+                      "max-size": "10m",
+                      "max-file": "10"
+                    }
+                  },
                   "Binds": [
                     "/dev/bus/usb:/dev/bus/usb"
                   ],
@@ -149,6 +156,6 @@
         "Running": true,
         "TelemetryInterval": 5
       }
-    }    
+    }
   }
 }
