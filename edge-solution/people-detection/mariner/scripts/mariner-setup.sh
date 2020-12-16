@@ -303,6 +303,7 @@ printf "%60s\n" " " | tr ' ' '-'
 # the device using sshpass. This step may fail if the edge device's network firewall
 # does not allow ssh access. Please make sure the edge device is on the local area
 # network and is accepting ssh requests.
+EXISTING_IOTHUB_DEVICE=$(az iot hub device-identity list --hub-name "$IOTHUB_NAME" --query "[?deviceId=='$DEVICE_NAME'].deviceId" -o tsv)
 
 if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
     echo "$(info) Creating an Edge device \"$DEVICE_NAME\" in IoT Hub \"$IOTHUB_NAME\""
