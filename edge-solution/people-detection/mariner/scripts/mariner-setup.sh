@@ -273,7 +273,7 @@ echo "$(info) Successfully set subscription to \"$SUBSCRIPTION_ID\""
 
 
 # Downloading Mariner bundle
-SAS_URL="https://unifiededgescenariost.blob.core.windows.net/mariner-deployment/deployment-bundle-mariner.zip"
+SAS_URL="https://unifiededgescenarios.blob.core.windows.net/mariner-deployment/deployment-bundle-mariner.zip"
 echo "Downloading mariner bundle zip"
 
 # Download the latest mariner-bundle.zip from storage account
@@ -536,6 +536,11 @@ else
     echo "$(error) AMS Asset not found"
     exitWithError
 fi
+
+#Create Streaming Endpoint of media service
+echo "$(info) Creating streaming endpoint"
+az ams streaming-endpoint create --account-name "$AMS_ACCOUNT_NAME" --name "$STREAMING_ENDPOINT" --resource-group "$RESOURCE_GROUP_AMS" --scale-units 0
+echo "$(info) Created streaming endpoint"
 
 # Start the Streaming Endpoint of media service
 echo "$(info) Starting the Streaming endpoint..."
