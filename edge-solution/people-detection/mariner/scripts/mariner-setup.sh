@@ -231,12 +231,14 @@ GRAPH_TOPOLOGY_NAME="CVRToAMSAsset"
 GRAPH_INSTANCE_NAME="BrainBoxSOM"
 STREAMING_LOCATOR="StreamingLocator"
 STREAMING_LOCATOR=${STREAMING_LOCATOR}${RANDOM_SUFFIX}
+STREAMING_ENDPOINT="StreamingEndpoint"
+STREAMING_ENDPOINT=${STREAMING_ENDPOINT}${RANDOM_SUFFIX}
 DEPLOYMENT_NAME="bbox-deployment"
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 
 
 #required credentials
-TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
+TENANT_ID=$(az account show | jq '.tenantId')
 
 
 # Check if already logged in using az ad signed-in-user
@@ -419,6 +421,10 @@ echo "$(info) Deployed manifest file to IoT Hub. Your modules are being deployed
 echo "$(info) Pausing script for 13m to allow Edge modules to start."
 sleep 13m
 
+# Create an AMS asset
+echo "$(info) Creating an asset on AMS"
+ASSET="$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME"
+az ams asset create --account-name "$MEDIA_SERVICE_NAME" --name "$ASSET" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 echo "$(info) Setting LVA graph topology"
 
 GRAPH_TOPOLOGY=$(
@@ -507,12 +513,6 @@ else
     exitWithError
 fi
 
-
-# Create an AMS asset
-echo "$(info) Creating an asset on AMS"
-ASSET="$GRAPH_TOPOLOGY_NAME-$GRAPH_INSTANCE_NAME"
-az ams asset create --account-name "$MEDIA_SERVICE_NAME" --name "$ASSET" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
-
 echo "$(info) Pausing script execution for 3m"
 sleep 3m
 
@@ -539,13 +539,13 @@ fi
 
 # Start the Streaming Endpoint of media service
 echo "$(info) Starting the Streaming endpoint..."
-az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "default" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
+az ams streaming-endpoint start --account-name "$MEDIA_SERVICE_NAME" --name "$STREAMING_ENDPOINT" --resource-group "$RESOURCE_GROUP_AMS" --output "none"
 echo "$(info) Started the Streaming endpoint"
-echo "$(info) Pausing script execution for 2m"
-sleep 2m
+echo "$(info) Pausing script execution for 4m"
+sleep 4m
 
 # Passing Streaming url to script output for video playback
-STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
+STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "$STREAMING_ENDPOINT" --query "hostName" -o tsv)
 
 STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='SmoothStreaming'].paths[]" -o tsv)
 
@@ -562,6 +562,6 @@ WEBAPP_TEMPLATE="webapp.json"
 APP_DEPLOYMENT=$(az deployment group create --resource-group "$RESOURCE_GROUP_AMS" --template-file "$WEBAPP_TEMPLATE" --no-prompt --parameters password="$WEBAPP_PASSWORD" existingIotHubName="$IOTHUB_NAME" AMP_STREAMING_URL="$STREAMING_URL" AZUREEYE_MODULE_CONNECTION_STRING="$MODULE_CONNECTION_STRING" STORAGE_BLOB_SHARED_ACCESS_SIGNATURE="$STORAGE_BLOB_SHARED_ACCESS_SIGNATURE" WEBAPP_PACKAGE="$PACKAGE_URI")
 
 WEBAPP_NAME=$(az resource list --resource-group "$RESOURCE_GROUP_AMS" --query "[?type=='Microsoft.Web/sites'].name" -o tsv)
-WEBAPP_URL="https://www.$WEBAPP_NAME.azurewebsites.net"
+WEBAPP_URL="https://$WEBAPP_NAME.azurewebsites.net"
 echo "$(info) Script execution is completed successfully. You can visit the web app at the following link."
 echo "$(info) Web App: $WEBAPP_URL"
