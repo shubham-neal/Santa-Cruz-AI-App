@@ -10,15 +10,15 @@ printHelp() {
         --rg-ams                : Resource group name for Azure Media Service, Storage Accounts and Web App
         
     Optional Arguments
-        --rg-device             : Resource group name for brainbox and IoT Hub. If it's not provided, it is same same rg-ams 
+        --rg-device             : Resource group name for brainbox and IoT Hub. If it's not provided, rg-ams is used 
         --website-password      : Password to access the web app
-		--existing-iothub		: Name of existing iothub
-		--existing-device		: Name of existing device present in iothub
-        --use-existing-sp       : Use existing service principal.
+		--existing-iothub		: Name of existing IoT Hub
+		--existing-device		: Name of existing IoT Edge device in IoT Hub
+        --use-existing-sp       : Whether to use existing service principal
         --help                  : Show this message and exit
-        --sp-id                 : Service principal id (if use-existing-sp is set to 'True')     
-        --sp-password           : Service principal secret
-        --sp-object-id          : Service principal object id 
+        --sp-id                 : Id of existing service principal     
+        --sp-password           : secret of existing service principal
+        --sp-object-id          : Object id of existing service principal 
     
     Examples:
 
