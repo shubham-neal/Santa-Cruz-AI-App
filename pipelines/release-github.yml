@@ -11,10 +11,7 @@ pool:
 variables:
   Branch: '$(Build.SourceBranch)'
   buildSuffix: '$(Build.BuildNumber)' 
-  ${{ if startsWith(variables['Build.SourceBranchName'], 'release') }}:
-    Variable_Group: 'ARMTemplate_ReleaseEnvironment'
-  ${{ if not(startsWith(variables['Build.SourceBranchName'], 'release')) }}:
-    Variable_Group: 'ARMTemplate_TestEnvironment'
+  Variable_Group: 'ARMTemplate_ReleaseEnvironment'
 
 stages:
 - stage: GitHubRelease
@@ -40,8 +37,6 @@ stages:
                   
                   # Current Source branch name
                   BRANCH_NAME=$(echo $(Branch) | cut -d'/' -f 3- )
-                  TARGET_BRANCH="master"
-                  PROJECT="UnifiedEdgeScenarios"
                   
                   set -e
                   
@@ -61,7 +56,7 @@ stages:
                   echo ${DEVOPS_PERSONAL_ACCESS_TOKEN} | az devops login --org "https://dev.azure.com/AED-E2E-Experiences/"
 
                   # Getting the details of latest Pull Request completed against current source branch
-                  PR_DETAILS=$(az repos pr list --status "completed" --target-branch "$BRANCH_NAME" --project "$PROJECT" --top 1)
+                  PR_DETAILS=$(az repos pr list --status "completed" --target-branch "$DEVOPS_MASTER_BRANCH" --project "$PROJECT" --top 1)
                   PR_DESCRIPTION=$(echo $PR_DETAILS | jq -r '.[0].description')
                   PR_TITLE=$(echo $PR_DETAILS | jq -r '.[0].title')
 
@@ -69,11 +64,11 @@ stages:
                   PR_DESCRIPTION=$(echo "${PR_DESCRIPTION//$'\n'/\\n}" | sed 's/\"/\\"/g')
 
                   if [ "$PR_DESCRIPTION" == "null" ]; then
-                    PR_DESCRIPTION="Merge latest changes from branch $BRANCH_NAME"
+                    PR_DESCRIPTION="Merge changes from branch $BRANCH_NAME"
                   fi
 
                   if [ "$PR_TITLE" == "null" ]; then
-                    PR_TITLE="$BRANCH_NAME version"
+                    PR_TITLE="Merge changes from $BRANCH_NAME"
                   fi
 
                   # Clone the current release branch version to local
@@ -94,7 +89,7 @@ stages:
 
                   # Raise the Pull request to target GitHub repo's master branch from this new branch
                   echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
-                  PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
+                  PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
                   PR_URL=$(echo $PR_RESPONSE | jq '.url' | cut -d'"' -f 2)
 
                   
