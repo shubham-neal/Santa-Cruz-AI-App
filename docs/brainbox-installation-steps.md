@@ -13,6 +13,10 @@ This is an open source application providing edge-based people counting with use
 This application executes against a Brainbox device.
 
 
+## Software emulation app topology
+![People Detector](images/Brainbox-Device.PNG)
+
+
 
 # Installation details
 This reference open source application showcases best practices for AI security, privacy and compliance.  It is intended to be immediately useful for anyone to use with their Brainbox device. 
