@@ -21,10 +21,13 @@ printHelp() {
         --sp-object-id          : Object id of existing service principal 
     
     Examples:
+
     1. Deploy app with existing IoT Edge device
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device --existing-iothub <iothub name> --existing-device <device name>
+
     2. Deploy app with existing Iot Edge device and existing Service Principal
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device --existing-iothub <iothub name> --existing-device <device name> --use-existing-sp --sp-id <id> --sp-password <secret> --sp-object-id <object-id>
+
     2. Deploy app without existing IoT Edge device
     sudo ./mariner-setup.sh --rg-ams rg-mariner-ams --rg-device rg-mariner-device
     "
@@ -64,7 +67,7 @@ checkPackageInstallation() {
 	if [ -z "$(command -v az)" ]; then
 		checkIfMachineIsMariner
         echo "$(info) Installing az cli"
-		wget "https://packages.microsoft.com/yumrepos/azure-cli/azure-cli-2.0.16-1.el7.x86_64.rpm"
+		wget "https://packages.microsoft.com/yumrepos/azure-cli/azure-cli-2.9.1-1.el7.x86_64.rpm"
 		rpm -ivh --nodeps azure-cli-*.rpm
 		rm azure-cli-*.rpm
 
@@ -83,11 +86,22 @@ checkPackageInstallation() {
 		sudo yum -y install jq
     fi
 	
+    if [ -z "$(command -v iotedgedev)" ]; then
+        echo "$(info) Installing iotedgedev"
+		if [ -z "$(command -v pip3)" ];then
+            sudo yum -y install python3-pip
+        fi
+        pip3 install iotedgedev    
+    fi
+
 	if [ -z "$(command -v timeout)" ]; then
         checkIfMachineIsMariner
         echo "$(info) Installing timeout"
 		sudo yum -y install timeout
     fi
+    
+    echo "$(info) Updating jsonschema"
+    pip3 install update jsonschema
 }
 
 WEBAPP_PASSWORD=""
@@ -182,6 +196,18 @@ fi
 # Check if required packages are installed
 checkPackageInstallation
 
+# Check if already logged in using az ad signed-in-user
+IS_LOGGED_IN=$(az account show)
+
+if [ -z "$IS_LOGGED_IN" ]; then
+        echo "$(info) Attempting login"
+        # Timeout Azure Login step if the user does not complete the login process in 3 minutes
+        timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
+        echo "$(info) Login successful"
+else
+        echo "Using existing login"
+fi
+
 # Run uname to get current device architecture
 DEVICE_ARCHITECTURE="x86"
 #Run command to get current device runtime
@@ -234,20 +260,6 @@ DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 
 #required credentials
 TENANT_ID=$(az account show | jq '.tenantId')
-
-
-# Check if already logged in using az ad signed-in-user
-IS_LOGGED_IN=$(az account show)
-
-if [ -z "$IS_LOGGED_IN" ]; then
-        echo "$(info) Attempting login"
-        # Timeout Azure Login step if the user does not complete the login process in 3 minutes
-        timeout --foreground 3m az login --output "none" || (echo "$(error) Interactive login timed out" && exitWithError)
-        echo "$(info) Login successful"
-else
-        echo "Using existing login"
-fi
-
 
 # Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
 if [ -z "$SUBSCRIPTION_ID" ]; then
@@ -309,8 +321,7 @@ if [ -z "$EXISTING_IOTHUB_DEVICE" ]; then
 	echo "$(info) Retrieving connection string for device \"$DEVICE_NAME\" from Iot Hub \"$IOTHUB_NAME\" and updating the IoT Edge service in edge device with this connection string"
 	EDGE_DEVICE_CONNECTION_STRING=$(az iot hub device-identity connection-string show --device-id "$DEVICE_NAME" --hub-name "$IOTHUB_NAME" --query "connectionString" -o tsv)
 	echo "$(info) Updating Config.yaml on edge device with the connection string from IoT Hub"
-	CONFIG_FILE_PATH="/etc/iotedge/config.yaml"
-	SCRIPT_PATH="/etc/iotedge/configedge.sh"
+	SCRIPT_PATH="configedge.sh"
 	# Replace placeholder connection string with actual value for Edge device using the 'configedge.sh' script
 	source "$SCRIPT_PATH" "$EDGE_DEVICE_CONNECTION_STRING"
 	echo "$(info) Updated Config.yaml"
@@ -542,7 +553,21 @@ sleep 2m
 # Passing Streaming url to script output for video playback
 STREAMING_ENDPOINT_HOSTNAME=$(az ams streaming-endpoint show --account-name "$MEDIA_SERVICE_NAME" --resource-group "$RESOURCE_GROUP_AMS" -n "default" --query "hostName" -o tsv)
 
-STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='SmoothStreaming'].paths[]" -o tsv)
+# Checking the existence of Streaming path on Media Service
+# till Max 15 minutes
+for ((i=1; i<=60; i++)); do
+    STREAMING_PATH=$(az ams streaming-locator get-paths -a "$MEDIA_SERVICE_NAME" -g "$RESOURCE_GROUP_AMS" -n "$STREAMING_LOCATOR" --query "streamingPaths[?streamingProtocol=='SmoothStreaming'].paths[]" -o tsv)
+    if [ -z "$STREAMING_PATH" ]; then
+        sleep 15s
+    else
+        break
+    fi
+done
+
+if [ -z "$STREAMING_PATH" ];then
+    echo "$(error) Streaming path is not available"
+    exitWithError
+fi
 
 STREAMING_URL="https://$STREAMING_ENDPOINT_HOSTNAME$STREAMING_PATH"
 

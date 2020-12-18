@@ -46,6 +46,7 @@ stages:
           edge-solution/people-detection/mariner/templates/custom-role.json
           edge-solution/people-detection/mariner/templates/resources.json
           edge-solution/people-detection/mariner/templates/webapp.json
+          edge-solution/people-detection/mariner/scripts/configedge.sh
           edge-solution/people-detection/mariner/.env
           edge-solution/people-detection/mariner/cvr-topology-params.json
           edge-solution/people-detection/mariner/cvr-topology.json

@@ -32,29 +32,7 @@ stages:
     displayName: 'Deploy Person Tracking App to a test environment'
     steps:
     - checkout: none
-    - download: none
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Delete existing resource group'
-      env:
-        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Logging to Azure"
-                          
-          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
-
-          if [ "$(az group exists --name "$RESOURCE_GROUP_AMS")" == false ]; then
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS\" exists in current subscription."
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS\""
-              az group delete --resource-group "$RESOURCE_GROUP_AMS" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS\""
-          fi  
+    - download: none  
 
     - task: DownloadPipelineArtifact@2
       enabled: true
@@ -151,6 +129,8 @@ stages:
           set -e
           echo "Starting task"
 
+          SUFFIX="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
+
           echo "Updating sas url for deployment bundle mariner zip"
           SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle-mariner.zip"
           sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
@@ -176,7 +156,7 @@ stages:
           Command="az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none" "
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Running script"
-          Command="sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS" --rg-device "$RESOURCE_GROUP_DEVICE" --use-existing-sp --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
+          Command="sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS$SUFFIX" --rg-device "$RESOURCE_GROUP_DEVICE" --use-existing-sp --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
           sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
           echo "Task is complete"
         workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
@@ -358,14 +338,14 @@ stages:
               targetType: 'inline'
               script: |
                 # Exit the script on any error
-                
+                SUFFIX="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
                 echo "Logging to Azure"
                 
                 az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
 
-                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS\""
+                echo "Deleting resource group for IoT Hub \"$RESOURCE_GROUP_AMS$SUFFIX\""
                 
-                az group delete --resource-group "$RESOURCE_GROUP_AMS" --yes --no-wait
+                az group delete --resource-group "$RESOURCE_GROUP_AMS$SUFFIX" --yes --no-wait
                 
-                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS\""
+                echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS$SUFFIX\""
               workingDirectory: '$(System.DefaultWorkingDirectory)'
