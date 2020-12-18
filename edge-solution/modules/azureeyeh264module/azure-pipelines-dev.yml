@@ -1,0 +1,48 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- master
+
+resources:
+- repo: self
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '066cedd9-e72c-42f5-b535-ce62d996b63b'
+  imageRepository: 'azureeyemodule'
+  containerRegistry: 'devazureedgedevices.azurecr.io'
+  dockerfileDir: '$(Build.SourcesDirectory)/modules/azureeyeh264module/'
+  tag: '$(Build.BuildId)'
+  # tag: 'preload-devkit'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Arm64v8
+    displayName: Build Arm64v8 Docker Image
+    timeoutInMinutes: 0
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        sudo apt-get update
+        sudo apt-get install qemu binfmt-support qemu-user-static
+        sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      displayName: Install QEMU tools
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'azureedgedevices-eye'
+        command: 'login'
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfileDir)/Dockerfile.arm64v8
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)-arm64v8
+          h264-arm64v8
