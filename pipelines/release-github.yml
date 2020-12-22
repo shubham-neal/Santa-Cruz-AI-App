@@ -79,8 +79,8 @@ stages:
 
                   # Remove the current remote origin from DevOps repo and set it to target GitHub repo
                   git remote rm origin
-                  git remote add origin "https://github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}.git"
-                  git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}.git"
+                  git remote add origin "https://github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
+                  git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
                   
 
                   # Push the current source branch changes to GitHub repo, it will create a new branch with current branch name
