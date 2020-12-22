@@ -77,7 +77,7 @@ stages:
                   
                   cd UnifiedEdgeScenarios/
 
-                  # Remove the current remote origin from DevOps repo and set it to target GitHub repo
+                  # Remove the current remote origin from DevOps repo and set it to GitHub repo
                   git remote rm origin
                   git remote add origin "https://github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
                   git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
