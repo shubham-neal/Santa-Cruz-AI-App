@@ -113,6 +113,7 @@ stages:
 
                   # Get the latest status response for raised pull request
                   PR_STATUS=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}"  ${PR_URL})
+                  echo "PR STATUS: $PR_STATUS "
                   MERGE_STATUS=$(echo $PR_STATUS | jq '.mergeable')
                   
                   echo "Checking mergeability of pull request"
