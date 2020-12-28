@@ -77,10 +77,10 @@ stages:
                   
                   cd UnifiedEdgeScenarios/
 
-                  # Remove the current remote origin from DevOps repo and set it to target GitHub repo
+                  # Remove the current remote origin from DevOps repo and set it to GitHub repo
                   git remote rm origin
-                  git remote add origin "https://github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}.git"
-                  git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}.git"
+                  git remote add origin "https://github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
+                  git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
                   
 
                   # Push the current source branch changes to GitHub repo, it will create a new branch with current branch name
@@ -89,7 +89,7 @@ stages:
 
                   # Raise the Pull request to target GitHub repo's master branch from this new branch
                   echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
-                  PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
+                  PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$GITHUB_REPO_USERNAME":"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
                   PR_URL=$(echo $PR_RESPONSE | jq '.url' | cut -d'"' -f 2)
 
                   
