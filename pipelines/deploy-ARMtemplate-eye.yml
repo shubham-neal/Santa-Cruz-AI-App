@@ -6,7 +6,7 @@ resources:
   pipelines:
   - pipeline: build
     project: UnifiedEdgeScenarios
-    source: Build ARM Template Eye
+    source: Build Azure Eye ARM Template
     trigger:
       enabled: true
 
@@ -30,38 +30,6 @@ stages:
     displayName: 'Deploy ARM Template to a test environment'
     steps:
     - checkout: self
-
-    - task: Bash@3
-      enabled: true
-      displayName: 'Delete existing resource group for AMS'
-      env:
-        LOGIN_PASSWORD: $(LOGIN_PASSWORD)
-      inputs:
-        targetType: 'inline'
-        script: |
-          echo "Logging to Azure"
-                          
-          az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
-          az account set --subscription "$SUBSCRIPTION_ID"
-
-          if [ "$(az group exists --name "$RESOURCE_GROUP_AMS_ARM")" == false ]; then
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" does not exist in current subscription."
-              echo "Skipping deletion of resource group"
-          else
-              echo "Resource Group for IoT Hub \"$RESOURCE_GROUP_AMS_ARM\" exists in current subscription."
-              MANAGED_IDENTITY=$(az resource list --resource-group "$RESOURCE_GROUP_AMS_ARM" --query "[?type=='Microsoft.ManagedIdentity/userAssignedIdentities'].name" -o tsv)
-              PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
-              if [ ! -z "$PRINCIPAL_ID" ]; then
-                IS_ROLE_ASSIGNMENT_NOT_PRESENT=$(az role assignment list --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --query "[?principalId=='$PRINCIPAL_ID'].principalId" -o tsv)
-                if [ ! -z "$IS_ROLE_ASSIGNMENT_NOT_PRESENT" ]; then
-                  az role assignment delete --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_DEVICE_ARM" --assignee "$PRINCIPAL_ID"
-                fi
-              fi
-              echo "Deleting Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
-              az group delete --resource-group "$RESOURCE_GROUP_AMS_ARM" --subscription "$SUBSCRIPTION_ID" --yes
-              echo "Deleted Resource Group \"$RESOURCE_GROUP_AMS_ARM\""
-          fi
-
 
     - task: DownloadPipelineArtifact@2
       enabled: true
@@ -170,6 +138,12 @@ stages:
             --container-name "$STORAGE_ACCOUNT_ARM_SCRIPTS_CONTAINER_NAME" \
             --file people-detection-app.zip \
             --name people-detection-app.zip
+
+          
+          # Writing rgSuffix value to local job variables, so it can be used in ARM template task
+          
+          rgSuffixLocal="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
+          echo "##vso[task.setvariable variable=rgSuffix]$rgSuffixLocal"
         workingDirectory: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye'
     
 
@@ -185,7 +159,7 @@ stages:
         location: 'West US 2'
         templateLocation: 'Linked artifact'
         csmFile: '$(System.DefaultWorkingDirectory)/arm-deployment-bundle-eye/azuredeploy.json'
-        overrideParameters: '-resourceGroupAMS "$(RESOURCE_GROUP_AMS_ARM)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -existingIotHubName "$(EXISTING_IOTHUB_NAME)" -existingDeviceName "$(EXISTING_DEVICE_NAME)" -servicePrincipalId "$(SP_APPLICATION_ID)" -servicePrincipalObjectId "$(SP_OBJECT_ID)" -servicePrincipalSecret "$(SP_PWD)" -password "$(WEBAPP_PASSWORD)"'
+        overrideParameters: '-resourceGroupAMS "$(RESOURCE_GROUP_AMS_ARM)$(rgSuffix)" -resourceGroupDevice "$(RESOURCE_GROUP_DEVICE_ARM)" -existingIotHubName "$(EXISTING_IOTHUB_NAME)" -existingDeviceName "$(EXISTING_DEVICE_NAME)" -servicePrincipalId "$(SP_APPLICATION_ID)" -servicePrincipalObjectId "$(SP_OBJECT_ID)" -servicePrincipalSecret "$(SP_PWD)" -password "$(WEBAPP_PASSWORD)"'
         deploymentMode: 'Incremental'
 
     - task: Bash@3
@@ -245,6 +219,8 @@ stages:
                 
                 az login --service-principal --username "$LOGIN_USERNAME" --password "$LOGIN_PASSWORD" --tenant "$TENANT_ID" --output "none"
                 az account set --subscription "$SUBSCRIPTION_ID"
+                rgSuffix="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
+                RESOURCE_GROUP_AMS_ARM=$RESOURCE_GROUP_AMS_ARM$rgSuffix
                 MANAGED_IDENTITY=$(az resource list --resource-group "$RESOURCE_GROUP_AMS_ARM" --query "[?type=='Microsoft.ManagedIdentity/userAssignedIdentities'].name" -o tsv)
                 PRINCIPAL_ID=$(az identity list -g "$RESOURCE_GROUP_AMS_ARM" --query "[?name=='$MANAGED_IDENTITY'].principalId" -o tsv)
                 if [ ! -z "$PRINCIPAL_ID" ]; then

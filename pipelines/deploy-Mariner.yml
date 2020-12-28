@@ -8,7 +8,7 @@ resources:
   pipelines:
   - pipeline: build
     project: UnifiedEdgeScenarios
-    source: Build Mariner
+    source: Build Brainbox Scripts
     trigger:
       enabled: true
 

@@ -259,7 +259,7 @@ DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 
 
 #required credentials
-TENANT_ID=$(az account show | jq '.tenantId')
+TENANT_ID=$(az account show | jq -r '.tenantId')
 
 # Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
 if [ -z "$SUBSCRIPTION_ID" ]; then
