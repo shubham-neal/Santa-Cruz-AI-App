@@ -92,6 +92,13 @@ stages:
                   #PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
                   DOES_PR_EXIST=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$GITHUB_REPO_USERNAME":"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'"}')
                   echo "DPR: $DOES_PR_EXIST"
+                  EXISTING_PR_STATUS=$(echo $DOES_PR_EXIST | jq -r '.[0].status')
+                  if [ ! "$EXISTING_PR_STATUS" == "null" ]; then
+                    PR_URL=$(echo $DOES_PR_EXIST | jq -r '.[0].url')
+                    echo "Pull Request already exists with status $EXISTING_PR_STATUS"
+                    echo "Pull Request URL: $PR_URL"
+                    exit 0
+                  fi
                   PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$GITHUB_REPO_USERNAME":"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
                   PR_URL=$(echo $PR_RESPONSE | jq '.url' | cut -d'"' -f 2)
 
