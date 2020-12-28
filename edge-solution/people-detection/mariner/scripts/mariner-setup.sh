@@ -260,7 +260,8 @@ DEPLOYMENT_NAME=${DEPLOYMENT_NAME}${RANDOM_NUMBER}
 
 #required credentials
 TENANT_ID=$(az account show | jq '.tenantId')
-
+echo "testing"
+echo "$TENANT_ID"
 # Getting the details of subscriptions which user has access, in case when value is not provided in variable.template
 if [ -z "$SUBSCRIPTION_ID" ]; then
     # Value is empty for SUBSCRIPTION_ID
@@ -370,8 +371,8 @@ fi
 
 MANIFEST_TEMPLATE_NAME="deployment.lvaedge.template.json"
 MANIFEST_ENVIRONMENT_VARIABLES_FILENAME=".env"
-
-
+echo "testing."
+echo "$TENANT_ID"
 # Update the value of RUNTIME variable in environment variable file
 sed -i 's#^\(SP_APP_ID[ ]*=\).*#\1\"'"$SP_APP_ID"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
 sed -i 's#^\(SP_APP_PWD[ ]*=\).*#\1\"'"$SP_APP_PWD"'\"#g' "$MANIFEST_ENVIRONMENT_VARIABLES_FILENAME"
