@@ -11,15 +11,6 @@ trigger:
     - pipelines/build-ARMtemplate-eye.yml
     - pipelines/deploy-ARMtemplate-eye.yml
 
-# Build after completion of Release WebApp
-resources:
-  pipelines:
-  - pipeline: build
-    project: UnifiedEdgeScenarios
-    source: Release ues-app
-    trigger:
-      enabled: true
-
 pool:
   default
 
