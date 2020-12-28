@@ -1,0 +1,139 @@
+# CI Enabled
+trigger:
+  batch: true
+  branches:
+    include:
+    - releases/*
+
+pool: 
+  default
+
+variables:
+  Branch: '$(Build.SourceBranch)'
+  buildSuffix: '$(Build.BuildNumber)' 
+  Variable_Group: 'ARMTemplate_ReleaseEnvironment'
+
+stages:
+- stage: GitHubRelease
+  jobs:
+    - deployment: 'GitHubRelease'
+      displayName: 'Release new version to GitHub'
+      environment: 'ApproveGitHubRelease'
+      variables:
+        - group: ${{variables.Variable_Group}}
+      strategy:
+       runOnce:
+         deploy:
+           steps:
+             - checkout: none
+
+             - task: Bash@3
+               env:
+                DEVOPS_PERSONAL_ACCESS_TOKEN: $(DEVOPS_PERSONAL_ACCESS_TOKEN)
+                GITHUB_ACCESS_TOKEN: $(GITHUB_ACCESS_TOKEN)
+               inputs:
+                targetType: 'inline'
+                script: |
+                  
+                  # Current Source branch name
+                  BRANCH_NAME=$(echo $(Branch) | cut -d'/' -f 3- )
+                  
+                  set -e
+                  
+                  # Check existence for azure-devops extension
+                  if [[ $(az extension list --query "[?name=='azure-devops'].name" --output tsv | wc -c) -eq 0 ]]; then
+                    echo "$(info) Installing azure-devops extension"
+                    az extension add --name azure-devops
+                  fi
+
+                  # Check if Directory already available for DevOps repo on local and remove it if exists
+                  if [ -d "UnifiedEdgeScenarios" ]; then
+                    echo "Deleting the git directory as it already exists"
+                    sudo rm -rf UnifiedEdgeScenarios
+                  fi
+
+                  # Login to DevOps org account with PAT
+                  echo ${DEVOPS_PERSONAL_ACCESS_TOKEN} | az devops login --org "https://dev.azure.com/AED-E2E-Experiences/"
+
+                  # Getting the details of latest Pull Request completed against current source branch
+                  PR_DETAILS=$(az repos pr list --status "completed" --target-branch "$DEVOPS_MASTER_BRANCH" --project "$PROJECT" --top 1)
+                  PR_DESCRIPTION=$(echo $PR_DETAILS | jq -r '.[0].description')
+                  PR_TITLE=$(echo $PR_DETAILS | jq -r '.[0].title')
+
+                  # Escaping newline and double quotes from the PR description for it to pass in Git REST Api json payload
+                  PR_DESCRIPTION=$(echo "${PR_DESCRIPTION//$'\n'/\\n}" | sed 's/\"/\\"/g')
+
+                  if [ "$PR_DESCRIPTION" == "null" ]; then
+                    PR_DESCRIPTION="Merge changes from branch $BRANCH_NAME"
+                  fi
+
+                  if [ "$PR_TITLE" == "null" ]; then
+                    PR_TITLE="Merge changes from $BRANCH_NAME"
+                  fi
+
+                  # Clone the current release branch version to local
+                  git clone -b "${BRANCH_NAME}" --single-branch "https://${DEVOPS_REPO_USERNAME}:${DEVOPS_PERSONAL_ACCESS_TOKEN}@dev.azure.com/AED-E2E-Experiences/UnifiedEdgeScenarios/_git/UnifiedEdgeScenarios"
+                  echo "Cloned ${BRANCH_NAME} to local"
+                  
+                  cd UnifiedEdgeScenarios/
+
+                  # Remove the current remote origin from DevOps repo and set it to GitHub repo
+                  git remote rm origin
+                  git remote add origin "https://github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
+                  git remote set-url origin "https://${GITHUB_REPO_USERNAME}:${GITHUB_ACCESS_TOKEN}@github.com/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}.git"
+                  
+
+                  # Push the current source branch changes to GitHub repo, it will create a new branch with current branch name
+                  echo "Upload files to github in branch ${BRANCH_NAME}"
+                  git push origin "${BRANCH_NAME}"
+
+                  # Raise the Pull request to target GitHub repo's master branch from this new branch
+                  echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
+                  #PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
+                  PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$GITHUB_REPO_USERNAME":"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
+                  PR_URL=$(echo $PR_RESPONSE | jq '.url' | cut -d'"' -f 2)
+
+                  
+                  # Checking whether PR is created by checking non-empty value for PR_URL from PR_RESPONSE
+                  if [ "$PR_URL" == "null" ]; then
+                    echo "PR could not be raised."
+                    
+                    if [ "$(echo $PR_RESPONSE | jq '.message')" != "null" ]; then
+                      echo "The following is the error message:"
+                      echo "$(echo $PR_RESPONSE | jq '.message')"
+                    fi
+
+                    if [ "$(echo $PR_RESPONSE | jq '.errors[0].message')" != "null" ]; then
+                      echo "$(echo $PR_RESPONSE | jq '.errors[0].message')"
+                    fi
+                    exit 1
+                  fi
+
+                  # Adding delay for checking the updated status of PR as git will take time to compute in background for mergeability of pull request
+                  sleep 10s
+
+                  # Get the latest status response for raised pull request
+                  PR_STATUS=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}"  ${PR_URL})
+                  echo "PR STATUS: $PR_STATUS "
+                  MERGE_STATUS=$(echo $PR_STATUS | jq '.mergeable')
+                  
+                  echo "Checking mergeability of pull request"
+                  if [ "$MERGE_STATUS" == "true" ]; then
+
+                    echo "Pull Request is raised. Please review it on GitHub."
+                    PR_NUMBER=$(echo $PR_STATUS | jq '.number')
+                    echo "GitHub PR Link: https://github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pull/${PR_NUMBER}"
+                  elif [ "$MERGE_STATUS" == "false" ]; then
+
+                    echo "The PR can not be merged. It may have merge conflicts."
+                    echo "Please review it on GitHub."
+                    PR_NUMBER=$(echo $PR_STATUS | jq '.number')
+                    echo "GitHub PR Link: https://github.com/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pull/${PR_NUMBER}"
+                    exit 1
+                  fi
+
+                  # Remove devops repo directory and files in it from local
+                  cd ..
+                  sudo rm -rf UnifiedEdgeScenarios/
+
+                workingDirectory: '$(System.DefaultWorkingDirectory)'

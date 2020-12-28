@@ -1,0 +1,366 @@
+# This pipeline takes the Mariner-deployment zip from build pipeline and releases it to a test environment.
+# It then releases it to blob storage account after manual approval
+
+
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: build
+    project: UnifiedEdgeScenarios
+    source: Build Brainbox Scripts
+    trigger:
+      enabled: true
+
+pool:
+  default
+
+
+variables:
+  buildSuffix: '$(Build.BuildNumber)' 
+  ${{ if or(startsWith(variables['Build.SourceBranchName'], 'release'), eq(variables['Build.SourceBranchName'], 'master')) }}:
+    Variable_Group: 'Mariner_ReleaseEnvrionment'
+  ${{ if and(not(startsWith(variables['Build.SourceBranchName'], 'release')), ne(variables['Build.SourceBranchName'], 'master')) }}:
+    Variable_Group: 'Mariner_TestEnvrionment'
+
+stages:
+- stage: 'Deploy'
+  jobs:
+  - job: 'Deploy'
+    variables:
+     - group: ${{variables.Variable_Group}}
+    displayName: 'Deploy Person Tracking App to a test environment'
+    steps:
+    - checkout: none
+    - download: none  
+
+    - task: DownloadPipelineArtifact@2
+      enabled: true
+      displayName: 'Download artifacts from Build Pipeline'
+      inputs:
+        buildType: 'specific'
+        project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+        definition: '10'
+        buildVersionToDownload: 'latest'
+        targetPath: '$(System.DefaultWorkingDirectory)'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Upload the mariner deployment scripts to temporary container in storage account'
+      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Exit the script on any error
+          set -e
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+          
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          
+          if [ "$CONTAINER" == "False" ]; then
+            echo "Creating temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts in storage account"
+          
+            az storage container create \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
+          
+            az storage container set-permission \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --public-access blob
+          
+            echo "Created temp container \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts in storage account"
+          fi
+          
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file deployment-bundle-mariner.zip \
+            --name deployment-bundle-mariner.zip
+          
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file people-detection-app.zip \
+            --name people-detection-app.zip
+
+          az storage blob upload \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --container-name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" \
+            --file staircase.mkv \
+            --name staircase.mkv  
+
+          unzip -o deployment-bundle-mariner.zip -d .
+          
+        workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
+    
+    - task: Bash@3
+      enabled: true
+      displayName: 'Prerequisite software installation'
+      inputs:
+        targetType: 'inline'
+        script: |
+          sudo apt install -y curl
+          sudo apt install -y jq
+          sudo apt install -y wget
+          sudo apt install -y sshpass
+
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Run mariner-setup.sh script'
+      env:
+        SP_APP_PWD: $(SP_APP_PWD)
+        MARINER_VM_PASSWORD: $(MARINER_VM_PASSWORD)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -e
+          echo "Starting task"
+
+          SUFFIX="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
+
+          echo "Updating sas url for deployment bundle mariner zip"
+          SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/deployment-bundle-mariner.zip"
+          sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+          echo "Updated sas url for deployment bundle mariner zip"
+
+          PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/people-detection-app.zip"
+          sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+
+          CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME}/staircase.mkv"
+          sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
+
+          chmod +x mariner-setup.sh
+
+          CURRENT_IP_ADDRESS=$(curl -s https://ip4.seeip.org/)
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+          
+          az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG1_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          az network nsg rule create --name "AllowSSH" --nsg-name "$MARINER_NSG2_NAME" --priority 100 --resource-group "$MARINER_RESOURCE_GROUP" --destination-port-ranges 22 --source-address-prefixes "$CURRENT_IP_ADDRESS" --output "none"
+          
+          sshpass -p "$MARINER_VM_PASSWORD" scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mariner-setup.sh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP":/root/setup/mariner-setup.sh
+          sleep 5s
+         
+          Command="az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none" "
+          sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
+          echo "Running script"
+          Command="sudo bash /root/setup/mariner-setup.sh --rg-ams "$RESOURCE_GROUP_AMS$SUFFIX" --rg-device "$RESOURCE_GROUP_DEVICE$SUFFIX" --use-existing-sp --sp-id "$SP_APP_ID" --sp-password "$SP_APP_PWD" --sp-object-id "$OBJECT_ID""
+          sshpass -p "$MARINER_VM_PASSWORD" ssh "$MARINER_UNAME"@"$MARINER_PUBLIC_IP" -o StrictHostKeyChecking=no "$Command"
+          echo "Task is complete"
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
+
+    - task: Bash@3
+      enabled: true
+      displayName: 'Delete temporary container for mariner deployment scripts in storage account'
+      env:
+        RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+        SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Logging into Azure"
+          
+          az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+          
+          CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+          
+          if [ "$CONTAINER" == "True" ]; then
+            echo "Deleting temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts"
+            az storage container delete \
+            --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+            --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+            --name "$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME"
+
+            echo "Deleted temp container  \"$RELEASE_STORAGE_ACCOUNT_TEMP_CONTAINER_NAME\" for mariner deployment scripts"
+          fi
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+    
+- stage: Release
+  jobs:
+  - deployment: 'Release'
+    displayName: 'Release bundle zip to storage account'
+    environment: 'ApproveARMRelease'
+    variables:
+      - group: ${{variables.Variable_Group}}
+    strategy:
+      runOnce:
+        deploy:
+          steps: 
+          - checkout: none
+          - download: none
+
+          - task: DownloadPipelineArtifact@2
+            enabled: true
+            displayName: 'Download artifacts from Build Pipeline'
+            inputs:
+              buildType: 'specific'
+              project: '1ab7de3c-f8b7-4b59-be5a-fa78b4f4570c'
+              definition: '10'
+              buildVersionToDownload: 'latest'
+              targetPath: '$(System.DefaultWorkingDirectory)'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Upload the deployment bundle mariner zip to release storage account'
+            env:
+              RELEASE_STORAGE_ACCOUNT_KEY: $(RELEASE_STORAGE_ACCOUNT_KEY)
+              SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Logging into Azure"
+                
+                az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+
+                CONTAINER=$(az storage container exists --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" --account-name "$RELEASE_STORAGE_ACCOUNT_NAME" --account-key "$RELEASE_STORAGE_ACCOUNT_KEY" -o tsv)
+                
+                if [ "$CONTAINER" == "False" ];then
+                  echo "Creating container \"RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME\" in storage account"
+                  
+                  az storage container create \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                
+                  az storage container set-permission \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --public-access blob
+                fi
+                
+                echo "Uploading deployment bundle zip to storage account"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle-mariner.zip \
+                  --name "$(buildSuffix)/deployment-bundle-mariner.zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file deployment-bundle-mariner.zip \
+                  --name "latest/deployment-bundle-mariner.zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file people-detection-app.zip \
+                  --name "$(buildSuffix)/people-detection-app.zip"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file people-detection-app.zip \
+                  --name "latest/people-detection-app.zip"
+
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file staircase.mkv \
+                  --name "$(buildSuffix)/staircase.mkv"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file staircase.mkv \
+                  --name "latest/staircase.mkv"  
+                  
+                cd '$(System.DefaultWorkingDirectory)/Mariner-Setup-Script'
+
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/deployment-bundle-mariner.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+                echo "Updated sas url for deployment bundle mariner zip"
+                
+                echo "Updating package uri for deployment bundle zip"
+                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/people-detection-app.zip"
+                sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+                echo "Updated package uri for deployment bundle mariner zip"
+
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/latest/staircase.mkv"
+                sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file mariner-setup.sh \
+                  --name "latest/mariner-setup.sh"
+                
+                echo "Updating sas url for deployment bundle zip"
+                SCRIPTS_URL="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/deployment-bundle-mariner.zip"
+                sed -i 's#^\(SAS_URL[ ]*=\).*#\1\"'"$SCRIPTS_URL"'\"#g' "mariner-setup.sh"
+                echo "Updated sas url for deployment bundle mariner zip"
+                
+                echo "Updating package uri for deployment bundle zip"
+                PACKAGE_URI="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/people-detection-app.zip"
+                sed -i 's#^\(PACKAGE_URI[ ]*=\).*#\1\"'"$PACKAGE_URI"'\"#g' "mariner-setup.sh"
+                echo "Updated package uri for deployment bundle mariner zip"
+
+                CUSTOM_VIDEO_SOURCE="https://${RELEASE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net/${RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME}/$(buildSuffix)/staircase.mkv"
+                sed -i 's#^\(CUSTOM_VIDEO_SOURCE[ ]*=\).*#\1\"'"$CUSTOM_VIDEO_SOURCE"'\"#g' "mariner-setup.sh"
+                
+                az storage blob upload \
+                  --account-name $(RELEASE_STORAGE_ACCOUNT_NAME) \
+                  --account-key $(RELEASE_STORAGE_ACCOUNT_KEY) \
+                  --container-name "$RELEASE_STORAGE_ACCOUNT_CONTAINER_NAME" \
+                  --file mariner-setup.sh \
+                  --name "$(buildSuffix)/mariner-setup.sh"
+              workingDirectory: '$(System.DefaultWorkingDirectory)/deployment-bundle-mariner'
+
+          - task: Bash@3
+            enabled: true
+            displayName: 'Delete the resource group'
+            env:
+              SP_APP_PWD_LOGIN: $(SP_APP_PWD_LOGIN)
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Exit the script on any error
+                SUFFIX="$(echo "$(buildSuffix)" | md5sum | cut -c1-4)"
+                
+                echo "Logging to Azure"
+                
+                az login --service-principal --username "$SP_APP_ID_LOGIN" --password "$SP_APP_PWD_LOGIN" --tenant "$TENANT_ID" --output "none"
+                
+                if [ "$RESOURCE_GROUP_DEVICE$SUFFIX" == "$RESOURCE_GROUP_AMS$SUFFIX" ]; then
+                  echo "Deleting resource group \"$RESOURCE_GROUP_DEVICE$SUFFIX\""
+
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE$SUFFIX" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE$SUFFIX\""
+                else
+                  echo "Deleting resource group  \"$RESOURCE_GROUP_DEVICE$SUFFIX\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_DEVICE$SUFFIX" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_DEVICE$SUFFIX\""
+                  
+                  echo "Deleting resource group  \"$RESOURCE_GROUP_AMS$SUFFIX\""
+                  
+                  az group delete --resource-group "$RESOURCE_GROUP_AMS$SUFFIX" --yes --no-wait
+                  
+                  echo "Triggered deletion of resource group \"$RESOURCE_GROUP_AMS$SUFFIX\""
+                fi
+              workingDirectory: '$(System.DefaultWorkingDirectory)'

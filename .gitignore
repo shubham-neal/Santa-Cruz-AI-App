@@ -9,3 +9,4 @@ bin/
 .vs/
 ASALocalRun/
 sandbox/
+**/edge-solution/*.env

@@ -7,6 +7,10 @@ variables:
 
 trigger:
   batch: true
+  branches:
+    include:
+      - releases/*
+      - master
   paths:
     include:
     - frontend-app
@@ -14,7 +18,7 @@ trigger:
     - pipelines/deploy-frontend.yml
 
 pool:
-  vmImage: 'ubuntu-latest'
+  default
 
 steps:
 - checkout: self
@@ -34,9 +38,9 @@ steps:
 # copying the files from build folder to uesmessagesapp
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '/home/vsts/work/1/s/frontend-app/app/build'
+    SourceFolder: 'frontend-app/app/build'
     Contents: '**'
-    TargetFolder: '/home/vsts/work/1/s/frontend-app/api/public'
+    TargetFolder: 'frontend-app/api/public'
   displayName: 'npm install and build and copy'
 
 # install dependencies for api
