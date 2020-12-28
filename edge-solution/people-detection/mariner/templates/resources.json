@@ -40,7 +40,7 @@
         "storageAccountName": "[concat('uesstorage',substring(uniqueString(subscription().id,parameters('resourceGroupAMS')),1,4))]",
         "deploymentName": "[concat('eye-deployment',substring(uniqueString(subscription().id,parameters('resourceGroupAMS')),1,4))]",
         "mediaServiceName": "[parameters('mediaServiceName')]",
-        "applicationType": "people-tracking-azureeye-device",
+        "applicationType": "people-tracking-brainbox-device",
         "accountType": "Standard_RAGRS",
         "kind": "StorageV2",
         "isHnsEnabled": true,
