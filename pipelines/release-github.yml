@@ -85,7 +85,7 @@ stages:
 
                   # Push the current source branch changes to GitHub repo, it will create a new branch with current branch name
                   echo "Upload files to github in branch ${BRANCH_NAME}"
-                  git push –u origin "${BRANCH_NAME}"
+                  git push origin "${BRANCH_NAME}"
 
                   # Raise the Pull request to target GitHub repo's master branch from this new branch
                   echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
