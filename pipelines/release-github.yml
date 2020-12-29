@@ -35,28 +35,6 @@ stages:
                inputs:
                  targetType: 'inline'
                  script: |
-                   # Current Source branch name
-                   BRANCH_NAME=$(echo $(Branch) | cut -d'/' -f 3- )
-                   echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
-                                     #PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
-                                     #DOES_PR_EXIST=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls?state=all" -d '{"head":"'"$GITHUB_REPO_USERNAME:$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'"}')
-                                     DOES_PR_EXIST=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls?head="$GITHUB_REPO_USERNAME":"$BRANCH_NAME"&base="$GITHUB_TARGET_BRANCH"" )
-                                     echo "DPR1: $DOES_PR_EXIST"
-                                     EXISTING_PR_STATUS=$(echo $DOES_PR_EXIST | jq -r '.[0].state')
-                                     echo "EPS: $EXISTING_PR_STATUS"
-                                     PR_URL=$(echo $DOES_PR_EXIST | jq -r '.[0].url')
-                                     echo "EPU: $PR_URL"
-                                     if [ ! "$EXISTING_PR_STATUS" == "null" ]; then
-                                       PR_URL=$(echo $DOES_PR_EXIST | jq -r '.[0].url')
-                                       echo "Pull Request already exists with status $EXISTING_PR_STATUS"
-                                       echo "Pull Request URL: $PR_URL"
-                                       exit 0
-                                     fi
-                   
-                   echo "Outside"
-                   
-                   exit 0
-                   
                    
                    # Current Source branch name
                    BRANCH_NAME=$(echo $(Branch) | cut -d'/' -f 3- )
@@ -113,7 +91,7 @@ stages:
                    # Raise the Pull request to target GitHub repo's master branch from this new branch
                    echo "Raising PR from branch \"${BRANCH_NAME}\" to master in GitHub repo \"${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}\""
                    #PR_RESPONSE=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${GITHUB_REPO_USERNAME}/${GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'","title":"'"$PR_TITLE"'","body":"'"$PR_DESCRIPTION"'"}')
-                   DOES_PR_EXIST=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls" -d '{"head":"'"$GITHUB_REPO_USERNAME":"$BRANCH_NAME"'","base":"'"$GITHUB_TARGET_BRANCH"'"}')
+                   DOES_PR_EXIST=$(curl -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" "https://api.github.com/repos/${TARGET_GITHUB_REPO_USERNAME}/${TARGET_GITHUB_REPO_NAME}/pulls?head="$GITHUB_REPO_USERNAME":"$BRANCH_NAME"&base="$GITHUB_TARGET_BRANCH"" )
                    echo "DPR2: $DOES_PR_EXIST"
                    EXISTING_PR_STATUS=$(echo $DOES_PR_EXIST | jq -r '.[0].state')
                    if [ ! "$EXISTING_PR_STATUS" == "null" ]; then
